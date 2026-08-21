@@ -93,18 +93,20 @@ export const Header: React.FC = () => {
 
       {/* Right: AI Quick Action + Notifications + SSO User Switcher */}
       <div className="flex items-center gap-3">
-        {/* ChatBI Drawer Toggle Button */}
+        {/* AI Assistant Drawer Toggle Icon Button */}
         <button
           id="btn-nav-chatbi"
           onClick={() => setIsAiDrawerOpen(!isAiDrawerOpen)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all shadow-xs ${
+          title="AI 智能助手 / ChatBI"
+          aria-label="AI 智能助手"
+          className={`relative p-2 rounded-md transition-all shadow-xs flex items-center justify-center ${
             isAiDrawerOpen
-              ? 'bg-blue-800 text-white ring-2 ring-blue-400'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-blue-700 text-white ring-2 ring-blue-400'
+              : 'bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-200'
           }`}
         >
-          <Sparkles className={`w-3.5 h-3.5 ${isAiDrawerOpen ? 'animate-spin' : ''}`} />
-          <span>AI 助手 / ChatBI</span>
+          <Sparkles className={`w-4 h-4 ${isAiDrawerOpen ? 'animate-spin text-white' : 'text-blue-600'}`} />
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white"></span>
         </button>
 
         {/* Notifications */}

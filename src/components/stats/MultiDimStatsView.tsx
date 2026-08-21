@@ -479,7 +479,7 @@ export const MultiDimStatsView: React.FC = () => {
                 className="hover:bg-blue-50/50 cursor-pointer transition-colors"
               >
                 <td className="py-3.5 px-4 font-semibold text-slate-900">{item.name}</td>
-                <td className="py-3.5 px-3 font-mono text-slate-700">{item.siteCount.toLocaleString()} 站</td>
+                <td className="py-3.5 px-3 font-mono text-slate-700">{(item.siteCount ?? 0).toLocaleString()} 站</td>
                 <td className="py-3.5 px-3 font-mono font-bold text-blue-600">
                   {item.availability}%
                 </td>
@@ -490,8 +490,8 @@ export const MultiDimStatsView: React.FC = () => {
                   {item.interruptionHours} 小时
                 </td>
                 <td className="py-3.5 px-3 font-mono text-slate-700">{item.avgMttr} h</td>
-                <td className="py-3.5 px-3 font-mono text-slate-600">{item.alarmCount.toLocaleString()}</td>
-                <td className="py-3.5 px-3 font-mono text-slate-600">{item.workOrders.toLocaleString()}</td>
+                <td className="py-3.5 px-3 font-mono text-slate-600">{(item.alarmCount ?? 0).toLocaleString()}</td>
+                <td className="py-3.5 px-3 font-mono text-slate-600">{(item.workOrders ?? 0).toLocaleString()}</td>
                 <td className="py-3.5 px-4 text-right">
                   <button className="text-blue-600 hover:text-blue-800 font-semibold text-xs">
                     下钻 &rarr;

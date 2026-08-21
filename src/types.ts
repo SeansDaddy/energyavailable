@@ -138,6 +138,8 @@ export interface ImportBatch {
   operator: string;
   equivalentInterruptionMinutes: number;
   eventsCount: number;
+  recordsCount?: number;
+  faultEventsExtracted?: number;
   isLatestWinning: boolean; // Latest-wins 参与可用度计算
   replacedBatchNo?: string;
 }

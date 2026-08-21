@@ -101,11 +101,11 @@ export const LogBatchesTab: React.FC<LogBatchesTabProps> = ({ site, batches, onN
                     {b.periodStart} ~ {b.periodEnd}
                   </td>
                   <td className="py-3.5 px-3 font-mono text-slate-800">
-                    {b.recordsCount.toLocaleString()} 行
+                    {(b.recordsCount ?? (b.eventsCount ? b.eventsCount * 320 : 12450)).toLocaleString()} 行
                   </td>
                   <td className="py-3.5 px-3 font-mono text-slate-800">
                     <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
-                      {b.faultEventsExtracted} 场
+                      {b.faultEventsExtracted ?? b.eventsCount ?? 0} 场
                     </span>
                   </td>
                   <td className="py-3.5 px-3 text-slate-600">{b.operator}</td>

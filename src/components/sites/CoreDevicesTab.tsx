@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Site, CoreDevice, RedundancyLevel } from '../../types';
 import { RedundancyBadge } from '../common/StatusBadge';
+import { DeviceDetailWorkbench } from './DeviceDetailWorkbench';
 import {
   Cpu,
   Shield,
@@ -9,12 +10,13 @@ import {
   Info,
   CheckCircle2,
   AlertTriangle,
-  X,
   Server,
   Activity,
   Zap,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
+  Search
 } from 'lucide-react';
 
 interface CoreDevicesTabProps {
@@ -32,11 +34,32 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
   const [editRedundancy, setEditRedundancy] = useState<RedundancyLevel>(site.redundancy);
   const [editNotes, setEditNotes] = useState(site.redundancyNotes || '');
   const [selectedDevice, setSelectedDevice] = useState<CoreDevice | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const handleSave = () => {
     onUpdateRedundancy(site.id, editRedundancy, editNotes);
     setIsEditingRedundancy(false);
   };
+
+  // If a device is selected for drilldown, render the comprehensive Deep-Dive Workbench
+  if (selectedDevice) {
+    return (
+      <DeviceDetailWorkbench
+        site={site}
+        device={selectedDevice}
+        onBack={() => setSelectedDevice(null)}
+        onSelectDevice={dev => setSelectedDevice(dev)}
+      />
+    );
+  }
+
+  const filteredDevices = site.coreDevices.filter(
+    d =>
+      d.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      d.deviceCode.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      d.deviceType.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      d.model.toLowerCase().includes(searchKeyword.toLowerCase())
+  );
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
@@ -47,7 +70,7 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
           <strong className="text-blue-900 font-semibold">
             核心设备认定与冗余拓扑规则 (Rule R2 & R1)：
           </strong>
-          可用度计算仅统计由<strong>核心计量设备（PCS变流器、BMS电池簇、EMS主控）</strong>非计划停机所引发的等效中断时长。辅机设备（如普通照明、外围温湿度传感）故障不触发扣除。组网冗余度由运维人员维护，直接输入至可靠性评分五因子模型。
+          可用度计算仅统计由<strong>核心计量设备（PCS变流器、BMS电池簇、EMS主控）</strong>非计划停机所引发的等效中断时长。辅机设备故障不触发扣除。点击任意设备可进入<strong>遥测时序、运行工况历史、点表清单与中断责任全景下钻工作台</strong>。
         </div>
       </div>
 
@@ -170,17 +193,28 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
         </div>
       </div>
 
-      {/* Core Devices Inventory */}
+      {/* Core Devices Inventory Table */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Cpu className="w-4 h-4 text-blue-600" />
-              站点核心计量设备台账清单 (点击设备下钻运行指标)
+              <span>站点核心计量设备台账清单 (点击设备卡片或行下钻运行详情)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              共挂接 {site.coreDevices.length} 台核心设备 · 仅核心设备停运触发可用度扣减
+              共挂接 {site.coreDevices.length} 台核心设备 · 仅核心设备停运触发可用度扣减 (Rule R2)
             </p>
+          </div>
+
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            <input
+              type="text"
+              placeholder="搜索设备编码/名称/型号..."
+              value={searchKeyword}
+              onChange={e => setSearchKeyword(e.target.value)}
+              className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-blue-500 w-52"
+            />
           </div>
         </div>
 
@@ -194,25 +228,31 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
                 <th className="py-3 px-3 font-mono">额定功率</th>
                 <th className="py-3 px-3">核心计量属性</th>
                 <th className="py-3 px-3">投运日期</th>
-                <th className="py-3 px-3">运行状态</th>
+                <th className="py-3 px-3">运行工况</th>
                 <th className="py-3 px-4 text-right">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {site.coreDevices.map(dev => (
+              {filteredDevices.map(dev => (
                 <tr
                   key={dev.id}
-                  className="hover:bg-blue-50/40 transition-colors cursor-pointer"
+                  className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
                   onClick={() => setSelectedDevice(dev)}
                 >
                   <td className="py-3.5 px-4">
-                    <div className="font-semibold text-slate-900">{dev.deviceName}</div>
+                    <div className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {dev.deviceName}
+                    </div>
                     <div className="text-[11px] text-blue-600 font-mono">{dev.deviceCode}</div>
                   </td>
-                  <td className="py-3.5 px-3 font-mono text-slate-700">{dev.deviceType}</td>
+                  <td className="py-3.5 px-3 font-mono text-slate-700">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
+                      {dev.deviceType}
+                    </span>
+                  </td>
                   <td className="py-3.5 px-3 text-slate-600">{dev.model}</td>
-                  <td className="py-3.5 px-3 font-mono text-slate-800">
-                    {dev.ratedPowerKw ? `${dev.ratedPowerKw} kW` : '-'}
+                  <td className="py-3.5 px-3 font-mono text-slate-800 font-bold">
+                    {dev.ratedPowerKw ? `${dev.ratedPowerKw} kW` : '集控主控'}
                   </td>
                   <td className="py-3.5 px-3">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -239,9 +279,10 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
                         e.stopPropagation();
                         setSelectedDevice(dev);
                       }}
-                      className="text-blue-600 hover:text-blue-800 font-semibold text-xs"
+                      className="px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs flex items-center gap-1 ml-auto shadow-xs transition-colors"
                     >
-                      参数下钻 &rarr;
+                      <span>遥测工况下钻</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </td>
                 </tr>
@@ -250,100 +291,7 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
           </table>
         </div>
       </div>
-
-      {/* Modal: Device Detail Drilldown */}
-      {selectedDevice && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded bg-blue-50 text-blue-600 border border-blue-200">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {selectedDevice.deviceName}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-mono">
-                    设备编码: {selectedDevice.deviceCode} · 所属站点: {site.siteName}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedDevice(null)}
-                className="text-slate-400 hover:text-slate-700 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-1 text-xs space-y-4 pr-1">
-              <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <div>
-                  <span className="text-slate-500">设备类型</span>
-                  <div className="font-bold text-slate-800 font-mono mt-0.5">
-                    {selectedDevice.deviceType}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-slate-500">规格型号</span>
-                  <div className="font-bold text-slate-800 mt-0.5">{selectedDevice.model}</div>
-                </div>
-                <div>
-                  <span className="text-slate-500">额定功率</span>
-                  <div className="font-bold text-slate-800 font-mono mt-0.5">
-                    {selectedDevice.ratedPowerKw ? `${selectedDevice.ratedPowerKw} kW` : '集控主控主机'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-slate-500">投运日期</span>
-                  <div className="font-bold text-slate-800 font-mono mt-0.5">
-                    {selectedDevice.installedDate}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-blue-50/60 rounded-lg border border-blue-200 space-y-2">
-                <div className="font-bold text-blue-900 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-blue-600" />
-                  <span>实时遥测与工况状态</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
-                  <div className="p-2 bg-white rounded border border-blue-100">
-                    <span className="text-slate-500">工作温度</span>
-                    <div className="font-mono font-bold text-slate-800 mt-0.5">42.5 ℃ (正常)</div>
-                  </div>
-                  <div className="p-2 bg-white rounded border border-blue-100">
-                    <span className="text-slate-500">转换效率</span>
-                    <div className="font-mono font-bold text-emerald-600 mt-0.5">98.92%</div>
-                  </div>
-                  <div className="p-2 bg-white rounded border border-blue-100">
-                    <span className="text-slate-500">通信心跳</span>
-                    <div className="font-mono font-bold text-blue-600 mt-0.5">实时 (0ms延迟)</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="font-bold text-slate-800">维护与巡检记录</div>
-                <div className="p-3 bg-slate-50 rounded border border-slate-200 text-slate-600 leading-relaxed text-[11px]">
-                  ● 2026-08-15: 配合工单 WO-20260815-9921 完成风道滤网更换与 IGBT 探头校准。<br />
-                  ● 2026-06-12: 固件升级至 v3.4.2 版本，并入全站双机热备环网。
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-slate-200 mt-4">
-              <button
-                onClick={() => setSelectedDevice(null)}
-                className="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-xs"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
