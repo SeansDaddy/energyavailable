@@ -76,14 +76,6 @@ export const Sidebar: React.FC = () => {
       section: '风控与分析'
     },
     {
-      id: 'ai_assistant',
-      label: 'AI 助手 / ChatBI',
-      icon: Sparkles,
-      badge: '大模型',
-      badgeColor: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
-      section: '风控与分析'
-    },
-    {
       id: 'work_orders',
       label: 'PCare 工单管理',
       icon: Wrench,

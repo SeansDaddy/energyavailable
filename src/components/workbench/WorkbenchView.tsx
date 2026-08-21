@@ -40,7 +40,8 @@ export const WorkbenchView: React.FC = () => {
     alerts,
     setActiveTab,
     navigateToSiteDetail,
-    setDrilldownFilter
+    setDrilldownFilter,
+    openAiDrawer
   } = useApp();
 
   // Find breached sites for TOP list
@@ -94,7 +95,7 @@ export const WorkbenchView: React.FC = () => {
           </button>
           <button
             id="btn-cockpit-quick-chatbi"
-            onClick={() => setActiveTab('ai_assistant')}
+            onClick={() => openAiDrawer()}
             className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
           >
             <Sparkles className="w-3.5 h-3.5" />

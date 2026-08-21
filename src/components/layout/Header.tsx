@@ -23,7 +23,10 @@ export const Header: React.FC = () => {
     alerts,
     drilldownFilter,
     setDrilldownFilter,
-    syncContracts
+    syncContracts,
+    isAiDrawerOpen,
+    setIsAiDrawerOpen,
+    openAiDrawer
   } = useApp();
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -90,17 +93,17 @@ export const Header: React.FC = () => {
 
       {/* Right: AI Quick Action + Notifications + SSO User Switcher */}
       <div className="flex items-center gap-3">
-        {/* ChatBI Button */}
+        {/* ChatBI Drawer Toggle Button */}
         <button
           id="btn-nav-chatbi"
-          onClick={() => setActiveTab('ai_assistant')}
+          onClick={() => setIsAiDrawerOpen(!isAiDrawerOpen)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all shadow-xs ${
-            activeTab === 'ai_assistant'
-              ? 'bg-blue-700 text-white'
+            isAiDrawerOpen
+              ? 'bg-blue-800 text-white ring-2 ring-blue-400'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className={`w-3.5 h-3.5 ${isAiDrawerOpen ? 'animate-spin' : ''}`} />
           <span>AI 助手 / ChatBI</span>
         </button>
 

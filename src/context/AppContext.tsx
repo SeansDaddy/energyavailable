@@ -37,8 +37,7 @@ export type NavigationTab =
   | 'analytics'
   | 'reports'
   | 'work_orders'
-  | 'contracts'
-  | 'ai_assistant';
+  | 'contracts';
 
 export interface ReliabilityWeights {
   historyInterruptionFreq: number;
@@ -55,8 +54,15 @@ interface AppContextType {
   setCurrentUser: (user: UserProfile) => void;
   selectedSiteId: string;
   setSelectedSiteId: (id: string) => void;
-  siteDetailTab: number; // 0..5
+  siteDetailTab: number; // 0..6
   setSiteDetailTab: (idx: number) => void;
+  
+  // AI Drawer state
+  isAiDrawerOpen: boolean;
+  setIsAiDrawerOpen: (open: boolean) => void;
+  openAiDrawer: (initialQuery?: string) => void;
+  closeAiDrawer: () => void;
+  clearChatMessages: () => void;
   
   // Data lists
   sites: Site[];
@@ -113,6 +119,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [selectedSiteId, setSelectedSiteId] = useState<string>('site-001');
   const [siteDetailTab, setSiteDetailTab] = useState<number>(0);
   
+  // AI Drawer state
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState<boolean>(false);
+
   const [sites, setSites] = useState<Site[]>(INITIAL_SITES);
   const [alerts, setAlerts] = useState<AlertItem[]>(INITIAL_ALERTS);
   const [batches, setBatches] = useState<ImportBatch[]>(INITIAL_BATCHES);
@@ -136,6 +145,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     alarmDensity: 0.15,
     dataCoverage: 0.20
   });
+
+  const openAiDrawer = (initialQuery?: string) => {
+    setIsAiDrawerOpen(true);
+    if (initialQuery && initialQuery.trim()) {
+      sendChatMessage(initialQuery.trim());
+    }
+  };
+
+  const closeAiDrawer = () => {
+    setIsAiDrawerOpen(false);
+  };
+
+  const clearChatMessages = () => {
+    setChatMessages([
+      {
+        id: `chat-${Date.now()}`,
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        content: '已为您清空当前会话记录。我是能源站点可用度 AI 智能分析与 ChatBI 助手，随时待命为您解答全网台账、SLA 履约分析、故障归因及售前评估。',
+        queryType: 'fallback'
+      }
+    ]);
+  };
 
   const navigateToSiteDetail = (siteId: string, defaultTabIdx: number = 0) => {
     setSelectedSiteId(siteId);
@@ -443,6 +475,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           content: '【管理口径五因子评分 (R1)】依据平台双层指标模型，可靠性得分由五大因子加权生成（满分100）：\n1. 历史中断频率 (权重 25%)\n2. 平均恢复时长 MTTR (权重 20%)\n3. 组网冗余度 (权重 20%)\n4. 告警密度 (权重 15%)\n5. 数据覆盖率 (权重 20%)\n如需微调权重参数，可在可靠性设置面板进行全局调整。',
           queryType: 'fallback'
         };
+      } else if (lower.includes('宝武') || lower.includes('归因') || lower.includes('因果链') || lower.includes('中断原因')) {
+        aiMsg = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          content: '【故障归因与因果链诊断 (Rule R11)】针对【宝武钢铁1号储能站 (SZ-ESS-0001)】深度剖析：\n• **核心事件**：8月12日 14:20~16:30 发生 2# PCS 变流器过温告警，导致该支路非计划停机，折算等效 PCS 停运时长 596 分钟。\n• **PCare 工单闭环 (R4)**：现场运维工程师于 16:30 输出备件更换与风道清洗方案，系统即时恢复可用度基准。\n• **组网与扣减**：该站为双机热备架构，扣除计划内维护 120 分钟后，当期累计可用度为 98.64% (低于 SLA 99.50%)。\n• **整改建议**：建议升级变流器散热风道并加装进风口滤网温差传感器。',
+          queryType: 'pivot_analysis',
+          dataPayload: {
+            siteId: 'site-001',
+            siteName: '宝武钢铁1号储能站',
+            faultCode: 'FAULT-20260812-001',
+            equivalentMins: 596,
+            mttr: '2.17 小时'
+          }
+        };
+      } else if (lower.includes('售前') || lower.includes('可行性') || lower.includes('99.6') || lower.includes('意向')) {
+        aiMsg = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          content: '【售前风控评估决策意见】针对意向华东区 20MW 工商业储能站拟承诺 99.60% SLA 的可行性评估：\n⚠️ **违约风险等级：【高风险】**\n• **历史基准数据**：华东区同类工商业微网近 12 个月平均可用度为 99.48%，P90 值为 99.62%，P95 值为 99.21%。\n• **决策建议**：拟承诺 99.60% 处于高位极限边界。若要履约达标，必须在技术协议中采用【双机热备 + 光纤环网】并明确【电网不可抗力停机除外】与【计划内维护不扣减】条款 (R2)。建议推荐签约阈值为 99.35% ~ 99.45%。',
+          queryType: 'prediction_card',
+          dataPayload: {
+            siteName: '华东区 20MW 工商业储能拟建站',
+            currentValue: '99.48% (区域均值)',
+            predictedValue: '99.42% ~ 99.60%',
+            slaThreshold: '99.60%',
+            breachProbability: '68%',
+            riskLevel: 'HIGH_RISK',
+            suggestions: [
+              '技术方案采用双机热备架构 (+3.5% 可用度裕量)',
+              '合同中锁定计划内免责检修工时 (建议 ≥ 12 小时/月)',
+              '推荐将签约 SLA 调整至 99.40%'
+            ]
+          }
+        };
       } else {
         aiMsg = {
           id: `ai-${Date.now()}`,
@@ -468,6 +536,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSelectedSiteId,
         siteDetailTab,
         setSiteDetailTab,
+        isAiDrawerOpen,
+        setIsAiDrawerOpen,
+        openAiDrawer,
+        closeAiDrawer,
+        clearChatMessages,
         sites,
         alerts,
         batches,
