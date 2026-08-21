@@ -1,0 +1,6 @@
+{
+  "name": "能源站点可用度全生命周期管理平台",
+  "description": "面向数万级能源站点可用度全生命周期的管理系统，涵盖日志导入、可用度监控、可靠性评估、三类预警、多维统计、工单合同联动、报告生成与 AI ChatBI 辅助分析",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
