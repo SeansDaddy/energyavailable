@@ -19,7 +19,8 @@ import {
   Radio,
   SlidersHorizontal,
   ChevronRight,
-  Database
+  Database,
+  HeartPulse
 } from 'lucide-react';
 
 import { SitePanoramaTab } from './SitePanoramaTab';
@@ -201,6 +202,14 @@ export const SiteDetailView: React.FC = () => {
               >
                 <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
                 <span>导入日志</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('performance_evaluation')}
+                className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
+                title="进入性能评估分析服务"
+              >
+                <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
+                <span>性能评估分析</span>
               </button>
               <button
                 onClick={() =>

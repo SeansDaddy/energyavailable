@@ -14,7 +14,8 @@ import {
   LogIn,
   Layers,
   ChevronRight,
-  Database
+  Database,
+  HeartPulse
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -67,6 +68,22 @@ export const Sidebar: React.FC = () => {
       id: 'analytics',
       label: '多维统计分析',
       icon: BarChart3,
+      section: '风控与分析'
+    },
+    {
+      id: 'performance_evaluation',
+      label: '性能评估分析',
+      icon: HeartPulse,
+      badge: '体检分析',
+      badgeColor: 'bg-blue-600 text-white',
+      section: '风控与分析'
+    },
+    {
+      id: 'fault_diagnosis',
+      label: 'AI 故障诊断',
+      icon: Sparkles,
+      badge: 'AI推理',
+      badgeColor: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-xs',
       section: '风控与分析'
     },
     {

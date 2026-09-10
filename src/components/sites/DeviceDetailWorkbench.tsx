@@ -194,12 +194,12 @@ export const DeviceDetailWorkbench: React.FC<DeviceDetailWorkbenchProps> = ({
               <select
                 value={device.id}
                 onChange={e => {
-                  const target = site.coreDevices.find(d => d.id === e.target.value);
+                  const target = site.coreDevices?.find(d => d.id === e.target.value);
                   if (target) onSelectDevice(target);
                 }}
                 className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
               >
-                {site.coreDevices.map(d => (
+                {(site.coreDevices || []).map(d => (
                   <option key={d.id} value={d.id}>
                     {d.deviceCode} - {d.deviceName} ({d.deviceType})
                   </option>

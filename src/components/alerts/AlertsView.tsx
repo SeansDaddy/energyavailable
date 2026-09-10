@@ -16,15 +16,28 @@ import {
   X,
   Settings2,
   FileSpreadsheet,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
+import { NewDiagnosisWizardModal } from '../diagnosis/NewDiagnosisWizardModal';
 
 export const AlertsView: React.FC = () => {
-  const { alerts, handleAlert, navigateToSiteDetail, currentUser } = useApp();
+  const {
+    alerts,
+    handleAlert,
+    navigateToSiteDetail,
+    currentUser,
+    createDiagnosisTask,
+    setActiveDiagnosisTaskId,
+    setActiveTab
+  } = useApp();
 
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Diagnosis Modal from Alert Context
+  const [diagnosisAlert, setDiagnosisAlert] = useState<AlertItem | null>(null);
 
   // Handle modal
   const [selectedAlertForHandle, setSelectedAlertForHandle] = useState<AlertItem | null>(null);
@@ -288,6 +301,14 @@ export const AlertsView: React.FC = () => {
                   {alert.status === 'active' ? (
                     <>
                       <button
+                        onClick={() => setDiagnosisAlert(alert)}
+                        className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded font-bold text-xs shadow-xs inline-flex items-center gap-1 transition-colors"
+                        title="针对该预警一键调起 AI 故障诊断"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>AI诊断</span>
+                      </button>
+                      <button
                         onClick={() => handleOpenProcessModal(alert, 'confirmed')}
                         className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded font-semibold text-xs border border-emerald-200 transition-colors"
                       >
@@ -455,6 +476,27 @@ export const AlertsView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal 3: AI Fault Diagnosis Wizard */}
+      {diagnosisAlert && (
+        <NewDiagnosisWizardModal
+          initialSiteId={diagnosisAlert.siteId}
+          initialEvent={{
+            eventId: diagnosisAlert.id,
+            eventTitle: `${diagnosisAlert.type === 'sla_breached' ? 'SLA已跌破预警' : '预测将跌破预警'} (${diagnosisAlert.currentValue}%)`,
+            eventType: 'availability_alert',
+            eventTime: diagnosisAlert.triggerTime,
+            severity: diagnosisAlert.severity.toUpperCase(),
+            description: `当前站点可用度 ${diagnosisAlert.currentValue}%，低于合同阈值 ${diagnosisAlert.slaThreshold}%`
+          }}
+          onClose={() => setDiagnosisAlert(null)}
+          onLaunchTask={newTask => {
+            createDiagnosisTask(newTask);
+            setActiveDiagnosisTaskId(newTask.id);
+            setActiveTab('fault_diagnosis');
+          }}
+        />
       )}
     </div>
   );

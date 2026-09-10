@@ -25,6 +25,18 @@ import {
   REGION_DISTRIBUTION,
   DIMENSION_TREE_DATA
 } from '../mock/initialData';
+import {
+  DiagnosisTask,
+  SimilarCase,
+  SopItem,
+  DiagnosisFeedbackStats
+} from '../types/faultDiagnosis';
+import {
+  INITIAL_DIAGNOSIS_TASKS,
+  INITIAL_SIMILAR_CASES,
+  INITIAL_SOPS,
+  INITIAL_FEEDBACK_STATS
+} from '../mock/faultDiagnosisData';
 
 export type NavigationTab =
   | 'login'
@@ -35,6 +47,8 @@ export type NavigationTab =
   | 'availability_monitor'
   | 'alerts'
   | 'analytics'
+  | 'performance_evaluation'
+  | 'fault_diagnosis'
   | 'reports'
   | 'work_orders'
   | 'contracts';
@@ -97,8 +111,33 @@ interface AppContextType {
   updateSiteRedundancy: (siteId: string, redundancy: RedundancyLevel, notes: string) => void;
   importLogBatch: (siteId: string, fileName: string, periodStart: string, periodEnd: string, isOverride: boolean) => ImportBatch;
   generateReport: (type: ReportItem['type'], scopeName: string, period: string, format: 'PDF' | 'EXCEL' | 'BOTH') => ReportItem;
+  addReportItem?: (report: ReportItem) => void;
   sendChatMessage: (content: string) => void;
   syncContracts: () => void;
+
+  // AI Fault Diagnosis
+  diagnosisTasks: DiagnosisTask[];
+  activeDiagnosisTaskId: string | null;
+  setActiveDiagnosisTaskId: (id: string | null) => void;
+  caseLibrary: SimilarCase[];
+  sopLibrary: SopItem[];
+  feedbackStats: DiagnosisFeedbackStats;
+  createDiagnosisTask: (task: DiagnosisTask) => void;
+  giveDiagnosisFeedback: (
+    taskId: string,
+    isThumbsUp: boolean,
+    negativeDetails?: {
+      verifiedRootCause: string;
+      reasonCategory: string;
+      remarks: string;
+      engineerName: string;
+    }
+  ) => void;
+  transferDiagnosisToCase: (taskId: string, caseData: Partial<SimilarCase>) => void;
+  transferDiagnosisToWorkOrder: (taskId: string, workOrderData: Partial<WorkOrder>) => void;
+  addCaseToLibrary: (newCase: SimilarCase) => void;
+  addSopToLibrary: (newSop: SopItem) => void;
+  updateSopInLibrary: (sopId: string, updated: Partial<SopItem>) => void;
   
   // Reliability Weights config
   reliabilityWeights: ReliabilityWeights;
@@ -129,6 +168,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [contracts, setContracts] = useState<Contract[]>(INITIAL_CONTRACTS);
   const [reports, setReports] = useState<ReportItem[]>(INITIAL_REPORTS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
+  
+  // AI Fault Diagnosis State
+  const [diagnosisTasks, setDiagnosisTasks] = useState<DiagnosisTask[]>(INITIAL_DIAGNOSIS_TASKS);
+  const [activeDiagnosisTaskId, setActiveDiagnosisTaskId] = useState<string | null>('diag-task-001');
+  const [caseLibrary, setCaseLibrary] = useState<SimilarCase[]>(INITIAL_SIMILAR_CASES);
+  const [sopLibrary, setSopLibrary] = useState<SopItem[]>(INITIAL_SOPS);
+  const [feedbackStats, setFeedbackStats] = useState<DiagnosisFeedbackStats>(INITIAL_FEEDBACK_STATS);
   
   const [drilldownFilter, setDrilldownFilter] = useState<{
     region?: string;
@@ -372,6 +418,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newReport;
   };
 
+  const addReportItem = (report: ReportItem) => {
+    setReports(prev => [report, ...prev]);
+  };
+
   const syncContracts = () => {
     const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' (手动触发同步完成)';
     setContracts(prev =>
@@ -525,6 +575,168 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, 600);
   };
 
+  // Fault Diagnosis handlers
+  const createDiagnosisTask = (task: DiagnosisTask) => {
+    setDiagnosisTasks(prev => [task, ...prev]);
+    setActiveDiagnosisTaskId(task.id);
+    if (task.status === 'DIAGNOSING') {
+      setTimeout(() => {
+        setDiagnosisTasks(prev =>
+          prev.map(t => {
+            if (t.id === task.id) {
+              return {
+                ...t,
+                status: 'COMPLETED' as const,
+                progress: 100,
+                completedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                currentStepDescription: 'AI 诊断推理与 SOP 检索匹配完成'
+              };
+            }
+            return t;
+          })
+        );
+      }, 2500);
+    }
+  };
+
+  const giveDiagnosisFeedback = (
+    taskId: string,
+    isThumbsUp: boolean,
+    negativeDetails?: {
+      verifiedRootCause: string;
+      reasonCategory: string;
+      remarks: string;
+      engineerName: string;
+    }
+  ) => {
+    setDiagnosisTasks(prev =>
+      prev.map(t => {
+        if (t.id === taskId && t.result) {
+          return {
+            ...t,
+            result: {
+              ...t.result,
+              feedback: {
+                type: isThumbsUp ? 'THUMBS_UP' : 'THUMBS_DOWN',
+                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                userName: negativeDetails?.engineerName || currentUser.name,
+                correctRootCause: negativeDetails?.verifiedRootCause,
+                feedbackNotes: negativeDetails?.remarks
+              }
+            }
+          };
+        }
+        return t;
+      })
+    );
+
+    setFeedbackStats(prev => ({
+      ...prev,
+      thumbsUpCount: isThumbsUp ? prev.thumbsUpCount + 1 : prev.thumbsUpCount,
+      thumbsDownCount: !isThumbsUp ? prev.thumbsDownCount + 1 : prev.thumbsDownCount
+    }));
+  };
+
+  const transferDiagnosisToCase = (taskId: string, caseData: Partial<SimilarCase>) => {
+    const caseNo = caseData.caseNo || `CASE-${new Date().getFullYear()}-${String(caseLibrary.length + 1).padStart(3, '0')}`;
+    setDiagnosisTasks(prev =>
+      prev.map(t => {
+        if (t.id === taskId && t.result) {
+          return {
+            ...t,
+            result: {
+              ...t.result,
+              isTransferredToCase: true,
+              transferredCaseNo: caseNo
+            }
+          };
+        }
+        return t;
+      })
+    );
+
+    const newCase: SimilarCase = {
+      id: `case-${Date.now()}`,
+      caseNo,
+      title: caseData.title || 'AI 诊断沉淀经验案例',
+      siteName: caseData.siteName || '目标储能站',
+      deviceModel: caseData.deviceModel || 'PCS-2500KTL / 280Ah 磷酸铁锂',
+      faultCategory: caseData.faultCategory || '变流器故障',
+      rootCause: caseData.rootCause || '由 AI 诊断自动沉淀',
+      symptomDescription: caseData.symptomDescription || '异常特征已归档',
+      resolutionSteps: caseData.resolutionSteps || '按照推荐 SOP 执行消缺',
+      outcome: caseData.outcome || '消缺完成，设备并网运行正常，SLA 恢复',
+      mttrMinutes: caseData.mttrMinutes || 45,
+      similarityScore: 100,
+      matchDimensions: caseData.matchDimensions || ['同类拓扑架构', '相同告警根因', '同型号部件'],
+      source: 'TRANSFERRED',
+      createdAt: new Date().toISOString().substring(0, 10),
+      createdBy: currentUser.name
+    };
+
+    setCaseLibrary(prev => [newCase, ...prev]);
+    setFeedbackStats(prev => ({
+      ...prev,
+      transferredCasesCount: prev.transferredCasesCount + 1
+    }));
+  };
+
+  const transferDiagnosisToWorkOrder = (taskId: string, workOrderData: Partial<WorkOrder>) => {
+    const woNo = workOrderData.orderNo || `WO-DIAG-${Date.now().toString().slice(-6)}`;
+    setDiagnosisTasks(prev =>
+      prev.map(t => {
+        if (t.id === taskId && t.result) {
+          return {
+            ...t,
+            result: {
+              ...t.result,
+              isTransferredToWorkOrder: true,
+              transferredWorkOrderNo: woNo
+            }
+          };
+        }
+        return t;
+      })
+    );
+
+    const targetSite = sites.find(s => s.id === (workOrderData.siteId || selectedSiteId));
+    const newWo: WorkOrder = {
+      id: `wo-${Date.now()}`,
+      orderNo: woNo,
+      siteId: workOrderData.siteId || selectedSiteId,
+      siteName: workOrderData.siteName || targetSite?.siteName || '目标储能电站',
+      customer: workOrderData.customer || targetSite?.customer || '华东电力新能源',
+      contractNo: workOrderData.contractNo || targetSite?.contractNo || 'CT-2024-001',
+      title: workOrderData.title || 'AI 诊断现场消缺工单',
+      priority: workOrderData.priority || 'URGENT',
+      status: 'PROCESSING',
+      faultCategory: workOrderData.faultCategory || '变流器电气系统',
+      assignee: workOrderData.assignee || '现场值班工程师',
+      createTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      description: workOrderData.description || '由 AI 故障诊断中心一键下发至 PCare 系统'
+    };
+
+    setWorkOrders(prev => [newWo, ...prev]);
+    setFeedbackStats(prev => ({
+      ...prev,
+      transferredWorkOrdersCount: prev.transferredWorkOrdersCount + 1
+    }));
+  };
+
+  const addCaseToLibrary = (newCase: SimilarCase) => {
+    setCaseLibrary(prev => [newCase, ...prev]);
+  };
+
+  const addSopToLibrary = (newSop: SopItem) => {
+    setSopLibrary(prev => [newSop, ...prev]);
+  };
+
+  const updateSopInLibrary = (sopId: string, updated: Partial<SopItem>) => {
+    setSopLibrary(prev =>
+      prev.map(s => (s.id === sopId ? { ...s, ...updated, updatedAt: new Date().toISOString().substring(0, 10) } : s))
+    );
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -557,8 +769,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateSiteRedundancy,
         importLogBatch,
         generateReport,
+        addReportItem,
         sendChatMessage,
         syncContracts,
+        diagnosisTasks,
+        activeDiagnosisTaskId,
+        setActiveDiagnosisTaskId,
+        caseLibrary,
+        sopLibrary,
+        feedbackStats,
+        createDiagnosisTask,
+        giveDiagnosisFeedback,
+        transferDiagnosisToCase,
+        transferDiagnosisToWorkOrder,
+        addCaseToLibrary,
+        addSopToLibrary,
+        updateSopInLibrary,
         reliabilityWeights,
         setReliabilityWeights,
         networkKpi: NETWORK_KPI,

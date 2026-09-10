@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Site, MergedFault, RawEvent } from '../../types';
+import { useApp } from '../../context/AppContext';
+import { NewDiagnosisWizardModal } from '../diagnosis/NewDiagnosisWizardModal';
 import {
   Clock,
   AlertTriangle,
@@ -23,10 +25,12 @@ interface MergedFaultsTabProps {
 }
 
 export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({ site, onNavigateTab }) => {
+  const { createDiagnosisTask, setActiveDiagnosisTaskId, setActiveTab } = useApp();
   const [expandedFaults, setExpandedFaults] = useState<Record<string, boolean>>({
     'fault-001': true
   });
   const [modalFault, setModalFault] = useState<MergedFault | null>(null);
+  const [diagnosisFault, setDiagnosisFault] = useState<MergedFault | null>(null);
 
   const toggleFaultExpand = (faultId: string) => {
     setExpandedFaults(prev => ({
@@ -129,6 +133,14 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({ site, onNaviga
                   </div>
 
                   <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                    <button
+                      onClick={() => setDiagnosisFault(fault)}
+                      className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded text-xs font-bold shadow-xs flex items-center gap-1 transition-colors"
+                      title="调用 AI 诊断引擎分析本次停机故障根因与匹配 SOP"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>AI 故障诊断</span>
+                    </button>
                     <button
                       onClick={() => setModalFault(fault)}
                       className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-xs font-semibold border border-blue-200 flex items-center gap-1 transition-colors"
@@ -354,6 +366,27 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({ site, onNaviga
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Fault Diagnosis Modal */}
+      {diagnosisFault && (
+        <NewDiagnosisWizardModal
+          initialSiteId={site.id}
+          initialEvent={{
+            eventId: diagnosisFault.id,
+            eventTitle: `${diagnosisFault.title} (${diagnosisFault.faultCode})`,
+            eventType: 'fault',
+            eventTime: diagnosisFault.startTime,
+            severity: 'CRITICAL',
+            description: `等效 PCS 中断 ${diagnosisFault.equivalentInterruptionMinutes} 分钟，起止: ${diagnosisFault.startTime} ~ ${diagnosisFault.endTime}。根因初步定性: ${diagnosisFault.rootCause}`
+          }}
+          onClose={() => setDiagnosisFault(null)}
+          onLaunchTask={newTask => {
+            createDiagnosisTask(newTask);
+            setActiveDiagnosisTaskId(newTask.id);
+            setActiveTab('fault_diagnosis');
+          }}
+        />
       )}
     </div>
   );
