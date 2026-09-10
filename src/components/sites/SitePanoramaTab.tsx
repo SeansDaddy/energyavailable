@@ -242,7 +242,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
                       dataKey="date"
                       stroke="#94a3b8"
                       tick={{ fontSize: 10 }}
-                      tickFormatter={val => val.slice(-5)}
+                      tickFormatter={val => (val ? String(val).slice(-5) : '')}
                     />
                     <YAxis domain={[97.0, 100]} stroke="#94a3b8" tick={{ fontSize: 10 }} />
                     <Tooltip

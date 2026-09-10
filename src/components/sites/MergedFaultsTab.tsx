@@ -245,7 +245,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({ site, onNaviga
                   <div>
                     <span className="text-slate-400">起止时间</span>
                     <div className="font-mono font-medium text-slate-800 mt-0.5">
-                      {modalFault.startTime} ~ {modalFault.endTime.slice(-5)}
+                      {modalFault.startTime} ~ {modalFault.endTime ? modalFault.endTime.slice(-5) : '处理中'}
                     </div>
                   </div>
                   <div>

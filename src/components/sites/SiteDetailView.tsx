@@ -56,10 +56,10 @@ export const SiteDetailView: React.FC = () => {
   );
   const siteOrders = workOrders.filter(
     w =>
-      w.siteId === site.id ||
-      w.siteName === site.siteName ||
-      w.contractNo === site.contractNo ||
-      w.siteName.includes(site.siteName.slice(0, 4))
+      (w.siteId && site.id && w.siteId === site.id) ||
+      (w.siteName && site.siteName && w.siteName === site.siteName) ||
+      (w.contractNo && site.contractNo && w.contractNo === site.contractNo) ||
+      (Boolean(site?.siteName && w?.siteName && site.siteName.length >= 2 && w.siteName.includes(site.siteName.slice(0, 4))))
   );
 
   const isBreached = site.currentAvailability < site.slaThreshold;

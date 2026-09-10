@@ -24,9 +24,10 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
   // Filter work orders related to this site or its contract
   const siteOrders = workOrders.filter(
     wo =>
-      wo.siteName === site.siteName ||
-      wo.contractNo === site.contractNo ||
-      wo.siteName.includes(site.siteName.slice(0, 4))
+      (wo.siteId && site.id && wo.siteId === site.id) ||
+      (wo.siteName && site.siteName && wo.siteName === site.siteName) ||
+      (wo.contractNo && site.contractNo && wo.contractNo === site.contractNo) ||
+      (Boolean(site?.siteName && wo?.siteName && site.siteName.length >= 2 && wo.siteName.includes(site.siteName.slice(0, 4))))
   );
 
   return (
@@ -200,7 +201,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
                     </div>
                     <span className="font-semibold text-slate-800 mt-1">创建派单</span>
                     <span className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {selectedOrder.createdAt.slice(-5)}
+                      {selectedOrder.createTime ? selectedOrder.createTime.slice(-5) : '--:--'}
                     </span>
                   </div>
 
@@ -212,7 +213,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
                     </div>
                     <span className="font-semibold text-slate-800 mt-1">现场接单排查</span>
                     <span className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {selectedOrder.assignee}
+                      {selectedOrder.assignee || '运维工程师'}
                     </span>
                   </div>
 
@@ -224,7 +225,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
                     </div>
                     <span className="font-bold text-emerald-700 mt-1">方案输出闭环</span>
                     <span className="text-[10px] text-emerald-600 font-mono font-semibold mt-0.5">
-                      {selectedOrder.solutionReadyAt ? selectedOrder.solutionReadyAt.slice(-5) : '待输出'}
+                      {selectedOrder.solutionTime ? selectedOrder.solutionTime.slice(-5) : '待输出'}
                     </span>
                   </div>
 
@@ -236,7 +237,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
                     </div>
                     <span className="font-semibold text-slate-500 mt-1">最终消缺归档</span>
                     <span className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {selectedOrder.fullyClosedAt ? selectedOrder.fullyClosedAt.slice(-5) : '平台待结'}
+                      {selectedOrder.closeTime ? selectedOrder.closeTime.slice(-5) : '平台待结'}
                     </span>
                   </div>
                 </div>
@@ -267,13 +268,13 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
                 <div>
                   <span className="text-slate-500">创建时间</span>
                   <div className="font-bold text-slate-800 font-mono mt-0.5">
-                    {selectedOrder.createdAt}
+                    {selectedOrder.createTime || '--'}
                   </div>
                 </div>
                 <div>
                   <span className="text-slate-500">R4 闭环判定时刻</span>
                   <div className="font-bold text-emerald-600 font-mono mt-0.5">
-                    {selectedOrder.solutionReadyAt || '未达方案输出阶段'}
+                    {selectedOrder.solutionTime || '未达方案输出阶段'}
                   </div>
                 </div>
               </div>

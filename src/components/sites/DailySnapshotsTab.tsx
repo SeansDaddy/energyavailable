@@ -108,7 +108,7 @@ export const DailySnapshotsTab: React.FC<DailySnapshotsTabProps> = ({
                 dataKey="date"
                 stroke="#94a3b8"
                 tick={{ fontSize: 11 }}
-                tickFormatter={val => val.slice(5)}
+                tickFormatter={val => (val ? String(val).slice(5) : '')}
               />
               <YAxis domain={[96.0, 100]} stroke="#94a3b8" tick={{ fontSize: 11 }} />
               <Tooltip

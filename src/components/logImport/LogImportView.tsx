@@ -364,7 +364,7 @@ export const LogImportView: React.FC = () => {
                   </td>
                   <td className="py-3 px-3 text-slate-900 font-semibold">{b.siteName}</td>
                   <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
-                    {b.periodStart.slice(0, 10)} ~ {b.periodEnd.slice(0, 10)}
+                    {b.periodStart ? b.periodStart.slice(0, 10) : '-'} ~ {b.periodEnd ? b.periodEnd.slice(0, 10) : '-'}
                   </td>
                   <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">{b.importTime}</td>
                   <td className="py-3 px-3">
