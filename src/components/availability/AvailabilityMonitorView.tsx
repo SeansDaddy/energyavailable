@@ -4,51 +4,72 @@ import { StatusLampBadge } from '../common/StatusBadge';
 import {
   Activity,
   Calendar,
-  Filter,
   Search,
-  SlidersHorizontal,
-  Clock,
-  Layers,
-  ChevronRight,
-  TrendingDown,
+  AlertTriangle,
   TrendingUp,
-  AlertOctagon,
-  Sparkles
+  TrendingDown,
+  Layers,
+  ShieldCheck,
+  ArrowUpRight,
+  Database
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ReferenceLine
-} from 'recharts';
 
 export const AvailabilityMonitorView: React.FC = () => {
-  const { sites, navigateToSiteDetail, setActiveTab } = useApp();
+  const { sites, navigateToSiteDetail } = useApp();
 
-  const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [regionFilter, setRegionFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Selected site for interactive curve inspection
-  const [activeSiteForChart, setActiveSiteForChart] = useState<string>(sites[0].id);
+  // 1. Core Summary Metrics
+  const totalSites = sites.length;
+  const totalCapacityMw = sites.reduce((sum, s) => sum + (s.capacityMw || 0), 0);
 
-  const inspectedSite = sites.find(s => s.id === activeSiteForChart) || sites[0];
+  const avgAvailability =
+    totalSites > 0
+      ? Number((sites.reduce((sum, s) => sum + s.currentAvailability, 0) / totalSites).toFixed(2))
+      : 0;
 
-  // Aggregated data for Daily Snapshots
-  const chartData = inspectedSite.dailySnapshots.map(snap => ({
-    date: snap.date,
-    availability: snap.availability,
-    slaThreshold: snap.slaThreshold,
-    eventsCount: snap.events.length,
-    events: snap.events
-  }));
+  const weightedAvgAvailability =
+    totalCapacityMw > 0
+      ? Number(
+          (
+            sites.reduce((sum, s) => sum + s.currentAvailability * (s.capacityMw || 0), 0) /
+            totalCapacityMw
+          ).toFixed(2)
+        )
+      : avgAvailability;
 
+  const avgSla =
+    totalSites > 0
+      ? Number((sites.reduce((sum, s) => sum + s.slaThreshold, 0) / totalSites).toFixed(2))
+      : 0;
+
+  const overallGap = Number((avgAvailability - avgSla).toFixed(2));
+
+  const compliantSites = sites.filter(s => s.currentAvailability >= s.slaThreshold);
+  const complianceRate =
+    totalSites > 0 ? Number(((compliantSites.length / totalSites) * 100).toFixed(1)) : 0;
+
+  // Four-color status lamp counts
+  const greenCount = sites.filter(s => s.statusLamp === 'green').length;
+  const yellowCount = sites.filter(s => s.statusLamp === 'yellow').length;
+  const redCount = sites.filter(s => s.statusLamp === 'red').length;
+  const greyCount = sites.filter(s => s.statusLamp === 'grey').length;
+
+  const atRiskCount = yellowCount + redCount;
+
+  // Data health
+  const avgCoverage =
+    totalSites > 0
+      ? Number((sites.reduce((sum, s) => sum + s.dataCoverage, 0) / totalSites).toFixed(1))
+      : 0;
+  const fullCoverageSites = sites.filter(s => s.dataCoverage >= 98).length;
+
+  const regionList = Array.from(new Set(sites.map(s => s.region)));
+
+  // Filtered Sites for Table
   const filteredSites = sites.filter(s => {
     if (regionFilter !== 'ALL' && s.region !== regionFilter) return false;
     if (statusFilter !== 'ALL' && s.statusLamp !== statusFilter) return false;
@@ -77,7 +98,7 @@ export const AvailabilityMonitorView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            动态汇总各站点每日可用度打点与关键事件快照（告警、工单闭环、日志导入、预警触发）。
+            动态汇总全网各站点可用度达标情况、四色状态分布、大区质量对比及履约预警指标。
           </p>
         </div>
 
@@ -99,182 +120,181 @@ export const AvailabilityMonitorView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Interactive Chart: Daily Snapshot Trend with Event Markers */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-slate-900">
-                站点可用度趋势走势与关键事件打点快照
-              </h2>
-              <span className="text-xs font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-semibold">
-                当前选中: {inspectedSite.siteName}
-              </span>
+      {/* 1. Core Network Availability Statistical Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Metric Card 1: Network Average Availability */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">全网综合可用度</span>
+            <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+              <Activity className="w-4 h-4" />
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              点击下方表格任意行可切换折线图对比对象。打点包含当日可用度及重要工单/告警/批次事件。
-            </p>
           </div>
-
-          {/* Granularity Switcher */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
-            <button
-              onClick={() => setGranularity('day')}
-              className={`px-3 py-1 rounded font-semibold transition-colors ${
-                granularity === 'day'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {avgAvailability}%
+            </span>
+            <span
+              className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded ${
+                overallGap >= 0
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
               }`}
             >
-              日打点 (Day)
-            </button>
-            <button
-              onClick={() => setGranularity('week')}
-              className={`px-3 py-1 rounded font-semibold transition-colors ${
-                granularity === 'week'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              周汇总 (Week)
-            </button>
-            <button
-              onClick={() => setGranularity('month')}
-              className={`px-3 py-1 rounded font-semibold transition-colors ${
-                granularity === 'month'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              月走势 (Month)
-            </button>
+              {overallGap >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {overallGap >= 0 ? `+${overallGap}%` : `${overallGap}%`}
+            </span>
+          </div>
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>全网平均 SLA: <strong className="text-slate-700 font-mono">{avgSla}%</strong></span>
+            <span>容量加权: <strong className="text-blue-600 font-mono">{weightedAvgAvailability}%</strong></span>
           </div>
         </div>
 
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis
-                dataKey="date"
-                stroke="#94a3b8"
-                tick={{ fontSize: 11 }}
-                tickFormatter={val => (val ? String(val).slice(-5) : '')}
-              />
-              <YAxis domain={[97.0, 100]} stroke="#94a3b8" tick={{ fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderColor: '#e2e8f0',
-                  borderRadius: '0.375rem',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                }}
-                formatter={(val: any, name: string) => [
-                  `${val}%`,
-                  name === 'availability' ? '当日实际可用度' : 'SLA 阈值'
-                ]}
-              />
-              <ReferenceLine
-                y={inspectedSite.slaThreshold}
-                stroke="#ef4444"
-                strokeDasharray="4 4"
-                label={{
-                  value: `SLA ${inspectedSite.slaThreshold}%`,
-                  fill: '#ef4444',
-                  fontSize: 10,
-                  position: 'right'
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="availability"
-                stroke="#2563eb"
-                strokeWidth={2.5}
-                dot={props => {
-                  const { cx, cy, payload } = props;
-                  const hasEvents = payload.eventsCount > 0;
-                  if (hasEvents) {
-                    return (
-                      <circle
-                        key={payload.date}
-                        cx={cx}
-                        cy={cy}
-                        r={5}
-                        fill="#ef4444"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      />
-                    );
-                  }
-                  return (
-                    <circle
-                      key={payload.date}
-                      cx={cx}
-                      cy={cy}
-                      r={3}
-                      fill="#2563eb"
-                    />
-                  );
-                }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Event Legend & Status Description */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-              <span>正常打点</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-red-500 border border-white" />
-              <span>当日关键事件快照 (告警/工单闭环/预警)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-0.5 bg-red-500 border-b border-dashed" />
-              <span>合同 SLA 阈值红线</span>
+        {/* Metric Card 2: SLA Compliance Rate */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">SLA 履约达标率</span>
+            <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+              <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {complianceRate}%
+            </span>
+            <span className="text-xs text-slate-500">
+              ({compliantSites.length}/{totalSites} 站达标)
+            </span>
+          </div>
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">总监控规模:</span>
+            <span className="font-semibold text-slate-800 font-mono">
+              {totalSites} 站 / {totalCapacityMw} MW
+            </span>
+          </div>
+        </div>
 
-          <div className="text-slate-500">
-            数据更新机制: 日志导入即时重算 · PCare 离线报表批量导入 · 每日 00:00 自动打点
+        {/* Metric Card 3: Four-Color Status Lamps */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">四色状态灯分布</span>
+            <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
+              <Layers className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-center gap-1.5">
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'green' ? 'ALL' : 'green')}
+              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
+                statusFilter === 'green'
+                  ? 'bg-emerald-100 border-emerald-400 font-bold'
+                  : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100/60'
+              }`}
+              title="点击按绿灯筛选"
+            >
+              <div className="text-[10px] text-emerald-700 font-medium">🟢 达标</div>
+              <div className="text-sm font-bold text-emerald-800 font-mono">{greenCount}</div>
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'yellow' ? 'ALL' : 'yellow')}
+              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
+                statusFilter === 'yellow'
+                  ? 'bg-amber-100 border-amber-400 font-bold'
+                  : 'bg-amber-50 border-amber-200 hover:bg-amber-100/60'
+              }`}
+              title="点击按黄灯筛选"
+            >
+              <div className="text-[10px] text-amber-700 font-medium">🟡 预警</div>
+              <div className="text-sm font-bold text-amber-800 font-mono">{yellowCount}</div>
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'red' ? 'ALL' : 'red')}
+              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
+                statusFilter === 'red'
+                  ? 'bg-red-100 border-red-400 font-bold'
+                  : 'bg-red-50 border-red-200 hover:bg-red-100/60'
+              }`}
+              title="点击按红灯筛选"
+            >
+              <div className="text-[10px] text-red-700 font-medium">🔴 跌破</div>
+              <div className="text-sm font-bold text-red-800 font-mono">{redCount}</div>
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'grey' ? 'ALL' : 'grey')}
+              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
+                statusFilter === 'grey'
+                  ? 'bg-slate-200 border-slate-400 font-bold'
+                  : 'bg-slate-100 border-slate-200 hover:bg-slate-200/60'
+              }`}
+              title="点击按灰灯筛选"
+            >
+              <div className="text-[10px] text-slate-600 font-medium">⚪ 断供</div>
+              <div className="text-sm font-bold text-slate-700 font-mono">{greyCount}</div>
+            </button>
+          </div>
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>重点干预风险站:</span>
+            <strong className={atRiskCount > 0 ? 'text-amber-600' : 'text-slate-700'}>
+              {atRiskCount} 站 ({totalSites > 0 ? ((atRiskCount / totalSites) * 100).toFixed(0) : 0}%)
+            </strong>
+          </div>
+        </div>
+
+        {/* Metric Card 4: Data Coverage & Health */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">数据采集覆盖率</span>
+            <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+              <Database className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {avgCoverage}%
+            </span>
+            <span className="text-xs text-slate-500">
+              ({fullCoverageSites}/{totalSites} 站完整)
+            </span>
+          </div>
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>数据更新机制:</span>
+            <span className="text-indigo-600 font-medium">5min 打点 / 日界重算</span>
           </div>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white border border-slate-200 p-4 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
+      <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-500">区域选择:</span>
+            <span className="text-slate-500 font-medium">区域选择:</span>
             <select
               value={regionFilter}
               onChange={e => setRegionFilter(e.target.value)}
-              className="bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500"
+              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500"
             >
-              <option value="ALL">全部区域</option>
-              <option value="华东区">华东区</option>
-              <option value="华南区">华南区</option>
-              <option value="华北区">华北区</option>
-              <option value="西北区">西北区</option>
+              <option value="ALL">全部区域 ({totalSites} 站)</option>
+              {regionList.map(r => (
+                <option key={r} value={r}>
+                  {r} ({sites.filter(s => s.region === r).length} 站)
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-500">四色状态灯:</span>
+            <span className="text-slate-500 font-medium">四色状态灯:</span>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500"
+              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500"
             >
-              <option value="ALL">全部状态灯</option>
-              <option value="green">🟢 绿灯 - SLA 达标</option>
-              <option value="yellow">🟡 黄灯 - 预测将跌破</option>
-              <option value="red">🔴 红灯 - 已跌破 SLA</option>
-              <option value="grey">⚪ 灰灯 - 数据断供</option>
+              <option value="ALL">全部状态灯 ({totalSites})</option>
+              <option value="green">🟢 绿灯 - SLA 达标 ({greenCount})</option>
+              <option value="yellow">🟡 黄灯 - 预测将跌破 ({yellowCount})</option>
+              <option value="red">🔴 红灯 - 已跌破 SLA ({redCount})</option>
+              <option value="grey">⚪ 灰灯 - 数据断供 ({greyCount})</option>
             </select>
           </div>
 
@@ -285,18 +305,31 @@ export const AvailabilityMonitorView: React.FC = () => {
               placeholder="搜索站点名称 / 编码 / 客户..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="bg-white border border-slate-300 rounded pl-8 pr-3 py-1.5 text-slate-800 w-56 focus:outline-none focus:border-blue-500"
+              className="bg-white border border-slate-300 rounded-lg pl-8 pr-3 py-1.5 text-slate-800 w-56 focus:outline-none focus:border-blue-500"
             />
           </div>
+
+          {(regionFilter !== 'ALL' || statusFilter !== 'ALL' || searchTerm) && (
+            <button
+              onClick={() => {
+                setRegionFilter('ALL');
+                setStatusFilter('ALL');
+                setSearchTerm('');
+              }}
+              className="text-xs text-blue-600 hover:text-blue-700 underline font-medium"
+            >
+              重置筛选
+            </button>
+          )}
         </div>
 
         <span className="text-slate-500">
-          共筛选出 <strong className="text-blue-600 font-semibold">{filteredSites.length}</strong> 个监控站点
+          共筛选出 <strong className="text-blue-600 font-semibold">{filteredSites.length}</strong> / {totalSites} 个监控站点
         </span>
       </div>
 
       {/* Sites Availability Detail Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left text-xs text-slate-700">
           <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase font-bold tracking-wider border-b border-slate-200">
             <tr>
@@ -314,15 +347,12 @@ export const AvailabilityMonitorView: React.FC = () => {
           <tbody className="divide-y divide-slate-100">
             {filteredSites.map(s => {
               const gapVal = Number((s.currentAvailability - s.slaThreshold).toFixed(2));
-              const isSelectedForChart = s.id === activeSiteForChart;
 
               return (
                 <tr
                   key={s.id}
-                  onClick={() => setActiveSiteForChart(s.id)}
-                  className={`hover:bg-blue-50/50 cursor-pointer transition-colors ${
-                    isSelectedForChart ? 'bg-blue-50/60 border-l-4 border-blue-600' : ''
-                  }`}
+                  onClick={() => navigateToSiteDetail(s.id)}
+                  className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                 >
                   <td className="py-3 px-4">
                     <div className="font-semibold text-slate-900">{s.siteName}</div>
@@ -364,9 +394,10 @@ export const AvailabilityMonitorView: React.FC = () => {
                         e.stopPropagation();
                         navigateToSiteDetail(s.id);
                       }}
-                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-blue-600 border border-slate-200 rounded font-semibold text-xs transition-colors"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-blue-600 border border-slate-200 rounded font-semibold text-xs transition-colors inline-flex items-center gap-1"
                     >
-                      下钻详情 &rarr;
+                      <span>下钻详情</span>
+                      <ArrowUpRight className="w-3 h-3" />
                     </button>
                   </td>
                 </tr>
