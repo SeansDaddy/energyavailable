@@ -20,7 +20,8 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Database,
-  HeartPulse
+  HeartPulse,
+  Zap
 } from 'lucide-react';
 
 import { SitePanoramaTab } from './SitePanoramaTab';
@@ -69,7 +70,7 @@ export const SiteDetailView: React.FC = () => {
   // 7-Layer Site-Centric Drilldown Hierarchy
   const tabs = [
     { id: 0, label: '1. 站点全景态势', icon: Activity },
-    { id: 1, label: '2. 逐日打点下钻 (R7)', icon: Calendar, count: site.dailySnapshots?.length || 30 },
+    { id: 1, label: '2. 5分钟打点与逐日下钻 (R7)', icon: Zap, count: 288 },
     { id: 2, label: '3. 故障因果链 (R11)', icon: Clock, count: site.mergedFaults?.length || 0 },
     { id: 3, label: '4. 核心设备与拓扑 (R2)', icon: Cpu, count: site.coreDevices?.length || 0 },
     { id: 4, label: '5. PCare 工单闭环 (R4)', icon: Wrench, count: siteOrders.length },
@@ -263,6 +264,7 @@ export const SiteDetailView: React.FC = () => {
       {siteDetailTab === 0 && (
         <SitePanoramaTab
           site={site}
+          workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
           onNavigateTab={idx => setSiteDetailTab(idx)}
           onSelectDay={handleSelectDay}
         />
@@ -272,6 +274,7 @@ export const SiteDetailView: React.FC = () => {
       {siteDetailTab === 1 && (
         <DailySnapshotsTab
           site={site}
+          workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
           selectedDate={selectedDrilldownDate}
           onSelectDate={date => setSelectedDrilldownDate(date)}
           onNavigateTab={idx => setSiteDetailTab(idx)}

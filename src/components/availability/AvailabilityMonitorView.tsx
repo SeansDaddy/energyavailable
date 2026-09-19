@@ -240,7 +240,7 @@ export const AvailabilityMonitorView: React.FC = () => {
           </div>
 
           <div className="text-slate-500">
-            数据更新机制: 日志导入即时重算 · PCare 工单准实时同步 · 每日 00:00 自动打点
+            数据更新机制: 日志导入即时重算 · PCare 离线报表批量导入 · 每日 00:00 自动打点
           </div>
         </div>
       </div>

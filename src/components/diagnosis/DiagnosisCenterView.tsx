@@ -21,33 +21,42 @@ import { NewDiagnosisWizardModal } from './NewDiagnosisWizardModal';
 export const DiagnosisCenterView: React.FC = () => {
   const { diagnosisTasks, createDiagnosisTask, activeDiagnosisTaskId, setActiveDiagnosisTaskId } = useApp();
 
-  // Internal tab: 'TASKS' | 'DETAIL' | 'CASES' | 'SOPS'
+  // Selected task state: defaults to activeDiagnosisTaskId if provided, otherwise null
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(activeDiagnosisTaskId);
+
+  // SubTab: only 'DETAIL' if a specific task was chosen for viewing details
   const [activeSubTab, setActiveSubTab] = useState<'TASKS' | 'DETAIL' | 'CASES' | 'SOPS'>(
     activeDiagnosisTaskId ? 'DETAIL' : 'TASKS'
   );
 
-  const [selectedTask, setSelectedTask] = useState<DiagnosisTask>(
-    diagnosisTasks.find(t => t.id === activeDiagnosisTaskId) || diagnosisTasks[0]
-  );
+  const selectedTask = diagnosisTasks.find(t => t.id === selectedTaskId) || null;
 
   const [showWizardModal, setShowWizardModal] = useState(false);
 
+  // When user clicks "查看详情" on a diagnosis task
   const handleSelectTask = (task: DiagnosisTask) => {
-    setSelectedTask(task);
+    setSelectedTaskId(task.id);
     setActiveDiagnosisTaskId(task.id);
     setActiveSubTab('DETAIL');
   };
 
+  // When user clicks "返回任务列表"
+  const handleBackToTaskList = () => {
+    setActiveSubTab('TASKS');
+    setSelectedTaskId(null);
+    setActiveDiagnosisTaskId(null);
+  };
+
   const handleLaunchTask = (newTask: DiagnosisTask) => {
     createDiagnosisTask(newTask);
-    setSelectedTask(newTask);
+    setSelectedTaskId(newTask.id);
     setActiveDiagnosisTaskId(newTask.id);
     setActiveSubTab('DETAIL');
   };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
-      {/* Top Header & Sub-Navigation Tabs */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -60,26 +69,26 @@ export const DiagnosisCenterView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            缩短从异常告警到消缺闭环的时间窗，输出根因定性、标准处理方案 (SOP) 推荐与相似案例参考
+            缩短从异常告警到消缺闭环的时间窗，融合 SOP 标准方案库与相似案例库多维辅助分析，实现精准根因定性与高效消缺
           </p>
         </div>
 
         {/* Action Button: 发起诊断 */}
         <button
           onClick={() => setShowWizardModal(true)}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-blue-500/20 shrink-0 self-start sm:self-auto"
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-blue-500/20 shrink-0 self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>新建诊断任务</span>
         </button>
       </div>
 
-      {/* Sub Navigation Bar (4 Pages from 4.12.8) */}
+      {/* Sub Navigation Bar - Detail tab only appears when viewing task detail */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto border-b border-slate-200 pb-1">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setActiveSubTab('TASKS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            onClick={handleBackToTaskList}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
               activeSubTab === 'TASKS'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -89,23 +98,22 @@ export const DiagnosisCenterView: React.FC = () => {
             <span>诊断任务列表 ({diagnosisTasks.length})</span>
           </button>
 
-          {selectedTask && (
+          {/* 只有在查看具体任务详情时才出现“诊断结果详情”选项卡 */}
+          {activeSubTab === 'DETAIL' && selectedTask && (
             <button
               onClick={() => setActiveSubTab('DETAIL')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-                activeSubTab === 'DETAIL'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-blue-600 text-white shadow-xs cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>诊断结果详情 · {selectedTask.siteName}</span>
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>诊断结果详情 · {selectedTask.siteName} ({selectedTask.taskNo})</span>
             </button>
           )}
 
           <button
-            onClick={() => setActiveSubTab('CASES')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            onClick={() => {
+              setActiveSubTab('CASES');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
               activeSubTab === 'CASES'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -116,8 +124,10 @@ export const DiagnosisCenterView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveSubTab('SOPS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            onClick={() => {
+              setActiveSubTab('SOPS');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
               activeSubTab === 'SOPS'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -131,11 +141,11 @@ export const DiagnosisCenterView: React.FC = () => {
         {/* Quick breadcrumb indicator if in detail */}
         {activeSubTab === 'DETAIL' && (
           <button
-            onClick={() => setActiveSubTab('TASKS')}
-            className="text-xs text-slate-500 hover:text-blue-600 font-semibold flex items-center gap-1 shrink-0"
+            onClick={handleBackToTaskList}
+            className="text-xs text-slate-600 hover:text-blue-600 font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition shrink-0 cursor-pointer"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>返回任务列表</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>返回诊断任务列表</span>
           </button>
         )}
       </div>
@@ -149,10 +159,10 @@ export const DiagnosisCenterView: React.FC = () => {
           />
         )}
 
-        {activeSubTab === 'DETAIL' && (
+        {activeSubTab === 'DETAIL' && selectedTask && (
           <DiagnosisResultDetailView
             task={selectedTask}
-            onBackToTaskList={() => setActiveSubTab('TASKS')}
+            onBackToTaskList={handleBackToTaskList}
             onNavigateToCaseLibrary={() => setActiveSubTab('CASES')}
             onNavigateToSopLibrary={() => setActiveSubTab('SOPS')}
           />

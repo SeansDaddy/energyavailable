@@ -78,6 +78,26 @@ export interface MergedFault {
   rawEvents: RawEvent[];
 }
 
+export interface FiveMinAvailabilityPoint {
+  index: number; // 0 ~ 287 (288 points per day)
+  time: string; // "00:00", "00:05", ... "23:55"
+  timestamp: string; // "2026-08-15 09:15"
+  availability: number; // 0 ~ 100
+  status: 'NORMAL' | 'FAULT_TRIP' | 'DEGRADED' | 'MAINTENANCE' | 'WORKORDER_ACTIVE';
+  statusLabel: string;
+  pcsAvailableKw: number;
+  pcsTotalKw: number;
+  interruptionMins: number; // 0 ~ 5 分钟
+  hasFaultEvent?: boolean;
+  faultEventTitle?: string;
+  faultEventCode?: string;
+  isWorkOrderActive?: boolean;
+  workOrderNo?: string;
+  workOrderStatus?: string;
+  isExempt?: boolean; // 是否免责
+  cumulativeDayAvailability: number; // 当日累计可用度
+}
+
 export interface DailySnapshot {
   date: string;
   siteId: string;
@@ -182,6 +202,25 @@ export interface WorkOrder {
   assignee: string;
   description: string;
   solutionSummary?: string;
+  importBatchNo?: string; // PCare 离线报表导入批次编号
+  importedAt?: string; // 导入时间
+  source?: 'PCARE_IMPORT' | 'AI_DIAGNOSIS_DISPATCH' | 'MANUAL'; // 来源说明
+  rawPcareStatus?: string; // PCare 原始工单状态字段
+}
+
+export interface PcareImportRecord {
+  id: string;
+  batchNo: string;
+  fileName: string;
+  fileSize?: string;
+  importTime: string;
+  operator: string;
+  totalParsedCount: number;
+  addedCount: number;
+  updatedCount: number;
+  solutionReadyCount: number; // 方案就绪闭环条数 (Rule R4)
+  status: 'SUCCESS' | 'FAILED' | 'PARTIAL';
+  remarks?: string;
 }
 
 export interface Contract {

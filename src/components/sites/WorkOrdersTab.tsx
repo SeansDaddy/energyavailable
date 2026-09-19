@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Site, WorkOrder } from '../../types';
+import { ImportPcareModal } from '../workOrders/ImportPcareModal';
 import {
   Wrench,
   Info,
@@ -10,7 +11,8 @@ import {
   User,
   X,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Upload
 } from 'lucide-react';
 
 interface WorkOrdersTabProps {
@@ -20,6 +22,7 @@ interface WorkOrdersTabProps {
 
 export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }) => {
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   // Filter work orders related to this site or its contract
   const siteOrders = workOrders.filter(
@@ -50,7 +53,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
           <div className="text-2xl font-black font-mono text-slate-900 mt-1">
             {siteOrders.length} <span className="text-xs text-slate-400 font-normal">单</span>
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">PCare 实时双向同步</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">PCare 离线报表批量导入</div>
         </div>
 
         <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
@@ -58,7 +61,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
           <div className="text-2xl font-black font-mono text-emerald-600 mt-1">
             {siteOrders.length > 0
               ? (
-                  (siteOrders.filter(o => o.status === 'CLOSED_SOLUTION_READY' || o.status === 'FULLY_CLOSED').length /
+                  (siteOrders.filter(o => o.status === 'SOLUTION_READY' || o.status === 'CLOSED').length /
                     siteOrders.length) *
                   100
                 ).toFixed(0)
@@ -79,16 +82,25 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
 
       {/* Work Orders List */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Wrench className="w-4 h-4 text-blue-600" />
               站点 PCare 现场运维工单台账 (点击查看全生命周期)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              关联合同: <strong className="font-mono text-slate-800">{site.contractNo}</strong>
+              关联合同: <strong className="font-mono text-slate-800">{site.contractNo}</strong> · 非直连模式（离线报表导入）
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="px-3 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            导入/更新 PCare 工单
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -291,6 +303,12 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
           </div>
         </div>
       )}
+
+      {/* PCare 导入弹窗 */}
+      <ImportPcareModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   );
 };

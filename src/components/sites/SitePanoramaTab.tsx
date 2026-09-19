@@ -1,6 +1,7 @@
 import React from 'react';
-import { Site, RedundancyLevel } from '../../types';
+import { Site, RedundancyLevel, WorkOrder } from '../../types';
 import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
+import { SitePanoramaTimelineChart } from './SitePanoramaTimelineChart';
 import {
   Activity,
   Shield,
@@ -39,12 +40,14 @@ import {
 
 interface SitePanoramaTabProps {
   site: Site;
+  workOrders?: WorkOrder[];
   onNavigateTab: (tabIdx: number) => void;
   onSelectDay?: (date: string) => void;
 }
 
 export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
   site,
+  workOrders = [],
   onNavigateTab,
   onSelectDay
 }) => {
@@ -385,6 +388,14 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Panoramic Timeline & Availability Conversion Chart: Fault Dots + PCare Work Orders Duration */}
+      <SitePanoramaTimelineChart
+        site={site}
+        workOrders={workOrders}
+        onNavigateTab={onNavigateTab}
+        onSelectDay={onSelectDay}
+      />
 
       {/* Subsystem Health Grid (Site Topology Core Layer) */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">

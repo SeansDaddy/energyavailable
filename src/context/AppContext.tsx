@@ -4,6 +4,7 @@ import {
   ImportBatch,
   AlertItem,
   WorkOrder,
+  PcareImportRecord,
   Contract,
   ReportItem,
   UserProfile,
@@ -17,6 +18,7 @@ import {
   INITIAL_ALERTS,
   INITIAL_BATCHES,
   INITIAL_WORK_ORDERS,
+  INITIAL_PCARE_IMPORT_HISTORY,
   INITIAL_CONTRACTS,
   INITIAL_REPORTS,
   INITIAL_CHAT_MESSAGES,
@@ -83,6 +85,12 @@ interface AppContextType {
   alerts: AlertItem[];
   batches: ImportBatch[];
   workOrders: WorkOrder[];
+  pcareImportHistory: PcareImportRecord[];
+  lastPcareImportTime: string;
+  importWorkOrders: (
+    newOrders: WorkOrder[],
+    batchMeta?: { batchNo?: string; fileName?: string; remarks?: string; fileSize?: string }
+  ) => { addedCount: number; updatedCount: number };
   contracts: Contract[];
   reports: ReportItem[];
   chatMessages: ChatMessage[];
@@ -165,13 +173,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [alerts, setAlerts] = useState<AlertItem[]>(INITIAL_ALERTS);
   const [batches, setBatches] = useState<ImportBatch[]>(INITIAL_BATCHES);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>(INITIAL_WORK_ORDERS);
+  const [pcareImportHistory, setPcareImportHistory] = useState<PcareImportRecord[]>(INITIAL_PCARE_IMPORT_HISTORY);
+  const [lastPcareImportTime, setLastPcareImportTime] = useState<string>('2026-09-08 17:35:20');
   const [contracts, setContracts] = useState<Contract[]>(INITIAL_CONTRACTS);
   const [reports, setReports] = useState<ReportItem[]>(INITIAL_REPORTS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
   
   // AI Fault Diagnosis State
   const [diagnosisTasks, setDiagnosisTasks] = useState<DiagnosisTask[]>(INITIAL_DIAGNOSIS_TASKS);
-  const [activeDiagnosisTaskId, setActiveDiagnosisTaskId] = useState<string | null>('diag-task-001');
+  const [activeDiagnosisTaskId, setActiveDiagnosisTaskId] = useState<string | null>(null);
   const [caseLibrary, setCaseLibrary] = useState<SimilarCase[]>(INITIAL_SIMILAR_CASES);
   const [sopLibrary, setSopLibrary] = useState<SopItem[]>(INITIAL_SOPS);
   const [feedbackStats, setFeedbackStats] = useState<DiagnosisFeedbackStats>(INITIAL_FEEDBACK_STATS);
@@ -723,6 +733,92 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   };
 
+  const importWorkOrders = (
+    newOrders: WorkOrder[],
+    batchMeta?: { batchNo?: string; fileName?: string; remarks?: string; fileSize?: string }
+  ) => {
+    const batchNo =
+      batchMeta?.batchNo ||
+      `PCare-Batch-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-2)}`;
+    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+    let addedCount = 0;
+    let updatedCount = 0;
+    let solutionReadyCount = 0;
+
+    setWorkOrders(prev => {
+      const existingMap = new Map<string, WorkOrder>();
+      prev.forEach(w => existingMap.set(w.orderNo, w));
+
+      newOrders.forEach(incoming => {
+        // 尝试自动对齐站点
+        const matchedSite = sites.find(
+          s =>
+            s.id === incoming.siteId ||
+            s.siteName === incoming.siteName ||
+            (incoming.siteName && s.siteName.includes(incoming.siteName.slice(0, 4)))
+        );
+
+        const isSolutionReady = incoming.status === 'SOLUTION_READY' || incoming.status === 'CLOSED';
+        if (isSolutionReady) {
+          solutionReadyCount++;
+        }
+
+        const enriched: WorkOrder = {
+          ...incoming,
+          id: incoming.id || `wo-imp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          siteId: matchedSite?.id || incoming.siteId || 'site-001',
+          siteName: matchedSite?.siteName || incoming.siteName || '目标储能电站',
+          customer: matchedSite?.customer || incoming.customer || '电网调度单位',
+          contractNo: matchedSite?.contractNo || incoming.contractNo || 'CT-SLA-DEFAULT',
+          importBatchNo: batchNo,
+          importedAt: nowStr,
+          source: 'PCARE_IMPORT',
+          rawPcareStatus:
+            incoming.rawPcareStatus ||
+            (incoming.status === 'SOLUTION_READY'
+              ? '已输出解决方案(待执行)'
+              : incoming.status === 'CLOSED'
+              ? '已归档完结'
+              : '现场处理中')
+        };
+
+        if (existingMap.has(incoming.orderNo)) {
+          existingMap.set(incoming.orderNo, {
+            ...existingMap.get(incoming.orderNo)!,
+            ...enriched
+          });
+          updatedCount++;
+        } else {
+          existingMap.set(incoming.orderNo, enriched);
+          addedCount++;
+        }
+      });
+
+      return Array.from(existingMap.values());
+    });
+
+    const newRecord: PcareImportRecord = {
+      id: `pcare-imp-${Date.now()}`,
+      batchNo,
+      fileName: batchMeta?.fileName || 'PCare_WorkOrders_Import.xlsx',
+      fileSize: batchMeta?.fileSize || '1.18 MB',
+      importTime: nowStr,
+      operator: currentUser.name,
+      totalParsedCount: newOrders.length,
+      addedCount,
+      updatedCount,
+      solutionReadyCount,
+      status: 'SUCCESS',
+      remarks: batchMeta?.remarks || 'PCare 离线单据导入入库'
+    };
+
+    setPcareImportHistory(prev => [newRecord, ...prev]);
+    setLastPcareImportTime(nowStr);
+
+    return { addedCount, updatedCount };
+  };
+
   const addCaseToLibrary = (newCase: SimilarCase) => {
     setCaseLibrary(prev => [newCase, ...prev]);
   };
@@ -757,6 +853,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         alerts,
         batches,
         workOrders,
+        pcareImportHistory,
+        lastPcareImportTime,
+        importWorkOrders,
         contracts,
         reports,
         chatMessages,

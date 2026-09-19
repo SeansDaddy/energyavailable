@@ -3,6 +3,7 @@ import {
   ImportBatch,
   AlertItem,
   WorkOrder,
+  PcareImportRecord,
   Contract,
   ReportItem,
   UserProfile,
@@ -960,7 +961,11 @@ export const INITIAL_WORK_ORDERS: WorkOrder[] = [
     solutionTime: '2026-08-15 14:48', // 闭环时刻 (R4)
     assignee: '张维保 (运维主管)',
     description: 'PCS变流器IGBT温度探头超标停机，需清理风道及更换驱动控制板',
-    solutionSummary: '已清理异物阻塞风道，更换备用IGBT驱动保护卡，自检运行正常，待现场下周定检复核。'
+    solutionSummary: '已清理异物阻塞风道，更换备用IGBT驱动保护卡，自检运行正常，待现场下周定检复核。',
+    importBatchNo: 'PCare-Batch-20260816-01',
+    importedAt: '2026-08-16 08:30:15',
+    source: 'PCARE_IMPORT',
+    rawPcareStatus: '已输出解决方案(方案确认中)'
   },
   {
     id: 'wo-002',
@@ -975,7 +980,11 @@ export const INITIAL_WORK_ORDERS: WorkOrder[] = [
     faultCategory: '通信与采集链路故障',
     createTime: '2026-08-18 16:40',
     assignee: '黄工',
-    description: 'BMS从控板CAN通讯间歇性闪断，导致系统降额运行'
+    description: 'BMS从控板CAN通讯间歇性闪断，导致系统降额运行',
+    importBatchNo: 'PCare-Batch-20260819-01',
+    importedAt: '2026-08-19 09:12:00',
+    source: 'PCARE_IMPORT',
+    rawPcareStatus: '工程师现场排查处理中'
   },
   {
     id: 'wo-003',
@@ -993,7 +1002,106 @@ export const INITIAL_WORK_ORDERS: WorkOrder[] = [
     closeTime: '2026-08-05 09:00',
     assignee: '李工',
     description: '高温环境下集装箱空调制冷风量再分配',
-    solutionSummary: '调整温控阈值与送风角度，集装箱内最高温差降至2.3℃以内。'
+    solutionSummary: '调整温控阈值与送风角度，集装箱内最高温差降至2.3℃以内。',
+    importBatchNo: 'PCare-Batch-20260805-01',
+    importedAt: '2026-08-05 10:00:22',
+    source: 'PCARE_IMPORT',
+    rawPcareStatus: '已完结归档'
+  }
+];
+
+// PCare 离线报表导入历史记录
+export const INITIAL_PCARE_IMPORT_HISTORY: PcareImportRecord[] = [
+  {
+    id: 'pcare-imp-001',
+    batchNo: 'PCare-Batch-20260908-01',
+    fileName: 'PCare_WorkOrders_Export_20260908.xlsx',
+    fileSize: '1.42 MB',
+    importTime: '2026-09-08 17:35:20',
+    operator: '张维保 (运维主管)',
+    totalParsedCount: 14,
+    addedCount: 3,
+    updatedCount: 11,
+    solutionReadyCount: 9,
+    status: 'SUCCESS',
+    remarks: '9月第一周全网消缺工单增量导入，核算Rule R4方案就绪闭环'
+  },
+  {
+    id: 'pcare-imp-002',
+    batchNo: 'PCare-Batch-20260825-02',
+    fileName: 'PCare_National_August_Summary.csv',
+    fileSize: '890 KB',
+    importTime: '2026-08-25 09:10:45',
+    operator: '林可用 (全网管理员)',
+    totalParsedCount: 38,
+    addedCount: 12,
+    updatedCount: 26,
+    solutionReadyCount: 22,
+    status: 'SUCCESS',
+    remarks: '8月月度中旬工单集中对账导入，对齐合同SLA可用度扣减'
+  }
+];
+
+// 可供快速载入的 PCare 离线报表示例数据包 (方便现场导入测试体验)
+export const MOCK_PCARE_NEW_ORDERS_PACK: Partial<WorkOrder>[] = [
+  {
+    orderNo: 'WO-20260909-8801',
+    title: '海口江东储能示范站 液冷回路冷媒压力偏低补加',
+    siteName: '海口江东新区绿色微电网储能示范站',
+    customer: '海南电网海口供电局',
+    contractNo: 'HN-CSG-2025-SLA-033',
+    status: 'SOLUTION_READY',
+    priority: 'HIGH',
+    faultCategory: '液冷系统维护',
+    createTime: '2026-09-09 10:20',
+    solutionTime: '2026-09-09 13:40',
+    assignee: '吴工 (海南现场站长)',
+    description: '液冷主管路压力自 0.28MPa 跌至 0.16MPa，触发二级低压报警预警',
+    solutionSummary: '经气密性检测排除管路泄漏，按标准补充乙二醇水溶液防冻液至 0.30MPa，自检稳压正常。'
+  },
+  {
+    orderNo: 'WO-20260910-3320',
+    title: '宁波舟山港 4#储能柜从控通信模组浪涌损坏应急更换',
+    siteName: '宁波舟山港梅山港区储能调频电站',
+    customer: '浙江省海港集团',
+    contractNo: 'ZJ-HG-2025-SLA-045',
+    status: 'SOLUTION_READY',
+    priority: 'URGENT',
+    faultCategory: '通信与采集链路故障',
+    createTime: '2026-09-10 08:30',
+    solutionTime: '2026-09-10 11:15',
+    assignee: '陈工 (高级电气工程师)',
+    description: '受沿海强对流雷暴天气影响，4#箱变通讯光端机出现浪涌残压冲击，光电转换板失步',
+    solutionSummary: '已更换同规格备用工业光纤交换机板卡并接地加固，恢复与主控网关通信，报文丢包率恢复为 0。'
+  },
+  {
+    orderNo: 'WO-20260910-5582',
+    title: '呼和浩特沙尔沁 3#变流器交流接触器吸合异响排查',
+    siteName: '呼和浩特沙尔沁工业园区微网储能电站',
+    customer: '内蒙古电力集团',
+    contractNo: 'IM-NMD-2025-SLA-058',
+    status: 'PROCESSING',
+    priority: 'MEDIUM',
+    faultCategory: '变流器电气与散热故障',
+    createTime: '2026-09-10 14:10',
+    assignee: '包工 (华北现场运维)',
+    description: '变流器交流并网侧接触器在带载切换时有轻微电磁蜂鸣颤音',
+    solutionSummary: '正在调取控制回路激磁线圈电压波形，等待夜间谷段停机验电检测铁芯绝缘。'
+  },
+  {
+    orderNo: 'WO-20260910-6644',
+    title: '深圳光明储能电站 5#PACK 单体电压压差微幅发散均衡维护',
+    siteName: '深圳光明储能电站二期-04号站',
+    customer: '南方电网深圳供电局',
+    contractNo: 'CSG-SZ-2025-SLA-081',
+    status: 'SOLUTION_READY',
+    priority: 'HIGH',
+    faultCategory: 'BMS与电芯保护',
+    createTime: '2026-09-10 09:00',
+    solutionTime: '2026-09-10 12:30',
+    assignee: '张维保 (运维主管)',
+    description: '满电态下 5#簇第 12 节电芯电压偏高 48mV，超出健康平衡带门限',
+    solutionSummary: '启动主动式均衡板进行恒流均衡，并注入修正系数校准采集引线内阻，实测压差已回归 12mV 以内。'
   }
 ];
 
