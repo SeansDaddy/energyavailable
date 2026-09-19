@@ -188,7 +188,7 @@ export const PerformanceEvaluationView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-black text-slate-900 tracking-tight">
-                性能评估分析
+                性能工况
               </h1>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
                 储能专业服务作战平台

@@ -270,7 +270,7 @@ export const MultiDimStatsView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <BarChart3 className="w-5 h-5 text-blue-600" />
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              多维可用度与运行质量统计报表
+              全网可用度与运行质量统计
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">

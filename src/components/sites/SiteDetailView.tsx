@@ -207,10 +207,10 @@ export const SiteDetailView: React.FC = () => {
               <button
                 onClick={() => setActiveTab('performance_evaluation')}
                 className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
-                title="进入性能评估分析服务"
+                title="进入性能工况服务"
               >
                 <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
-                <span>性能评估分析</span>
+                <span>性能工况</span>
               </button>
               <button
                 onClick={() =>
