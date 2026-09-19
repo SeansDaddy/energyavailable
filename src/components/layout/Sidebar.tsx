@@ -15,7 +15,9 @@ import {
   Layers,
   ChevronRight,
   Database,
-  HeartPulse
+  HeartPulse,
+  FileCheck2,
+  Sliders
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -32,29 +34,58 @@ export const Sidebar: React.FC = () => {
     badgeColor?: string;
     section?: string;
   }[] = [
+    // 专门归类：可用度管理 (所有可用度相关功能)
     {
-      id: 'workbench',
-      label: '工作台驾驶舱',
-      icon: LayoutDashboard,
-      section: '核心管控'
-    },
-    {
-      id: 'sites',
-      label: '站点台账管理',
-      icon: Radio,
-      section: '核心管控'
-    },
-    {
-      id: 'log_import',
-      label: '离线日志导入',
-      icon: UploadCloud,
-      section: '核心管控'
+      id: 'pre_sales_eval',
+      label: '售前可用度评估',
+      icon: FileCheck2,
+      badge: '售前决策',
+      badgeColor: 'bg-emerald-600 text-white shadow-xs',
+      section: '可用度管理'
     },
     {
       id: 'availability_monitor',
       label: '可用度监控与打点',
       icon: Activity,
-      section: '核心管控'
+      badge: '5min打点',
+      badgeColor: 'bg-blue-600 text-white',
+      section: '可用度管理'
+    },
+    {
+      id: 'analytics',
+      label: '多维可用度统计',
+      icon: BarChart3,
+      section: '可用度管理'
+    },
+    {
+      id: 'performance_evaluation',
+      label: '可用度性能评估',
+      icon: HeartPulse,
+      badge: '体检分析',
+      badgeColor: 'bg-indigo-600 text-white',
+      section: '可用度管理'
+    },
+    {
+      id: 'log_import',
+      label: '离线日志与扣减',
+      icon: UploadCloud,
+      badge: 'R2/R3',
+      badgeColor: 'bg-slate-700 text-slate-300',
+      section: '可用度管理'
+    },
+
+    // 站点与运行
+    {
+      id: 'workbench',
+      label: '工作台驾驶舱',
+      icon: LayoutDashboard,
+      section: '站点与运行'
+    },
+    {
+      id: 'sites',
+      label: '站点台账管理',
+      icon: Radio,
+      section: '站点与运行'
     },
     {
       id: 'alerts',
@@ -62,21 +93,23 @@ export const Sidebar: React.FC = () => {
       icon: AlertOctagon,
       badge: activeAlertsCount > 0 ? activeAlertsCount : undefined,
       badgeColor: 'bg-rose-500 text-white',
-      section: '风控与分析'
+      section: '站点与运行'
+    },
+
+    // 外部协同与风控
+    {
+      id: 'work_orders',
+      label: 'PCare 工单管理',
+      icon: Wrench,
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+      badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+      section: '外部协同与风控'
     },
     {
-      id: 'analytics',
-      label: '多维统计分析',
-      icon: BarChart3,
-      section: '风控与分析'
-    },
-    {
-      id: 'performance_evaluation',
-      label: '性能评估分析',
-      icon: HeartPulse,
-      badge: '体检分析',
-      badgeColor: 'bg-blue-600 text-white',
-      section: '风控与分析'
+      id: 'contracts',
+      label: '合同与履约视图',
+      icon: FileText,
+      section: '外部协同与风控'
     },
     {
       id: 'fault_diagnosis',
@@ -84,33 +117,21 @@ export const Sidebar: React.FC = () => {
       icon: Sparkles,
       badge: 'AI推理',
       badgeColor: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-xs',
-      section: '风控与分析'
+      section: '外部协同与风控'
     },
     {
       id: 'reports',
       label: '报告生成中心',
       icon: FileSpreadsheet,
-      section: '风控与分析'
+      section: '外部协同与风控'
     },
-    {
-      id: 'work_orders',
-      label: 'PCare 工单管理',
-      icon: Wrench,
-      badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
-      badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
-      section: '外部协同'
-    },
-    {
-      id: 'contracts',
-      label: '合同与履约视图',
-      icon: FileText,
-      section: '外部协同'
-    },
+
+    // 系统
     {
       id: 'login',
       label: '统一认证 (SSO)',
       icon: LogIn,
-      section: '系统'
+      section: '系统管理'
     }
   ];
 

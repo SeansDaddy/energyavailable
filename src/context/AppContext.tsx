@@ -45,6 +45,7 @@ export type NavigationTab =
   | 'workbench'
   | 'sites'
   | 'site_detail'
+  | 'pre_sales_eval'
   | 'log_import'
   | 'availability_monitor'
   | 'alerts'

@@ -31,6 +31,7 @@ const MainLayout: React.FC = () => {
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f0f2f5] p-1">
           {activeTab === 'workbench' && <WorkbenchView />}
+          {activeTab === 'pre_sales_eval' && <PreContractEvaluationView />}
           {activeTab === 'sites' && <SitesView />}
           {activeTab === 'site_detail' && <SiteDetailView />}
           {activeTab === 'log_import' && <LogImportView />}
