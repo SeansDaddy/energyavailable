@@ -47,6 +47,12 @@ export const SiteAvailabilityDetailView: React.FC = () => {
       (Boolean(site?.siteName && w?.siteName && site.siteName.length >= 2 && w.siteName.includes(site.siteName.slice(0, 4))))
   );
 
+  const [faultCausalChainTarget, setFaultCausalChainTarget] = useState<{
+    deviceCode?: string;
+    activeSubView?: 'merged' | 'alarms';
+    alarmId?: string;
+  } | null>(null);
+
   const isBreached = site.currentAvailability < site.slaThreshold;
   const gap = Number((site.currentAvailability - site.slaThreshold).toFixed(2));
 
@@ -61,7 +67,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     {
       id: 1,
       label: '故障因果链',
-      subtext: 'Rule R11 · 重叠事件归并 / 瀑布流穿透',
+      subtext: 'Rule R11 · 故障归并 / 可用度告警 / ECO免责',
       icon: Clock,
       count: site.mergedFaults?.length || 0
     },
@@ -74,7 +80,15 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     }
   ];
 
-  const handleDrilldownNavigate = (targetIdx: number) => {
+  const handleDrilldownNavigate = (
+    targetIdx: number,
+    extra?: { deviceCode?: string; activeSubView?: 'merged' | 'alarms'; alarmId?: string }
+  ) => {
+    if (extra) {
+      setFaultCausalChainTarget(extra);
+    } else {
+      setFaultCausalChainTarget(null);
+    }
     if (targetIdx === 1) {
       setAvailabilityDrilldownTab(1); // 故障因果链
     } else if (targetIdx === 2 || targetIdx === 4) {
@@ -293,11 +307,15 @@ export const SiteAvailabilityDetailView: React.FC = () => {
         />
       )}
 
-      {/* Tab 1: 故障因果链 (Rule R11) */}
+      {/* Tab 1: 故障因果链与可用度告警 (Rule R11 & R2) */}
       {availabilityDrilldownTab === 1 && (
         <MergedFaultsTab
           site={site}
           onNavigateTab={handleDrilldownNavigate}
+          workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
+          currentDate={availabilityDrilldownDate}
+          initialTarget={faultCausalChainTarget}
+          onClearTarget={() => setFaultCausalChainTarget(null)}
         />
       )}
 

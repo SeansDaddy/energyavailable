@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Site, WorkOrder, DailySnapshot, FiveMinAvailabilityPoint } from '../../types';
 import { FiveMinAvailabilityDotsView } from '../sites/FiveMinAvailabilityDotsView';
+import { DimensionEquipmentAndAlarmsSection } from './DimensionEquipmentAndAlarmsSection';
 import {
   Calendar,
   Clock,
@@ -50,7 +51,7 @@ interface AvailabilityDetailsTabProps {
   workOrders?: WorkOrder[];
   selectedDate?: string;
   onSelectDate?: (date: string) => void;
-  onNavigateTab: (tabIdx: number) => void;
+  onNavigateTab: (tabIdx: number, extra?: any) => void;
 }
 
 export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
@@ -243,6 +244,13 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
       worstWeek,
       bestWeek
     };
+  }, [filteredWeeklyData]);
+
+  const weeklyDateRange = useMemo(() => {
+    if (filteredWeeklyData.length === 0) return { start: '2026-08-01', end: '2026-08-30' };
+    const start = filteredWeeklyData[0].startDate;
+    const end = filteredWeeklyData[filteredWeeklyData.length - 1].endDate;
+    return { start, end };
   }, [filteredWeeklyData]);
 
   // 3. Monthly Aggregation Data (Trailing 12 months: 2025-09 to 2026-08)
@@ -638,11 +646,6 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
       {/* Dimension Selection Navigation Bar */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-slate-700 mr-1 flex items-center gap-1.5">
-            <Activity className="w-4 h-4 text-blue-600" />
-            <span>监控周期选择:</span>
-          </span>
-
           {/* 5 Dimension Buttons */}
           <button
             id="btn-cycle-5min"
@@ -655,13 +658,6 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
           >
             <Zap className={`w-3.5 h-3.5 ${cycle === '5min' ? 'text-white' : 'text-amber-500'}`} />
             <span>5分钟维度</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                cycle === '5min' ? 'bg-blue-700 text-white' : 'bg-blue-100 text-blue-800'
-              }`}
-            >
-              288点打点
-            </span>
           </button>
 
           <button
@@ -675,13 +671,6 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
           >
             <Calendar className={`w-3.5 h-3.5 ${cycle === 'daily' ? 'text-white' : 'text-blue-500'}`} />
             <span>日维度</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                cycle === 'daily' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {dailySummary.totalDays}天日切
-            </span>
           </button>
 
           <button
@@ -695,13 +684,6 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
           >
             <CalendarDays className={`w-3.5 h-3.5 ${cycle === 'weekly' ? 'text-white' : 'text-indigo-500'}`} />
             <span>周维度</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                cycle === 'weekly' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {weeklySummary?.totalWeeks || 0}周聚合
-            </span>
           </button>
 
           <button
@@ -715,13 +697,6 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
           >
             <CalendarRange className={`w-3.5 h-3.5 ${cycle === 'monthly' ? 'text-white' : 'text-emerald-500'}`} />
             <span>月维度</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                cycle === 'monthly' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {monthlySummary.totalMonths}个月履约
-            </span>
           </button>
 
           <button
@@ -735,25 +710,13 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
           >
             <Layers className={`w-3.5 h-3.5 ${cycle === 'yearly' ? 'text-white' : 'text-purple-500'}`} />
             <span>年维度</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                cycle === 'yearly' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {yearlySummary.totalYears}个年度台账
-            </span>
           </button>
         </div>
 
-        {/* Current Dimension Context Info */}
-        <div className="text-xs text-slate-500 flex items-center gap-3">
-          <span>
-            当前站点: <strong className="text-slate-800">{site.siteName}</strong> ({site.siteCode})
-          </span>
-          <span className="hidden sm:inline text-slate-300">|</span>
-          <span>
-            合同 SLA: <strong className="text-blue-600 font-mono">{site.slaThreshold}%</strong>
-          </span>
+        {/* Contract SLA Reference */}
+        <div className="text-xs text-slate-500 flex items-center gap-1.5">
+          <span>合同 SLA 门槛:</span>
+          <strong className="text-blue-600 font-mono">{site.slaThreshold}%</strong>
         </div>
       </div>
 
@@ -766,6 +729,17 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
             site={site}
             activeDate={activeDate}
             onChangeDate={handleDateClick}
+            workOrders={workOrders}
+            onNavigateTab={onNavigateTab}
+          />
+
+          {/* Equipment Status & Availability Alarms for 5-Min Dimension */}
+          <DimensionEquipmentAndAlarmsSection
+            site={site}
+            startDate={activeDate}
+            endDate={activeDate}
+            dimension="5min"
+            timeRangeLabel={`${activeDate} (5分钟颗粒度全天288点)`}
             workOrders={workOrders}
             onNavigateTab={onNavigateTab}
           />
@@ -1182,6 +1156,17 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
               </table>
             </div>
           </div>
+
+          {/* Equipment Status & Availability Alarms for Daily Dimension */}
+          <DimensionEquipmentAndAlarmsSection
+            site={site}
+            startDate={dayStartDate}
+            endDate={dayEndDate}
+            dimension="daily"
+            timeRangeLabel={`${dayStartDate} 至 ${dayEndDate}`}
+            workOrders={workOrders}
+            onNavigateTab={onNavigateTab}
+          />
         </div>
       )}
 
@@ -1551,6 +1536,17 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
               </table>
             </div>
           </div>
+
+          {/* Equipment Status & Availability Alarms for Weekly Dimension */}
+          <DimensionEquipmentAndAlarmsSection
+            site={site}
+            startDate={weeklyDateRange.start}
+            endDate={weeklyDateRange.end}
+            dimension="weekly"
+            timeRangeLabel={`${weekStart} ~ ${weekEnd} (${weeklyDateRange.start} 至 ${weeklyDateRange.end})`}
+            workOrders={workOrders}
+            onNavigateTab={onNavigateTab}
+          />
         </div>
       )}
 
@@ -1927,6 +1923,17 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
               </table>
             </div>
           </div>
+
+          {/* Equipment Status & Availability Alarms for Monthly Dimension */}
+          <DimensionEquipmentAndAlarmsSection
+            site={site}
+            startDate={`${monthStart}-01`}
+            endDate={`${monthEnd}-31`}
+            dimension="monthly"
+            timeRangeLabel={`${monthStart} 至 ${monthEnd}`}
+            workOrders={workOrders}
+            onNavigateTab={onNavigateTab}
+          />
         </div>
       )}
 
@@ -2329,6 +2336,17 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
               </table>
             </div>
           </div>
+
+          {/* Equipment Status & Availability Alarms for Yearly Dimension */}
+          <DimensionEquipmentAndAlarmsSection
+            site={site}
+            startDate={`${yearStart}-01-01`}
+            endDate={`${yearEnd}-12-31`}
+            dimension="yearly"
+            timeRangeLabel={`${yearStart}年 至 ${yearEnd}年`}
+            workOrders={workOrders}
+            onNavigateTab={onNavigateTab}
+          />
         </div>
       )}
     </div>
