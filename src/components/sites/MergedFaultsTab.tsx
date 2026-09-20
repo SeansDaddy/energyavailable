@@ -348,7 +348,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({ site, onNaviga
                 <button
                   onClick={() => {
                     setModalFault(null);
-                    onNavigateTab(4); // Work orders
+                    onNavigateTab(2); // Work orders tab in availability drilldown
                   }}
                   className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold flex items-center gap-1"
                 >

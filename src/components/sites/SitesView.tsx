@@ -25,6 +25,7 @@ export const SitesView: React.FC = () => {
     sites,
     addSite,
     navigateToSiteDetail,
+    navigateToAvailabilityDrilldown,
     drilldownFilter,
     setDrilldownFilter,
     setActiveTab,
@@ -327,15 +328,26 @@ export const SitesView: React.FC = () => {
                           <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
                             {site.lastImportTime}
                           </td>
-                          <td className="py-3 px-4 text-right space-x-2">
+                          <td className="py-3 px-4 text-right space-x-1.5">
                             <button
                               onClick={e => {
                                 e.stopPropagation();
                                 navigateToSiteDetail(site.id);
                               }}
                               className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 rounded bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+                              title="查看站点台账（全景态势、核心设备拓扑、合同SLA履约、离线日志批次）"
                             >
-                              详情
+                              台账
+                            </button>
+                            <button
+                              onClick={e => {
+                                e.stopPropagation();
+                                navigateToAvailabilityDrilldown(site.id, 0);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold px-2 py-1 rounded bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                              title="下钻至可用度监控（5分钟打点、故障因果链、PCare工单闭环）"
+                            >
+                              可用度下钻
                             </button>
                             <button
                               onClick={e => {

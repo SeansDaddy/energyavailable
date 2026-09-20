@@ -1,5 +1,6 @@
 import React from 'react';
 import { Site, RedundancyLevel, WorkOrder } from '../../types';
+import { useApp } from '../../context/AppContext';
 import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
 import { SitePanoramaTimelineChart } from './SitePanoramaTimelineChart';
 import {
@@ -20,7 +21,8 @@ import {
   Info,
   Calendar,
   Zap,
-  Server
+  Server,
+  ArrowUpRight
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -51,6 +53,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
   onNavigateTab,
   onSelectDay
 }) => {
+  const { navigateToAvailabilityDrilldown } = useApp();
   const gap = Number((site.currentAvailability - site.slaThreshold).toFixed(2));
   const isBreached = site.currentAvailability < site.slaThreshold;
 
@@ -92,7 +95,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
       status: site.statusLamp === 'red' ? 'FAULT' : 'NORMAL',
       deviceCount: site.coreDevices.filter(d => d.deviceType === 'PCS_INVERTER').length,
       detail: '主变流器并联运行，支持双向充放电调度',
-      tabTarget: 3 // Device Tab
+      tabTarget: 1 // Core Device Tab (Tab 1 in Site Ledger)
     },
     {
       id: 'sub-bms',
@@ -101,7 +104,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
       status: 'NORMAL',
       deviceCount: site.coreDevices.filter(d => d.deviceType === 'BMS_CLUSTER').length,
       detail: '高压电池簇集控管理，单体电芯温度与SOC实时监控',
-      tabTarget: 3
+      tabTarget: 1
     },
     {
       id: 'sub-ems',
@@ -110,7 +113,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
       status: 'NORMAL',
       deviceCount: site.coreDevices.filter(d => d.deviceType === 'EMS_HOST').length,
       detail: '双冗余工业主控机，通信协议自适应对齐',
-      tabTarget: 3
+      tabTarget: 1
     },
     {
       id: 'sub-network',
@@ -119,7 +122,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
       status: 'NORMAL',
       deviceCount: 2,
       detail: site.redundancyNotes || '组网冗余链路正常',
-      tabTarget: 3
+      tabTarget: 1
     }
   ];
 
@@ -146,21 +149,21 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => onNavigateTab(1)}
+            onClick={() => navigateToAvailabilityDrilldown(site.id, 0)}
             className="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium flex items-center gap-1 shadow-sm transition-colors"
           >
             <Calendar className="w-3.5 h-3.5 text-blue-600" />
             <span>逐日打点下钻</span>
           </button>
           <button
-            onClick={() => onNavigateTab(2)}
+            onClick={() => navigateToAvailabilityDrilldown(site.id, 1)}
             className="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium flex items-center gap-1 shadow-sm transition-colors"
           >
             <Clock className="w-3.5 h-3.5 text-amber-600" />
             <span>故障时间线下钻 ({site.mergedFaults.length})</span>
           </button>
           <button
-            onClick={() => onNavigateTab(3)}
+            onClick={() => onNavigateTab(1)}
             className="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium flex items-center gap-1 shadow-sm transition-colors"
           >
             <Cpu className="w-3.5 h-3.5 text-indigo-600" />
@@ -294,7 +297,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
               最后日志更新: <strong className="font-mono text-slate-700">{site.lastImportTime}</strong>
             </span>
             <button
-              onClick={() => onNavigateTab(1)}
+              onClick={() => navigateToAvailabilityDrilldown(site.id, 0)}
               className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
             >
               <span>查看 30 天打点完整日历与日切分析 &rarr;</span>
@@ -380,7 +383,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
               当前冗余等级: <strong className="text-slate-800">{site.redundancy}</strong>
             </span>
             <button
-              onClick={() => onNavigateTab(3)}
+              onClick={() => onNavigateTab(1)}
               className="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
             >
               <span>查看拓扑与在线维护冗余度 &rarr;</span>
@@ -393,7 +396,17 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
       <SitePanoramaTimelineChart
         site={site}
         workOrders={workOrders}
-        onNavigateTab={onNavigateTab}
+        onNavigateTab={idx => {
+          if (idx === 1 || idx === 0) {
+            navigateToAvailabilityDrilldown(site.id, 0);
+          } else if (idx === 2) {
+            navigateToAvailabilityDrilldown(site.id, 1);
+          } else if (idx === 4) {
+            navigateToAvailabilityDrilldown(site.id, 2);
+          } else {
+            onNavigateTab(idx);
+          }
+        }}
         onSelectDay={onSelectDay}
       />
 

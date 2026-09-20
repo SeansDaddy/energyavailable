@@ -11,11 +11,12 @@ import {
   Layers,
   ShieldCheck,
   ArrowUpRight,
-  Database
+  Database,
+  Eye
 } from 'lucide-react';
 
 export const AvailabilityMonitorView: React.FC = () => {
-  const { sites, navigateToSiteDetail } = useApp();
+  const { sites, navigateToSiteDetail, navigateToAvailabilityDrilldown } = useApp();
 
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [regionFilter, setRegionFilter] = useState('ALL');
@@ -351,7 +352,7 @@ export const AvailabilityMonitorView: React.FC = () => {
               return (
                 <tr
                   key={s.id}
-                  onClick={() => navigateToSiteDetail(s.id)}
+                  onClick={() => navigateToAvailabilityDrilldown(s.id, 0)}
                   className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                 >
                   <td className="py-3 px-4">
@@ -388,16 +389,18 @@ export const AvailabilityMonitorView: React.FC = () => {
                   <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
                     {s.lastImportTime}
                   </td>
-                  <td className="py-3 px-4 text-right space-x-2">
+                  <td className="py-3 px-4 text-right">
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        navigateToSiteDetail(s.id);
+                        navigateToAvailabilityDrilldown(s.id, 0);
                       }}
-                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-blue-600 border border-slate-200 rounded font-semibold text-xs transition-colors inline-flex items-center gap-1"
+                      className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs group"
+                      title="查看详情"
+                      aria-label="查看详情"
                     >
-                      <span>下钻详情</span>
-                      <ArrowUpRight className="w-3 h-3" />
+                      <Eye className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <span className="hidden sm:inline font-medium text-slate-700 group-hover:text-blue-700">查看详情</span>
                     </button>
                   </td>
                 </tr>

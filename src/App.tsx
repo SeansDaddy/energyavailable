@@ -7,6 +7,7 @@ import { SitesView } from './components/sites/SitesView';
 import { SiteDetailView } from './components/sites/SiteDetailView';
 import { LogImportView } from './components/logImport/LogImportView';
 import { AvailabilityMonitorView } from './components/availability/AvailabilityMonitorView';
+import { SiteAvailabilityDetailView } from './components/availability/SiteAvailabilityDetailView';
 import { AlertsView } from './components/alerts/AlertsView';
 import { MultiDimStatsView } from './components/stats/MultiDimStatsView';
 import { PreContractEvaluationView } from './components/evaluation/PreContractEvaluationView';
@@ -36,6 +37,7 @@ const MainLayout: React.FC = () => {
           {activeTab === 'site_detail' && <SiteDetailView />}
           {activeTab === 'log_import' && <LogImportView />}
           {activeTab === 'availability_monitor' && <AvailabilityMonitorView />}
+          {activeTab === 'availability_drilldown' && <SiteAvailabilityDetailView />}
           {activeTab === 'alerts' && <AlertsView />}
           {activeTab === 'analytics' && <MultiDimStatsView />}
           {activeTab === 'performance_evaluation' && <PerformanceEvaluationView />}

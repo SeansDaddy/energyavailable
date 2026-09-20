@@ -6,29 +6,20 @@ import {
   ArrowLeft,
   Activity,
   Shield,
-  Clock,
-  Wrench,
   FileText,
   UploadCloud,
   Cpu,
-  Layers,
   Sparkles,
-  Calendar,
-  ChevronDown,
-  Building,
-  Radio,
-  SlidersHorizontal,
-  ChevronRight,
   Database,
   HeartPulse,
-  Zap
+  Zap,
+  Radio,
+  Info,
+  ArrowUpRight
 } from 'lucide-react';
 
 import { SitePanoramaTab } from './SitePanoramaTab';
-import { DailySnapshotsTab } from './DailySnapshotsTab';
-import { MergedFaultsTab } from './MergedFaultsTab';
 import { CoreDevicesTab } from './CoreDevicesTab';
-import { WorkOrdersTab } from './WorkOrdersTab';
 import { ContractFulfillmentTab } from './ContractFulfillmentTab';
 import { LogBatchesTab } from './LogBatchesTab';
 
@@ -41,6 +32,7 @@ export const SiteDetailView: React.FC = () => {
     setSiteDetailTab,
     setActiveTab,
     updateSiteRedundancy,
+    navigateToAvailabilityDrilldown,
     batches,
     workOrders,
     contracts,
@@ -48,9 +40,6 @@ export const SiteDetailView: React.FC = () => {
   } = useApp();
 
   const site = sites.find(s => s.id === selectedSiteId) || sites[0];
-
-  // Internal state for selected day in drilldown
-  const [selectedDrilldownDate, setSelectedDrilldownDate] = useState<string>('');
 
   // Associated counts
   const siteBatches = batches.filter(
@@ -67,21 +56,13 @@ export const SiteDetailView: React.FC = () => {
   const isBreached = site.currentAvailability < site.slaThreshold;
   const gap = Number((site.currentAvailability - site.slaThreshold).toFixed(2));
 
-  // 7-Layer Site-Centric Drilldown Hierarchy
+  // Site Ledger tabs: Site Panorama, Core Devices, Contract & SLA Fulfillment, Offline Log Batches
   const tabs = [
     { id: 0, label: '1. 站点全景态势', icon: Activity },
-    { id: 1, label: '2. 5分钟打点与逐日下钻 (R7)', icon: Zap, count: 288 },
-    { id: 2, label: '3. 故障因果链 (R11)', icon: Clock, count: site.mergedFaults?.length || 0 },
-    { id: 3, label: '4. 核心设备与拓扑 (R2)', icon: Cpu, count: site.coreDevices?.length || 0 },
-    { id: 4, label: '5. PCare 工单闭环 (R4)', icon: Wrench, count: siteOrders.length },
-    { id: 5, label: '6. 合同与 SLA 履约 (R10)', icon: FileText },
-    { id: 6, label: '7. 离线日志批次 (R3)', icon: Database, count: siteBatches.length }
+    { id: 1, label: '2. 核心设备拓扑 (R2)', icon: Cpu, count: site.coreDevices?.length || 0 },
+    { id: 2, label: '3. 合同与 SLA 履约 (R10)', icon: FileText },
+    { id: 3, label: '4. 离线日志批次查看 (R3)', icon: Database, count: siteBatches.length }
   ];
-
-  const handleSelectDay = (date: string) => {
-    setSelectedDrilldownDate(date);
-    setSiteDetailTab(1); // switch to daily snapshot tab
-  };
 
   const handleSiteSwitch = (newSiteId: string) => {
     setSelectedSiteId(newSiteId);
@@ -89,7 +70,7 @@ export const SiteDetailView: React.FC = () => {
 
   return (
     <div className="p-6 space-y-5 max-w-[1700px] mx-auto animate-in fade-in duration-200">
-      {/* Site-Centric Master Header & Drilldown Breadcrumb */}
+      {/* Site-Centric Master Header & Breadcrumb */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4">
         {/* Layer Breadcrumb & Quick Site Switcher */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -99,7 +80,7 @@ export const SiteDetailView: React.FC = () => {
               className="font-medium hover:text-blue-600 flex items-center gap-1 text-slate-700 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>全网站点大盘</span>
+              <span>全网站点台账大盘</span>
             </button>
             <span>/</span>
             <span className="text-slate-600">{site.region}</span>
@@ -109,6 +90,9 @@ export const SiteDetailView: React.FC = () => {
             <span className="text-slate-600">{site.customer}</span>
             <span>/</span>
             <span className="font-bold text-slate-900 font-mono">{site.siteCode}</span>
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold">
+              站点台账档案
+            </span>
           </div>
 
           {/* Quick Site Switcher Dropdown */}
@@ -196,17 +180,27 @@ export const SiteDetailView: React.FC = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => navigateToAvailabilityDrilldown(site.id, 0)}
+                className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
+                title="前往可用度监控下钻详情：查看 5分钟打点、故障因果链与 PCare 工单闭环"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>可用度监控下钻</span>
+                <ArrowUpRight className="w-3 h-3 text-blue-100" />
+              </button>
+
               <button
                 onClick={() => setActiveTab('log_import')}
-                className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-semibold border border-slate-300 shadow-sm transition-colors flex items-center gap-1.5"
+                className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold border border-slate-300 shadow-sm transition-colors flex items-center gap-1.5"
               >
                 <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
                 <span>导入日志</span>
               </button>
               <button
                 onClick={() => setActiveTab('performance_evaluation')}
-                className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
+                className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
                 title="进入性能工况服务"
               >
                 <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
@@ -218,7 +212,7 @@ export const SiteDetailView: React.FC = () => {
                     `针对站点【${site.siteName} (${site.siteCode})】进行深度可用度因果归因与告警诊断`
                   )
                 }
-                className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-xs font-semibold border border-blue-200 transition-colors flex items-center gap-1.5 shadow-xs"
+                className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold border border-blue-200 transition-colors flex items-center gap-1.5 shadow-xs"
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                 <span>AI 诊断</span>
@@ -227,7 +221,25 @@ export const SiteDetailView: React.FC = () => {
           </div>
         </div>
 
-        {/* 7-Layer Site-Centric Drilldown Navigation Tabs */}
+        {/* Feature Split Notification Banner */}
+        <div className="bg-blue-50/60 border border-blue-200 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-slate-700">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>
+              <strong>页面模块拆分提示：</strong>
+              本站点台账保留<strong>【站点全景态势】</strong>、<strong>【核心设备拓扑】</strong>、<strong>【合同与SLA履约】</strong>及<strong>【离线日志批次查看】</strong>。可用度详情（5分钟/日/周/月周期监控）、故障因果链、PCare工单闭环已归类至【可用度监控】的下钻详情中。
+            </span>
+          </div>
+          <button
+            onClick={() => navigateToAvailabilityDrilldown(site.id, 0)}
+            className="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 rounded font-semibold text-xs whitespace-nowrap flex items-center gap-1 shadow-xs transition-colors shrink-0"
+          >
+            <span>进入可用度下钻详情</span>
+            <ArrowUpRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* 4-Layer Site Ledger Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto border-t border-slate-100 pt-3 mt-2">
           {tabs.map(t => {
             const Icon = t.icon;
@@ -237,7 +249,7 @@ export const SiteDetailView: React.FC = () => {
                 key={t.id}
                 id={`tab-site-detail-${t.id}`}
                 onClick={() => setSiteDetailTab(t.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded text-xs font-bold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
@@ -265,32 +277,25 @@ export const SiteDetailView: React.FC = () => {
         <SitePanoramaTab
           site={site}
           workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
-          onNavigateTab={idx => setSiteDetailTab(idx)}
-          onSelectDay={handleSelectDay}
+          onNavigateTab={idx => {
+            if (idx === 1 || idx === 3) {
+              setSiteDetailTab(1); // 核心设备拓扑
+            } else if (idx === 5) {
+              setSiteDetailTab(2); // 合同与SLA履约
+            } else if (idx === 6) {
+              setSiteDetailTab(3); // 离线日志批次
+            } else {
+              setSiteDetailTab(idx);
+            }
+          }}
+          onSelectDay={date => {
+            navigateToAvailabilityDrilldown(site.id, 0, date);
+          }}
         />
       )}
 
-      {/* Layer 1: Daily Snapshots & Day-Level Inspector (Rule R7) */}
+      {/* Layer 1: Core Devices & Topology Visualizer (Rule R2) */}
       {siteDetailTab === 1 && (
-        <DailySnapshotsTab
-          site={site}
-          workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
-          selectedDate={selectedDrilldownDate}
-          onSelectDate={date => setSelectedDrilldownDate(date)}
-          onNavigateTab={idx => setSiteDetailTab(idx)}
-        />
-      )}
-
-      {/* Layer 2: Merged Faults & Causality Waterfall (Rule R11) */}
-      {siteDetailTab === 2 && (
-        <MergedFaultsTab
-          site={site}
-          onNavigateTab={idx => setSiteDetailTab(idx)}
-        />
-      )}
-
-      {/* Layer 3: Core Devices & Topology Visualizer (Rule R2) */}
-      {siteDetailTab === 3 && (
         <CoreDevicesTab
           site={site}
           onUpdateRedundancy={updateSiteRedundancy}
@@ -298,16 +303,8 @@ export const SiteDetailView: React.FC = () => {
         />
       )}
 
-      {/* Layer 4: PCare Work Order Lifecycle & Solution-Ready Closure (Rule R4) */}
-      {siteDetailTab === 4 && (
-        <WorkOrdersTab
-          site={site}
-          workOrders={workOrders}
-        />
-      )}
-
-      {/* Layer 5: Contract & SLA Fulfillment Risk (Rule R9 & R10) */}
-      {siteDetailTab === 5 && (
+      {/* Layer 2: Contract & SLA Fulfillment Risk (Rule R9 & R10) */}
+      {siteDetailTab === 2 && (
         <ContractFulfillmentTab
           site={site}
           contracts={contracts}
@@ -316,8 +313,8 @@ export const SiteDetailView: React.FC = () => {
         />
       )}
 
-      {/* Layer 6: Offline Log Batches & Latest-Wins Overlap (Rule R3) */}
-      {siteDetailTab === 6 && (
+      {/* Layer 3: Offline Log Batches & Latest-Wins Overlap (Rule R3) */}
+      {siteDetailTab === 3 && (
         <LogBatchesTab
           site={site}
           batches={batches}

@@ -48,6 +48,7 @@ export type NavigationTab =
   | 'pre_sales_eval'
   | 'log_import'
   | 'availability_monitor'
+  | 'availability_drilldown'
   | 'alerts'
   | 'analytics'
   | 'performance_evaluation'
@@ -71,8 +72,15 @@ interface AppContextType {
   setCurrentUser: (user: UserProfile) => void;
   selectedSiteId: string;
   setSelectedSiteId: (id: string) => void;
-  siteDetailTab: number; // 0..6
+  siteDetailTab: number; // 0..3 (0: 站点全景态势, 1: 核心设备拓扑, 2: 合同与SLA履约, 3: 离线日志批次)
   setSiteDetailTab: (idx: number) => void;
+  
+  // Availability Drilldown state (0: 可用度详情 [5min/日/周/月], 1: 故障因果链, 2: PCare工单闭环)
+  availabilityDrilldownTab: number;
+  setAvailabilityDrilldownTab: (tab: number) => void;
+  availabilityDrilldownDate: string;
+  setAvailabilityDrilldownDate: (date: string) => void;
+  navigateToAvailabilityDrilldown: (siteId: string, defaultTabIdx?: number, date?: string) => void;
   
   // AI Drawer state
   isAiDrawerOpen: boolean;
@@ -166,6 +174,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentUser, setCurrentUser] = useState<UserProfile>(CURRENT_USERS[0]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>('site-001');
   const [siteDetailTab, setSiteDetailTab] = useState<number>(0);
+  const [availabilityDrilldownTab, setAvailabilityDrilldownTab] = useState<number>(0);
+  const [availabilityDrilldownDate, setAvailabilityDrilldownDate] = useState<string>('2026-08-15');
   
   // AI Drawer state
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState<boolean>(false);
@@ -230,6 +240,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSelectedSiteId(siteId);
     setSiteDetailTab(defaultTabIdx);
     setActiveTab('site_detail');
+  };
+
+  const navigateToAvailabilityDrilldown = (siteId: string, defaultTabIdx: number = 0, date?: string) => {
+    setSelectedSiteId(siteId);
+    setAvailabilityDrilldownTab(defaultTabIdx);
+    if (date) {
+      setAvailabilityDrilldownDate(date);
+    }
+    setActiveTab('availability_drilldown');
   };
 
   const navigateToAlertsWithFilter = (typeFilter?: string) => {
@@ -862,7 +881,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         chatMessages,
         drilldownFilter,
         setDrilldownFilter,
+        availabilityDrilldownTab,
+        setAvailabilityDrilldownTab,
+        availabilityDrilldownDate,
+        setAvailabilityDrilldownDate,
         navigateToSiteDetail,
+        navigateToAvailabilityDrilldown,
         navigateToAlertsWithFilter,
         handleAlert,
         addSite,

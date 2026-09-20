@@ -462,7 +462,7 @@ export const DailySnapshotsTab: React.FC<DailySnapshotsTabProps> = ({
                             <div className="shrink-0 flex items-center gap-2">
                               {evt.type.includes('alarm') && (
                                 <button
-                                  onClick={() => onNavigateTab(2)}
+                                  onClick={() => onNavigateTab(1)}
                                   className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] text-blue-600 font-semibold"
                                 >
                                   故障溯源 &rarr;
@@ -470,7 +470,7 @@ export const DailySnapshotsTab: React.FC<DailySnapshotsTabProps> = ({
                               )}
                               {evt.type.includes('workorder') && (
                                 <button
-                                  onClick={() => onNavigateTab(4)}
+                                  onClick={() => onNavigateTab(2)}
                                   className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] text-blue-600 font-semibold"
                                 >
                                   工单明细 &rarr;
@@ -493,7 +493,7 @@ export const DailySnapshotsTab: React.FC<DailySnapshotsTabProps> = ({
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span className="text-slate-500">需查看全时段归并因果？</span>
                     <button
-                      onClick={() => onNavigateTab(2)}
+                      onClick={() => onNavigateTab(1)}
                       className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
                     >
                       <span>下钻至归并故障因果时间线 (R11) &rarr;</span>

@@ -47,7 +47,9 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
   onNavigateTab
 }) => {
   // Time window filter for 288 points
-  const [timeWindow, setTimeWindow] = useState<'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24'>('fault_focus');
+  const [timeWindow, setTimeWindow] = useState<'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24' | 'custom'>('fault_focus');
+  const [customStartTime, setCustomStartTime] = useState<string>('08:00');
+  const [customEndTime, setCustomEndTime] = useState<string>('18:00');
   // Dot status filter for the data table
   const [statusFilter, setStatusFilter] = useState<'all' | 'interrupted' | 'workorder' | 'normal'>('all');
   const [searchTime, setSearchTime] = useState<string>('');
@@ -72,6 +74,14 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
     if (timeWindow === '18_24') {
       return allPoints.filter(p => p.index >= 216 && p.index < 288); // 18:00 to 23:55
     }
+    if (timeWindow === 'custom') {
+      const startMins = timeToMinutes(customStartTime);
+      const endMins = timeToMinutes(customEndTime);
+      return allPoints.filter(p => {
+        const ptMins = timeToMinutes(p.time);
+        return ptMins >= startMins && ptMins <= endMins;
+      });
+    }
     if (timeWindow === 'fault_focus') {
       // Find where faults or work orders occur, default to 07:00 to 18:00 (index 84 to 216)
       const faultIndices = allPoints
@@ -85,7 +95,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
       return allPoints.filter(p => p.index >= 84 && p.index <= 216);
     }
     return allPoints; // 'all' (288 points)
-  }, [allPoints, timeWindow]);
+  }, [allPoints, timeWindow, customStartTime, customEndTime]);
 
   // Summary statistics for 288 points
   const stats = useMemo(() => {
@@ -344,8 +354,66 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
             >
               18-24时 (72点)
             </button>
+            <button
+              onClick={() => setTimeWindow('custom')}
+              className={`px-2 py-1 rounded transition-colors ${
+                timeWindow === 'custom'
+                  ? 'bg-white text-blue-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              自定义时段
+            </button>
           </div>
         </div>
+
+        {/* Custom Time Range Selector Row when 'custom' is active */}
+        {timeWindow === 'custom' && (
+          <div className="flex items-center gap-3 bg-blue-50/70 border border-blue-200 rounded-md px-3 py-2 text-xs">
+            <span className="text-blue-900 font-semibold flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-blue-600" />
+              <span>设置采样时段:</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={customStartTime}
+                onChange={e => setCustomStartTime(e.target.value)}
+                className="bg-white border border-slate-300 rounded px-2 py-0.5 font-mono text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-xs"
+              />
+              <span className="text-slate-500">至</span>
+              <input
+                type="time"
+                value={customEndTime}
+                onChange={e => setCustomEndTime(e.target.value)}
+                className="bg-white border border-slate-300 rounded px-2 py-0.5 font-mono text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-xs"
+              />
+            </div>
+            <span className="text-slate-500 text-[11px]">
+              当前筛选展示 <strong className="text-blue-700 font-mono">{chartPoints.length}</strong> 个打点 ({chartPoints.length * 5}分钟)
+            </span>
+            <div className="ml-auto flex items-center gap-1.5 text-[11px]">
+              <button
+                onClick={() => { setCustomStartTime('08:00'); setCustomEndTime('18:00'); }}
+                className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100"
+              >
+                08:00~18:00
+              </button>
+              <button
+                onClick={() => { setCustomStartTime('09:00'); setCustomEndTime('12:00'); }}
+                className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100"
+              >
+                上午高峰
+              </button>
+              <button
+                onClick={() => { setCustomStartTime('14:00'); setCustomEndTime('18:00'); }}
+                className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100"
+              >
+                下午时段
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Legend */}
         <div className="flex items-center justify-between text-[11px] text-slate-500">
