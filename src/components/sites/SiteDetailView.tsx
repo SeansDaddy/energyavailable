@@ -33,6 +33,7 @@ export const SiteDetailView: React.FC = () => {
     setActiveTab,
     updateSiteRedundancy,
     navigateToAvailabilityDrilldown,
+    navigateToPerformanceDetail,
     batches,
     workOrders,
     contracts,
@@ -184,7 +185,7 @@ export const SiteDetailView: React.FC = () => {
               <button
                 onClick={() => navigateToAvailabilityDrilldown(site.id, 0)}
                 className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
-                title="前往可用度监控下钻详情：查看 5分钟打点、故障因果链与 PCare 工单闭环"
+                title="前往可用度监控下钻详情：查看 5分钟打点、中断告警与工单详情"
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>可用度监控下钻</span>
@@ -199,9 +200,9 @@ export const SiteDetailView: React.FC = () => {
                 <span>导入日志</span>
               </button>
               <button
-                onClick={() => setActiveTab('performance_evaluation')}
+                onClick={() => navigateToPerformanceDetail(site.id)}
                 className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
-                title="进入性能工况服务"
+                title="查看该站点的性能工况详情"
               >
                 <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
                 <span>性能工况</span>
@@ -227,7 +228,7 @@ export const SiteDetailView: React.FC = () => {
             <Info className="w-4 h-4 text-blue-600 shrink-0" />
             <span>
               <strong>页面模块拆分提示：</strong>
-              本站点台账保留<strong>【站点全景态势】</strong>、<strong>【核心设备拓扑】</strong>、<strong>【合同与SLA履约】</strong>及<strong>【离线日志批次查看】</strong>。可用度详情（5分钟/日/周/月周期监控）、故障因果链、PCare工单闭环已归类至【可用度监控】的下钻详情中。
+              本站点台账保留<strong>【站点全景态势】</strong>、<strong>【核心设备拓扑】</strong>、<strong>【合同与SLA履约】</strong>及<strong>【离线日志批次查看】</strong>。可用度详情（5分钟/日/周/月周期监控）、中断告警（故障归并与告警清册）、工单详情已归类至【可用度监控】的下钻详情中。
             </span>
           </div>
           <button

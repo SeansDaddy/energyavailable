@@ -25,7 +25,9 @@ import {
   Activity,
   FileText,
   Tag,
-  Leaf
+  Leaf,
+  RotateCcw,
+  Link2
 } from 'lucide-react';
 
 interface DimensionEquipmentAndAlarmsSectionProps {
@@ -36,6 +38,8 @@ interface DimensionEquipmentAndAlarmsSectionProps {
   timeRangeLabel: string;
   workOrders?: WorkOrder[];
   onNavigateTab?: (tabIdx: number, extra?: any) => void;
+  linkageMode?: 'range' | 'selected';
+  onResetToRange?: () => void;
 }
 
 export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndAlarmsSectionProps> = ({
@@ -45,7 +49,9 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
   dimension,
   timeRangeLabel,
   workOrders = [],
-  onNavigateTab
+  onNavigateTab,
+  linkageMode,
+  onResetToRange
 }) => {
   // Device filter & search states
   const [deviceStatusFilter, setDeviceStatusFilter] = useState<
@@ -124,12 +130,28 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
               {dimensionNameMap[dimension] || dimension}
             </span>
-            <span className="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded">
-              {timeRangeLabel}
+            <span className="text-xs text-slate-700 font-mono bg-slate-100 border border-slate-200 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
+              <Clock className="w-3 h-3 text-slate-500" />
+              <span>{timeRangeLabel}</span>
             </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>已与上方时段实时联动</span>
+            </span>
+            {linkageMode === 'selected' && onResetToRange && (
+              <button
+                type="button"
+                onClick={onResetToRange}
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors shadow-2xs"
+                title="切回上方全统计区间"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>切回全统计区间</span>
+              </button>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            监控当前时段内核心设备运行工况、等效停运时长与可用度贡献率。点击设备关联告警即可下钻跳转至【故障因果链】及根因溯源。
+            监控当前时段内核心设备运行工况、等效停运时长与可用度贡献率。点击设备关联告警即可下钻跳转至【中断告警】及根因溯源。
           </p>
         </div>
 
@@ -138,10 +160,10 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
           <button
             onClick={() => handleDrilldownToCausalChain()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs"
-            title="下钻前往故障因果链页签查看全站可用度告警与时序瀑布流"
+            title="下钻前往中断告警页签查看全站可用度告警与时序瀑布流"
           >
             <Layers className="w-3.5 h-3.5 text-blue-600" />
-            <span>查看故障因果链与可用度告警</span>
+            <span>查看中断告警 (故障归并与告警清册)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -180,16 +202,16 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
           </div>
         </div>
 
-        {/* 可用度告警 KPI: Click jumps directly to Fault Causal Chain Tab */}
+        {/* 可用度告警 KPI: Click jumps directly to Interruption Alarms Tab */}
         <div
           onClick={() => handleDrilldownToCausalChain()}
           className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/20 cursor-pointer transition-all group"
-          title="点击直接下钻跳转至【故障因果链】查看可用度告警"
+          title="点击直接下钻跳转至【中断告警】查看可用度告警"
         >
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
             <span>可用度告警</span>
             <span className="flex items-center gap-1 text-amber-600 text-[10px] font-bold group-hover:underline">
-              <span>下钻因果链</span>
+              <span>下钻告警</span>
               <ArrowRight className="w-3 h-3" />
             </span>
           </div>
@@ -541,13 +563,13 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                           </span>
                         </td>
 
-                        {/* 关联可用度告警: 点击下钻跳转至故障因果链 */}
+                        {/* 关联可用度告警: 点击下钻跳转至中断告警 */}
                         <td className="py-3 px-3 text-center">
                           {dev.alarmCountInPeriod > 0 ? (
                             <button
                               onClick={() => handleDrilldownToCausalChain(dev.deviceCode)}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold font-mono bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 hover:border-amber-400 hover:shadow-xs transition-all cursor-pointer group"
-                              title="点击下钻跳转至【故障因果链】查看该设备告警与根因时序"
+                              title="点击下钻跳转至【中断告警】查看该设备告警与根因时序"
                             >
                               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                               <span>{dev.alarmCountInPeriod} 条告警</span>
@@ -578,7 +600,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                             <button
                               onClick={() => handleDrilldownToCausalChain(dev.deviceCode)}
                               className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold text-[11px] px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                              title="下钻至【故障因果链】查看告警与时序链"
+                              title="下钻至【中断告警】查看告警与时序链"
                             >
                               <span>下钻告警</span>
                               <ArrowRight className="w-3 h-3" />
@@ -621,13 +643,13 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                                   </div>
                                   <p className="text-[11px] text-slate-500 mt-1">
                                     {dev.totalInterruptionMinutesInPeriod > 0
-                                      ? '当期已扣减可用度，支持在【故障因果链】中评估 ECO 节能运行免责条款。'
+                                      ? '当期已扣减可用度，支持在【中断告警】中评估 ECO 节能运行免责条款。'
                                       : '本考核周期未发生导致可用度下降的非计划停运。'}
                                   </p>
                                 </div>
 
                                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                  <span className="text-slate-500 text-[11px]">因果链与告警联动</span>
+                                  <span className="text-slate-500 text-[11px]">中断告警与事件联动</span>
                                   <div className="text-sm font-bold font-mono text-slate-900 mt-1">
                                     {dev.alarmCountInPeriod} 项关联告警
                                   </div>
@@ -637,10 +659,10 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                                 </div>
                               </div>
 
-                              {/* Prominent CTA to jump to Fault Causal Chain */}
+                              {/* Prominent CTA to jump to Interruption Alarms */}
                               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                                 <span className="text-[11px] text-slate-500">
-                                  下钻穿透：查看该设备的原始因果时序事件瀑布流、AI 根因分析及 ECO 免责清册。
+                                  下钻穿透：查看该设备的原始中断时序事件瀑布流、AI 根因分析及 ECO 免责清册。
                                 </span>
                                 <button
                                   onClick={() => handleDrilldownToCausalChain(dev.deviceCode)}
@@ -648,7 +670,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                                 >
                                   <Sparkles className="w-3.5 h-3.5" />
                                   <span>
-                                    下钻跳转至【故障因果链】查看设备【{dev.deviceCode}】告警与根因
+                                    下钻跳转至【中断告警】查看设备【{dev.deviceCode}】告警与根因
                                   </span>
                                   <ArrowRight className="w-3.5 h-3.5" />
                                 </button>

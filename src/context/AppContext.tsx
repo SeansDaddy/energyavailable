@@ -75,12 +75,18 @@ interface AppContextType {
   siteDetailTab: number; // 0..3 (0: 站点全景态势, 1: 核心设备拓扑, 2: 合同与SLA履约, 3: 离线日志批次)
   setSiteDetailTab: (idx: number) => void;
   
-  // Availability Drilldown state (0: 可用度详情 [5min/日/周/月], 1: 故障因果链, 2: PCare工单闭环)
+  // Availability Drilldown state (0: 可用度详情 [5min/日/周/月], 1: 中断告警, 2: 工单详情)
   availabilityDrilldownTab: number;
   setAvailabilityDrilldownTab: (tab: number) => void;
   availabilityDrilldownDate: string;
   setAvailabilityDrilldownDate: (date: string) => void;
   navigateToAvailabilityDrilldown: (siteId: string, defaultTabIdx?: number, date?: string) => void;
+
+  // Performance condition state & drilldown
+  performanceDetailSiteId: string | null;
+  setPerformanceDetailSiteId: (siteId: string | null) => void;
+  navigateToPerformanceDetail: (siteId: string) => void;
+  navigateToPerformanceMonitor: () => void;
   
   // AI Drawer state
   isAiDrawerOpen: boolean;
@@ -177,6 +183,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [availabilityDrilldownTab, setAvailabilityDrilldownTab] = useState<number>(0);
   const [availabilityDrilldownDate, setAvailabilityDrilldownDate] = useState<string>('2026-08-15');
   
+  // Performance condition monitoring & detail state
+  const [performanceDetailSiteId, setPerformanceDetailSiteId] = useState<string | null>(null);
+  
   // AI Drawer state
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState<boolean>(false);
 
@@ -249,6 +258,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setAvailabilityDrilldownDate(date);
     }
     setActiveTab('availability_drilldown');
+  };
+
+  const navigateToPerformanceDetail = (siteId: string) => {
+    setSelectedSiteId(siteId);
+    setPerformanceDetailSiteId(siteId);
+    setActiveTab('performance_evaluation');
+  };
+
+  const navigateToPerformanceMonitor = () => {
+    setPerformanceDetailSiteId(null);
+    setActiveTab('performance_evaluation');
   };
 
   const navigateToAlertsWithFilter = (typeFilter?: string) => {
@@ -885,6 +905,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAvailabilityDrilldownTab,
         availabilityDrilldownDate,
         setAvailabilityDrilldownDate,
+        performanceDetailSiteId,
+        setPerformanceDetailSiteId,
+        navigateToPerformanceDetail,
+        navigateToPerformanceMonitor,
         navigateToSiteDetail,
         navigateToAvailabilityDrilldown,
         navigateToAlertsWithFilter,

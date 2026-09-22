@@ -336,7 +336,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-600 mt-1">
-                已自动为您穿透展示该核心设备的关联可用度告警与故障因果链时序事件。
+                已自动为您穿透展示该核心设备的关联可用度告警与中断告警归并时序事件。
               </p>
             </div>
           </div>
@@ -369,14 +369,14 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                 <Layers className="w-5 h-5" />
               </span>
               <h3 className="text-base font-bold text-slate-900">
-                故障因果链与可用度告警
+                中断告警
               </h3>
               <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-                Rule R11 故障归并 / 可用度告警 / ECO免责
+                Rule R11 故障归并 / 中断告警 / ECO免责
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              结合同站点重叠时间窗故障归并形成因果链瀑布流，深度整合单站可用度告警清册，支持设备穿透溯源、ECO节能运行免责标注与
+              合并呈现同站点中断归并事件因果时序与可用度告警清册，支持设备穿透溯源、ECO节能运行免责标注与
               SLA 考核核减。
             </p>
           </div>
@@ -392,7 +392,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>故障因果链 (Rule R11)</span>
+              <span>中断归并事件 (Rule R11)</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-mono">
                 {filteredMergedFaults.length}
               </span>
@@ -422,7 +422,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* SUB-VIEW 1: FAULT CAUSAL CHAIN WATERFALL (Rule R11)                       */}
+        {/* SUB-VIEW 1: INTERRUPTION MERGED EVENTS WATERFALL (Rule R11)              */}
         {/* ========================================================================= */}
         {activeSubView === 'merged' && (
           <div className="space-y-5 animate-in fade-in duration-150">
@@ -431,9 +431,9 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
               <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <div>
                 <strong className="text-blue-900 font-semibold">
-                  故障归并与因果链追溯口径 (Rule R11)：
+                  中断告警归并与根因追溯口径 (Rule R11)：
                 </strong>
-                同站点内时间窗相互重叠的事件记录（告警、PCare工单、离线日志）自动归并形成展示单元。以等效
+                同站点内时间窗相互重叠的事件记录（告警、工单、离线日志）自动归并形成展示单元。以等效
                 PCS 中断时长为 SLA 考核计算依据，支持展开原始事件因果时序链瀑布流，实现从表象告警到根因诊断的穿透。
               </div>
             </div>
@@ -1066,7 +1066,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                               }}
                               className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
                             >
-                              <span>前往【PCare工单闭环】追溯</span>
+                              <span>前往【工单详情】追溯</span>
                               <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>

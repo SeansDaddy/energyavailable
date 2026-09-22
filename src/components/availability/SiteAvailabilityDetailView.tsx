@@ -66,15 +66,15 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     },
     {
       id: 1,
-      label: '故障因果链',
-      subtext: 'Rule R11 · 故障归并 / 可用度告警 / ECO免责',
+      label: '中断告警',
+      subtext: 'Rule R11 · 故障归并 / 中断告警 / ECO免责',
       icon: Clock,
       count: site.mergedFaults?.length || 0
     },
     {
       id: 2,
-      label: 'PCare 工单闭环',
-      subtext: 'Rule R4 · 方案输出闭环 / MTTR 追溯',
+      label: '工单详情',
+      subtext: 'Rule R4 · 现场消缺 / 方案闭环 / MTTR',
       icon: Wrench,
       count: siteOrders.length
     }
@@ -90,9 +90,9 @@ export const SiteAvailabilityDetailView: React.FC = () => {
       setFaultCausalChainTarget(null);
     }
     if (targetIdx === 1) {
-      setAvailabilityDrilldownTab(1); // 故障因果链
+      setAvailabilityDrilldownTab(1); // 中断告警
     } else if (targetIdx === 2 || targetIdx === 4) {
-      setAvailabilityDrilldownTab(2); // PCare工单闭环
+      setAvailabilityDrilldownTab(2); // 工单详情
     } else if (targetIdx === 3) {
       navigateToSiteDetail(site.id, 1); // 核心设备拓扑
     } else {
@@ -307,7 +307,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
         />
       )}
 
-      {/* Tab 1: 故障因果链与可用度告警 (Rule R11 & R2) */}
+      {/* Tab 1: 中断告警 (故障归并与可用度告警合并 · Rule R11 & R2) */}
       {availabilityDrilldownTab === 1 && (
         <MergedFaultsTab
           site={site}
@@ -319,7 +319,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
         />
       )}
 
-      {/* Tab 2: PCare 工单闭环 (Rule R4) */}
+      {/* Tab 2: 工单详情 (Rule R4) */}
       {availabilityDrilldownTab === 2 && (
         <WorkOrdersTab
           site={site}

@@ -140,24 +140,61 @@ export function getEquipmentAndAlarmsForPeriod(
   const sDate = startDateStr.slice(0, 10);
   const eDate = endDateStr.slice(0, 10);
 
+  // Helper to normalize datetime string to "YYYY-MM-DD HH:mm:ss"
+  const normalizeDateTime = (dtStr: string, isEnd = false): string => {
+    if (!dtStr) return isEnd ? '9999-12-31 23:59:59' : '0000-01-01 00:00:00';
+    const trimmed = dtStr.trim();
+    if (trimmed.length === 10) {
+      return isEnd ? `${trimmed} 23:59:59` : `${trimmed} 00:00:00`;
+    }
+    if (trimmed.length === 16) {
+      return isEnd ? `${trimmed}:59` : `${trimmed}:00`;
+    }
+    return trimmed;
+  };
+
+  const periodStartFull = normalizeDateTime(startDateStr, false);
+  const periodEndFull = normalizeDateTime(endDateStr, true);
+
+  // Check if an event or interval [eventStart, eventEnd] overlaps with [periodStartFull, periodEndFull]
+  const isTimeOverlap = (eventStart?: string, eventEnd?: string) => {
+    if (!eventStart) return false;
+    const eStart = normalizeDateTime(eventStart, false);
+    const eEnd = eventEnd ? normalizeDateTime(eventEnd, true) : eStart;
+    return eStart <= periodEndFull && eEnd >= periodStartFull;
+  };
+
+  // Calculate actual overlapping minutes between an event and the requested period
+  const calculateOverlapMinutes = (startStr: string, endStr: string | undefined, totalMins: number) => {
+    if (!startStr) return 0;
+    try {
+      const eStart = new Date(normalizeDateTime(startStr, false).replace(' ', 'T')).getTime();
+      const eEnd = endStr
+        ? new Date(normalizeDateTime(endStr, true).replace(' ', 'T')).getTime()
+        : eStart + totalMins * 60 * 1000;
+      const pStart = new Date(periodStartFull.replace(' ', 'T')).getTime();
+      const pEnd = new Date(periodEndFull.replace(' ', 'T')).getTime();
+
+      const overlapStart = Math.max(eStart, pStart);
+      const overlapEnd = Math.min(eEnd, pEnd);
+      if (overlapEnd <= overlapStart) return 0;
+      return Math.round((overlapEnd - overlapStart) / (60 * 1000));
+    } catch {
+      return totalMins;
+    }
+  };
+
   // 1. Gather all potential alarms from site's mergedFaults
   const alarmsList: AvailabilityAlarmItem[] = [];
 
-  // Helper to test if a timestamp falls within [sDate, eDate]
-  const isDateInRange = (ts: string) => {
-    if (!ts) return false;
-    const d = ts.slice(0, 10);
-    return d >= sDate && d <= eDate;
-  };
-
   // Extract from mergedFaults
   (site.mergedFaults || []).forEach(f => {
-    if (isDateInRange(f.startTime) || isDateInRange(f.endTime)) {
+    if (isTimeOverlap(f.startTime, f.endTime)) {
       // Look for alarms in rawEvents
       const rawAlarms = f.rawEvents?.filter(e => e.type === 'alarm') || [];
       if (rawAlarms.length > 0) {
         rawAlarms.forEach(ra => {
-          if (isDateInRange(ra.timestamp)) {
+          if (isTimeOverlap(ra.timestamp, f.endTime)) {
             // Determine device from title or code
             let devCode = 'PCS-INV-01B';
             let devName = '1.25MW 储能变流器 B组 (备)';
@@ -186,6 +223,9 @@ export function getEquipmentAndAlarmsForPeriod(
               w => w.siteId === site.id && (w.createTime?.startsWith(ra.timestamp.slice(0, 10)) || w.orderNo?.includes('9921'))
             );
 
+            const totalMins = f.durationMinutes || ra.durationMinutes || 60;
+            const overlapMins = calculateOverlapMinutes(ra.timestamp || f.startTime, f.endTime, totalMins);
+
             alarmsList.push({
               id: `alm-${ra.id || f.id}`,
               code: ra.code || f.faultCode || 'ALM-PCS-3042',
@@ -196,12 +236,12 @@ export function getEquipmentAndAlarmsForPeriod(
               deviceType: devType,
               triggerTime: ra.timestamp || f.startTime,
               clearTime: f.endTime,
-              durationMinutes: f.durationMinutes || ra.durationMinutes || 60,
-              equivalentInterruptionMinutes: f.equivalentInterruptionMinutes || ra.equivalentInterruptionMinutes || 60,
-              availabilityImpactPercent: Number(((f.equivalentInterruptionMinutes || 60) / 14.4).toFixed(2)),
+              durationMinutes: overlapMins > 0 ? overlapMins : totalMins,
+              equivalentInterruptionMinutes: overlapMins > 0 ? overlapMins : totalMins,
+              availabilityImpactPercent: Number((((overlapMins > 0 ? overlapMins : totalMins)) / 14.4).toFixed(2)),
               isExempt: false,
               slaCounted: true,
-              status: f.endTime ? 'RESOLVED' : 'ACTIVE',
+              status: f.endTime && normalizeDateTime(f.endTime, true) <= periodEndFull ? 'RESOLVED' : 'ACTIVE',
               rootCause: f.rootCause || '散热风道堵塞引发热敏保护动作',
               solution: '清理风道积灰，更换进气初效滤网，升级热敏保护固件',
               workOrderNo: linkedWo?.orderNo || 'WO-20260815-9921',
@@ -210,6 +250,8 @@ export function getEquipmentAndAlarmsForPeriod(
           }
         });
       } else {
+        const totalMins = f.durationMinutes || 60;
+        const overlapMins = calculateOverlapMinutes(f.startTime, f.endTime, totalMins);
         // Fallback: create alarm from fault directly
         alarmsList.push({
           id: `alm-${f.id}`,
@@ -221,12 +263,12 @@ export function getEquipmentAndAlarmsForPeriod(
           deviceType: 'PCS_INVERTER',
           triggerTime: f.startTime,
           clearTime: f.endTime,
-          durationMinutes: f.durationMinutes,
-          equivalentInterruptionMinutes: f.equivalentInterruptionMinutes,
-          availabilityImpactPercent: Number((f.equivalentInterruptionMinutes / 14.4).toFixed(2)),
+          durationMinutes: overlapMins > 0 ? overlapMins : totalMins,
+          equivalentInterruptionMinutes: overlapMins > 0 ? overlapMins : totalMins,
+          availabilityImpactPercent: Number((((overlapMins > 0 ? overlapMins : totalMins)) / 14.4).toFixed(2)),
           isExempt: false,
           slaCounted: true,
-          status: 'RESOLVED',
+          status: f.endTime && normalizeDateTime(f.endTime, true) <= periodEndFull ? 'RESOLVED' : 'ACTIVE',
           rootCause: f.rootCause,
           solution: '工单已闭环并完成硬件与通信恢复',
           workOrderNo: 'WO-20260815-9921',
@@ -238,127 +280,158 @@ export function getEquipmentAndAlarmsForPeriod(
 
   // Extract from dailySnapshots for other days (e.g. 2026-08-04, 2026-08-11, 2026-08-22, 2026-08-27)
   (site.dailySnapshots || []).forEach(snap => {
-    if (isDateInRange(snap.date)) {
+    const snapStart = `${snap.date} 00:00:00`;
+    const snapEnd = `${snap.date} 23:59:59`;
+    if (isTimeOverlap(snapStart, snapEnd)) {
       // Check if this date is already covered by mergedFaults
       const alreadyCovered = alarmsList.some(a => a.triggerTime.startsWith(snap.date));
       if (!alreadyCovered) {
         if (snap.pcsInterruptionMins > 0) {
           if (snap.date === '2026-08-04') {
-            alarmsList.push({
-              id: `alm-snap-${snap.date}-1`,
-              code: 'ALM-BMS-2108',
-              title: 'BMS 主控通信总线瞬时丢包超限降额告警',
-              severity: 'MAJOR',
-              deviceCode: 'BMS-RACK-01',
-              deviceName: '磷酸铁锂高压电池簇 01号',
-              deviceType: 'BMS_CLUSTER',
-              triggerTime: `${snap.date} 14:20:12`,
-              clearTime: `${snap.date} 17:40:00`,
-              durationMinutes: 200,
-              equivalentInterruptionMinutes: 200,
-              availabilityImpactPercent: 13.89,
-              isExempt: false,
-              slaCounted: true,
-              status: 'RESOLVED',
-              rootCause: 'CAN 通信屏蔽层接地电位差导致瞬时丢包，触发防孤岛保护',
-              solution: '重做通信屏蔽端子压接，加装磁环滤波器',
-              workOrderNo: 'WO-20260804-8711',
-              actionTaken: '更换双绞屏蔽通信线，复测丢包率降至 0.001%'
-            });
+            const trig = `${snap.date} 14:20:12`;
+            const clr = `${snap.date} 17:40:00`;
+            if (isTimeOverlap(trig, clr)) {
+              const dur = 200;
+              const ov = calculateOverlapMinutes(trig, clr, dur);
+              alarmsList.push({
+                id: `alm-snap-${snap.date}-1`,
+                code: 'ALM-BMS-2108',
+                title: 'BMS 主控通信总线瞬时丢包超限降额告警',
+                severity: 'MAJOR',
+                deviceCode: 'BMS-RACK-01',
+                deviceName: '磷酸铁锂高压电池簇 01号',
+                deviceType: 'BMS_CLUSTER',
+                triggerTime: trig,
+                clearTime: clr,
+                durationMinutes: ov > 0 ? ov : dur,
+                equivalentInterruptionMinutes: ov > 0 ? ov : dur,
+                availabilityImpactPercent: 13.89,
+                isExempt: false,
+                slaCounted: true,
+                status: 'RESOLVED',
+                rootCause: 'CAN 通信屏蔽层接地电位差导致瞬时丢包，触发防孤岛保护',
+                solution: '重做通信屏蔽端子压接，加装磁环滤波器',
+                workOrderNo: 'WO-20260804-8711',
+                actionTaken: '更换双绞屏蔽通信线，复测丢包率降至 0.001%'
+              });
+            }
           } else if (snap.date === '2026-08-22') {
-            alarmsList.push({
-              id: `alm-snap-${snap.date}-1`,
-              code: 'ALM-PCS-1049',
-              title: 'PCS 变流器并网交流接触器触头温升超限告警',
-              severity: 'MAJOR',
-              deviceCode: 'PCS-INV-01A',
-              deviceName: '1.25MW 储能变流器 A组 (主)',
-              deviceType: 'PCS_INVERTER',
-              triggerTime: `${snap.date} 11:15:30`,
-              clearTime: `${snap.date} 11:55:30`,
-              durationMinutes: 40,
-              equivalentInterruptionMinutes: 40,
-              availabilityImpactPercent: 2.78,
-              isExempt: false,
-              slaCounted: true,
-              status: 'RESOLVED',
-              rootCause: '交流侧主接触器动静触头微弱氧化导致接触电阻增加',
-              solution: '接触器触指研磨清洁，涂敷导电膏',
-              workOrderNo: 'WO-20260822-4521',
-              actionTaken: '紧固接触器接线端子，升载带电运行温升正常'
-            });
+            const trig = `${snap.date} 11:15:30`;
+            const clr = `${snap.date} 11:55:30`;
+            if (isTimeOverlap(trig, clr)) {
+              const dur = 40;
+              const ov = calculateOverlapMinutes(trig, clr, dur);
+              alarmsList.push({
+                id: `alm-snap-${snap.date}-1`,
+                code: 'ALM-PCS-1049',
+                title: 'PCS 变流器并网交流接触器触头温升超限告警',
+                severity: 'MAJOR',
+                deviceCode: 'PCS-INV-01A',
+                deviceName: '1.25MW 储能变流器 A组 (主)',
+                deviceType: 'PCS_INVERTER',
+                triggerTime: trig,
+                clearTime: clr,
+                durationMinutes: ov > 0 ? ov : dur,
+                equivalentInterruptionMinutes: ov > 0 ? ov : dur,
+                availabilityImpactPercent: 2.78,
+                isExempt: false,
+                slaCounted: true,
+                status: 'RESOLVED',
+                rootCause: '交流侧主接触器动静触头微弱氧化导致接触电阻增加',
+                solution: '接触器触指研磨清洁，涂敷导电膏',
+                workOrderNo: 'WO-20260822-4521',
+                actionTaken: '紧固接触器接线端子，升载带电运行温升正常'
+              });
+            }
           } else if (snap.date === '2026-08-27') {
-            alarmsList.push({
-              id: `alm-snap-${snap.date}-1`,
-              code: 'ALM-HVAC-0412',
-              title: '集装箱液冷温控节能ECO自适应待机降频',
-              severity: 'MINOR',
-              deviceCode: 'HVAC-COOL-01',
-              deviceName: '集装箱工业液冷温控机组',
-              deviceType: 'HVAC_COOLING',
-              triggerTime: `${snap.date} 08:30:00`,
-              clearTime: `${snap.date} 08:50:00`,
-              durationMinutes: 20,
-              equivalentInterruptionMinutes: 20,
-              availabilityImpactPercent: 1.39,
-              isExempt: false,
-              isEcoExempt: true,
-              ecoExemptReason: '符合调度协议 Clause 4.2 节能温控自适应启停免责条款',
-              ecoExemptTime: `${snap.date} 09:05:00`,
-              ecoExemptOperator: '运维专工·张强',
-              slaCounted: false,
-              status: 'RESOLVED',
-              rootCause: '站内环境温度适宜，液冷机组根据节能优化策略自动进入ECO休眠轮换待机',
-              solution: '仓温正常，待温升阈值触发自动切回全速冷却，无需消缺处理',
-              workOrderNo: 'WO-20260827-1108',
-              actionTaken: 'ECO 节能运行策略审核通过，依规标注免除考核扣减'
-            });
+            const trig = `${snap.date} 08:30:00`;
+            const clr = `${snap.date} 08:50:00`;
+            if (isTimeOverlap(trig, clr)) {
+              const dur = 20;
+              const ov = calculateOverlapMinutes(trig, clr, dur);
+              alarmsList.push({
+                id: `alm-snap-${snap.date}-1`,
+                code: 'ALM-HVAC-0412',
+                title: '集装箱液冷温控节能ECO自适应待机降频',
+                severity: 'MINOR',
+                deviceCode: 'HVAC-COOL-01',
+                deviceName: '集装箱工业液冷温控机组',
+                deviceType: 'HVAC_COOLING',
+                triggerTime: trig,
+                clearTime: clr,
+                durationMinutes: ov > 0 ? ov : dur,
+                equivalentInterruptionMinutes: ov > 0 ? ov : dur,
+                availabilityImpactPercent: 1.39,
+                isExempt: false,
+                isEcoExempt: true,
+                ecoExemptReason: '符合调度协议 Clause 4.2 节能温控自适应启停免责条款',
+                ecoExemptTime: `${snap.date} 09:05:00`,
+                ecoExemptOperator: '运维专工·张强',
+                slaCounted: false,
+                status: 'RESOLVED',
+                rootCause: '站内环境温度适宜，液冷机组根据节能优化策略自动进入ECO休眠轮换待机',
+                solution: '仓温正常，待温升阈值触发自动切回全速冷却，无需消缺处理',
+                workOrderNo: 'WO-20260827-1108',
+                actionTaken: 'ECO 节能运行策略审核通过，依规标注免除考核扣减'
+              });
+            }
           } else {
-            // General PCS anomaly
-            alarmsList.push({
-              id: `alm-snap-${snap.date}-gen`,
-              code: 'ALM-PCS-FAULT-GEN',
-              title: 'PCS 系统短时停机与联锁重合闸',
-              severity: 'MAJOR',
-              deviceCode: 'PCS-INV-01B',
-              deviceName: '1.25MW 储能变流器 B组 (备)',
-              deviceType: 'PCS_INVERTER',
-              triggerTime: `${snap.date} 10:00:00`,
-              clearTime: `${snap.date} 11:00:00`,
-              durationMinutes: snap.pcsInterruptionMins,
-              equivalentInterruptionMinutes: snap.pcsInterruptionMins,
-              availabilityImpactPercent: Number(((snap.pcsInterruptionMins / 1440) * 100).toFixed(2)),
-              isExempt: false,
-              slaCounted: true,
-              status: 'RESOLVED',
-              rootCause: '电网瞬态扰动引起变流器电压暂降保护动作',
-              solution: '自检通过后重新并网',
-              actionTaken: '自动恢复正常并网运行'
-            });
+            const trig = `${snap.date} 10:00:00`;
+            const clr = `${snap.date} 11:00:00`;
+            if (isTimeOverlap(trig, clr)) {
+              const dur = snap.pcsInterruptionMins;
+              const ov = calculateOverlapMinutes(trig, clr, dur);
+              alarmsList.push({
+                id: `alm-snap-${snap.date}-gen`,
+                code: 'ALM-PCS-FAULT-GEN',
+                title: 'PCS 系统短时停机与联锁重合闸',
+                severity: 'MAJOR',
+                deviceCode: 'PCS-INV-01B',
+                deviceName: '1.25MW 储能变流器 B组 (备)',
+                deviceType: 'PCS_INVERTER',
+                triggerTime: trig,
+                clearTime: clr,
+                durationMinutes: ov > 0 ? ov : dur,
+                equivalentInterruptionMinutes: ov > 0 ? ov : dur,
+                availabilityImpactPercent: Number(((snap.pcsInterruptionMins / 1440) * 100).toFixed(2)),
+                isExempt: false,
+                slaCounted: true,
+                status: 'RESOLVED',
+                rootCause: '电网瞬态扰动引起变流器电压暂降保护动作',
+                solution: '自检通过后重新并网',
+                actionTaken: '自动恢复正常并网运行'
+              });
+            }
           }
         } else if (snap.plannedMaintenanceMins > 0) {
-          // Rule R2 Exempt planned maintenance
-          alarmsList.push({
-            id: `alm-maint-${snap.date}`,
-            code: 'ALM-MAINT-R2',
-            title: '计划性月度预防性定检维护 (Rule R2 免责)',
-            severity: 'WARNING',
-            deviceCode: 'TR-MAIN-01',
-            deviceName: '35kV 主升压变压器',
-            deviceType: 'TRANSFORMER',
-            triggerTime: `${snap.date} 02:00:00`,
-            clearTime: `${snap.date} 04:00:00`,
-            durationMinutes: snap.plannedMaintenanceMins,
-            equivalentInterruptionMinutes: 0,
-            availabilityImpactPercent: 0,
-            isExempt: true,
-            slaCounted: false,
-            status: 'RESOLVED',
-            rootCause: '合同约定的预防性定期试验与红外测温',
-            solution: '完成断路器合分闸试验与绝缘油色谱化验',
-            workOrderNo: 'WO-PLAN-20260811',
-            actionTaken: '维保完成，系统按规范复归并网'
-          });
+          const trig = `${snap.date} 02:00:00`;
+          const clr = `${snap.date} 04:00:00`;
+          if (isTimeOverlap(trig, clr)) {
+            const dur = snap.plannedMaintenanceMins;
+            const ov = calculateOverlapMinutes(trig, clr, dur);
+            // Rule R2 Exempt planned maintenance
+            alarmsList.push({
+              id: `alm-maint-${snap.date}`,
+              code: 'ALM-MAINT-R2',
+              title: '计划性月度预防性定检维护 (Rule R2 免责)',
+              severity: 'WARNING',
+              deviceCode: 'TR-MAIN-01',
+              deviceName: '35kV 主升压变压器',
+              deviceType: 'TRANSFORMER',
+              triggerTime: trig,
+              clearTime: clr,
+              durationMinutes: ov > 0 ? ov : dur,
+              equivalentInterruptionMinutes: 0,
+              availabilityImpactPercent: 0,
+              isExempt: true,
+              slaCounted: false,
+              status: 'RESOLVED',
+              rootCause: '合同约定的预防性定期试验与红外测温',
+              solution: '完成断路器合分闸试验与绝缘油色谱化验',
+              workOrderNo: 'WO-PLAN-20260811',
+              actionTaken: '维保完成，系统按规范复归并网'
+            });
+          }
         }
       }
     }

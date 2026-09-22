@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Site, WorkOrder, FiveMinAvailabilityPoint } from '../../types';
 import { generateFiveMinutePointsForDate, timeToMinutes } from '../../utils/availabilityTimelineGenerator';
 import {
@@ -15,7 +15,8 @@ import {
   Layers,
   Sparkles,
   Zap,
-  Sliders
+  Sliders,
+  Link2
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -31,12 +32,35 @@ import {
   Dot
 } from 'recharts';
 
+export interface FiveMinTimeRangeLinkageInfo {
+  timeWindow: 'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24' | 'custom';
+  startTime: string;
+  endTime: string;
+  startDateTime: string;
+  endDateTime: string;
+  timeRangeLabel: string;
+  windowLabel: string;
+  selectedPoint: FiveMinAvailabilityPoint | null;
+  filteredPointCount: number;
+}
+
 interface FiveMinAvailabilityDotsViewProps {
   site: Site;
   activeDate: string;
   onChangeDate: (date: string) => void;
   workOrders?: WorkOrder[];
   onNavigateTab: (tabIdx: number) => void;
+  defaultDisplayFormat?: 'chart' | 'table' | 'all';
+  // Linkage callbacks and controlled props
+  timeWindow?: 'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24' | 'custom';
+  onTimeWindowChange?: (window: 'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24' | 'custom') => void;
+  customStartTime?: string;
+  onCustomStartTimeChange?: (time: string) => void;
+  customEndTime?: string;
+  onCustomEndTimeChange?: (time: string) => void;
+  selectedPointIndex?: number | null;
+  onSelectPointIndex?: (idx: number | null) => void;
+  onTimeRangeLinkageChange?: (info: FiveMinTimeRangeLinkageInfo) => void;
 }
 
 export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewProps> = ({
@@ -44,16 +68,57 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
   activeDate,
   onChangeDate,
   workOrders = [],
-  onNavigateTab
+  onNavigateTab,
+  defaultDisplayFormat = 'chart',
+  timeWindow: propTimeWindow,
+  onTimeWindowChange,
+  customStartTime: propCustomStartTime,
+  onCustomStartTimeChange,
+  customEndTime: propCustomEndTime,
+  onCustomEndTimeChange,
+  selectedPointIndex: propSelectedPointIndex,
+  onSelectPointIndex,
+  onTimeRangeLinkageChange
 }) => {
+  // Selection mode for chart vs table: 'chart' (可用度打点与走势) | 'table' (打点明细表) | 'all' (全部展开)
+  const [displayMode, setDisplayMode] = useState<'chart' | 'table' | 'all'>(defaultDisplayFormat);
+
   // Time window filter for 288 points
-  const [timeWindow, setTimeWindow] = useState<'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24' | 'custom'>('fault_focus');
-  const [customStartTime, setCustomStartTime] = useState<string>('08:00');
-  const [customEndTime, setCustomEndTime] = useState<string>('18:00');
+  const [internalTimeWindow, setInternalTimeWindow] = useState<'all' | 'fault_focus' | '00_06' | '06_12' | '12_18' | '18_24' | 'custom'>('fault_focus');
+  const effectiveTimeWindow = propTimeWindow !== undefined ? propTimeWindow : internalTimeWindow;
+
+  const [internalCustomStartTime, setInternalCustomStartTime] = useState<string>('08:00');
+  const effectiveCustomStartTime = propCustomStartTime !== undefined ? propCustomStartTime : internalCustomStartTime;
+
+  const [internalCustomEndTime, setInternalCustomEndTime] = useState<string>('18:00');
+  const effectiveCustomEndTime = propCustomEndTime !== undefined ? propCustomEndTime : internalCustomEndTime;
+
   // Dot status filter for the data table
   const [statusFilter, setStatusFilter] = useState<'all' | 'interrupted' | 'workorder' | 'normal'>('all');
   const [searchTime, setSearchTime] = useState<string>('');
-  const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
+
+  const [internalPointIndex, setInternalPointIndex] = useState<number | null>(null);
+  const selectedPointIndex = propSelectedPointIndex !== undefined ? propSelectedPointIndex : internalPointIndex;
+
+  const handleTimeWindowChange = (w: typeof effectiveTimeWindow) => {
+    setInternalTimeWindow(w);
+    onTimeWindowChange?.(w);
+  };
+
+  const handleCustomStartTimeChange = (t: string) => {
+    setInternalCustomStartTime(t);
+    onCustomStartTimeChange?.(t);
+  };
+
+  const handleCustomEndTimeChange = (t: string) => {
+    setInternalCustomEndTime(t);
+    onCustomEndTimeChange?.(t);
+  };
+
+  const handleSelectPointIndex = (idx: number | null) => {
+    setInternalPointIndex(idx);
+    onSelectPointIndex?.(idx);
+  };
 
   // Generate 288 5-minute points for activeDate
   const allPoints: FiveMinAvailabilityPoint[] = useMemo(() => {
@@ -62,27 +127,27 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
 
   // Filter points for chart based on time window
   const chartPoints = useMemo(() => {
-    if (timeWindow === '00_06') {
+    if (effectiveTimeWindow === '00_06') {
       return allPoints.filter(p => p.index >= 0 && p.index < 72); // 00:00 to 05:55
     }
-    if (timeWindow === '06_12') {
+    if (effectiveTimeWindow === '06_12') {
       return allPoints.filter(p => p.index >= 72 && p.index < 144); // 06:00 to 11:55
     }
-    if (timeWindow === '12_18') {
+    if (effectiveTimeWindow === '12_18') {
       return allPoints.filter(p => p.index >= 144 && p.index < 216); // 12:00 to 17:55
     }
-    if (timeWindow === '18_24') {
+    if (effectiveTimeWindow === '18_24') {
       return allPoints.filter(p => p.index >= 216 && p.index < 288); // 18:00 to 23:55
     }
-    if (timeWindow === 'custom') {
-      const startMins = timeToMinutes(customStartTime);
-      const endMins = timeToMinutes(customEndTime);
+    if (effectiveTimeWindow === 'custom') {
+      const startMins = timeToMinutes(effectiveCustomStartTime);
+      const endMins = timeToMinutes(effectiveCustomEndTime);
       return allPoints.filter(p => {
         const ptMins = timeToMinutes(p.time);
         return ptMins >= startMins && ptMins <= endMins;
       });
     }
-    if (timeWindow === 'fault_focus') {
+    if (effectiveTimeWindow === 'fault_focus') {
       // Find where faults or work orders occur, default to 07:00 to 18:00 (index 84 to 216)
       const faultIndices = allPoints
         .filter(p => p.status !== 'NORMAL')
@@ -95,7 +160,102 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
       return allPoints.filter(p => p.index >= 84 && p.index <= 216);
     }
     return allPoints; // 'all' (288 points)
-  }, [allPoints, timeWindow, customStartTime, customEndTime]);
+  }, [allPoints, effectiveTimeWindow, effectiveCustomStartTime, effectiveCustomEndTime]);
+
+  // Synchronize linkage whenever time window, custom times, or point selection changes
+  useEffect(() => {
+    if (!onTimeRangeLinkageChange) return;
+
+    let startTime = '00:00';
+    let endTime = '24:00';
+    let startDateTime = `${activeDate} 00:00:00`;
+    let endDateTime = `${activeDate} 23:59:59`;
+    let timeRangeLabel = `${activeDate} (5分钟颗粒度全天288点)`;
+    let windowLabel = '全天288点';
+
+    if (selectedPointIndex !== null && allPoints[selectedPointIndex]) {
+      const pt = allPoints[selectedPointIndex];
+      startTime = pt.time;
+      endTime = pt.time;
+      startDateTime = `${activeDate} ${pt.time}:00`;
+      endDateTime = `${activeDate} ${pt.time}:59`;
+      timeRangeLabel = `${activeDate} ${pt.time} (点位 #${pt.index + 1} 5分钟单打点聚焦)`;
+      windowLabel = `单点 ${pt.time}`;
+    } else if (effectiveTimeWindow === '00_06') {
+      startTime = '00:00';
+      endTime = '06:00';
+      startDateTime = `${activeDate} 00:00:00`;
+      endDateTime = `${activeDate} 05:59:59`;
+      timeRangeLabel = `${activeDate} 00:00 ~ 06:00 (凌晨时段联动，72点)`;
+      windowLabel = '00-06时';
+    } else if (effectiveTimeWindow === '06_12') {
+      startTime = '06:00';
+      endTime = '12:00';
+      startDateTime = `${activeDate} 06:00:00`;
+      endDateTime = `${activeDate} 11:59:59`;
+      timeRangeLabel = `${activeDate} 06:00 ~ 12:00 (上午时段联动，72点)`;
+      windowLabel = '06-12时';
+    } else if (effectiveTimeWindow === '12_18') {
+      startTime = '12:00';
+      endTime = '18:00';
+      startDateTime = `${activeDate} 12:00:00`;
+      endDateTime = `${activeDate} 17:59:59`;
+      timeRangeLabel = `${activeDate} 12:00 ~ 18:00 (下午时段联动，72点)`;
+      windowLabel = '12-18时';
+    } else if (effectiveTimeWindow === '18_24') {
+      startTime = '18:00';
+      endTime = '24:00';
+      startDateTime = `${activeDate} 18:00:00`;
+      endDateTime = `${activeDate} 23:59:59`;
+      timeRangeLabel = `${activeDate} 18:00 ~ 24:00 (晚间时段联动，72点)`;
+      windowLabel = '18-24时';
+    } else if (effectiveTimeWindow === 'custom') {
+      startTime = effectiveCustomStartTime;
+      endTime = effectiveCustomEndTime;
+      startDateTime = `${activeDate} ${effectiveCustomStartTime}:00`;
+      endDateTime = `${activeDate} ${effectiveCustomEndTime}:59`;
+      timeRangeLabel = `${activeDate} ${effectiveCustomStartTime} ~ ${effectiveCustomEndTime} (自定义时段联动，共${chartPoints.length}点)`;
+      windowLabel = `自定义 ${effectiveCustomStartTime}~${effectiveCustomEndTime}`;
+    } else if (effectiveTimeWindow === 'fault_focus') {
+      const s = chartPoints[0]?.time || '07:00';
+      const e = chartPoints[chartPoints.length - 1]?.time || '18:00';
+      startTime = s;
+      endTime = e;
+      startDateTime = `${activeDate} ${s}:00`;
+      endDateTime = `${activeDate} ${e}:59`;
+      timeRangeLabel = `${activeDate} ${s} ~ ${e} (异常重点时段联动，共${chartPoints.length}点)`;
+      windowLabel = `重点时段 (${s}~${e})`;
+    } else {
+      // 'all'
+      startTime = '00:00';
+      endTime = '24:00';
+      startDateTime = `${activeDate} 00:00:00`;
+      endDateTime = `${activeDate} 23:59:59`;
+      timeRangeLabel = `${activeDate} 全天 288 点打点走势全时段 (00:00 ~ 24:00)`;
+      windowLabel = '全天288点';
+    }
+
+    onTimeRangeLinkageChange({
+      timeWindow: effectiveTimeWindow,
+      startTime,
+      endTime,
+      startDateTime,
+      endDateTime,
+      timeRangeLabel,
+      windowLabel,
+      selectedPoint: selectedPointIndex !== null ? allPoints[selectedPointIndex] || null : null,
+      filteredPointCount: chartPoints.length
+    });
+  }, [
+    activeDate,
+    effectiveTimeWindow,
+    effectiveCustomStartTime,
+    effectiveCustomEndTime,
+    selectedPointIndex,
+    chartPoints,
+    allPoints,
+    onTimeRangeLinkageChange
+  ]);
 
   // Summary statistics for 288 points
   const stats = useMemo(() => {
@@ -276,100 +436,197 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
         </div>
       </div>
 
-      {/* 5-Min Availability Timeline Chart */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2.5 border-b border-slate-100">
-          <div>
-            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-600" />
-              <span>{activeDate} 逐点时序：5 分钟可用度打点与状态走势</span>
-              <span className="px-2 py-0.2 rounded bg-slate-100 text-slate-700 font-mono text-[10px]">
-                {chartPoints.length} / 288 点已渲染
-              </span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              点击图表上的任意打点，即可在下方快速定位并审查该 5 分钟的功率容量与扣减原因。
-            </p>
+      {/* Selection Mode Switcher: 可用度打点与走势 (图表) vs 打点明细表 (列表) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+            <Sliders className="w-4 h-4" />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900">展示形式选择</span>
+              <span className="text-[11px] text-slate-500">
+                支持在【可用度打点与走势】图表与【打点明细表】列表之间切换审查
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Segmented Mode Selector */}
+        <div className="inline-flex items-center p-1 bg-slate-100 rounded-lg border border-slate-200/80 shrink-0">
+          <button
+            type="button"
+            onClick={() => setDisplayMode('chart')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+              displayMode === 'chart'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5 text-blue-600" />
+            <span>图表：可用度打点与走势</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDisplayMode('table')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+              displayMode === 'table'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-indigo-600" />
+            <span>列表：打点明细表</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800 font-mono font-normal">
+              288点
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDisplayMode('all')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              displayMode === 'all'
+                ? 'bg-white text-slate-800 shadow-xs font-bold'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+            title="同时并列查看图表走势与明细表"
+          >
+            <span>全部展开</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5-Min Availability Timeline Chart (图表展示：可用度打点与走势) */}
+      {(displayMode === 'chart' || displayMode === 'all') && (
+        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2.5 border-b border-slate-100">
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span>可用度打点与走势（{activeDate} 逐点时序 5 分钟打点与状态走势）</span>
+                <span className="px-2 py-0.2 rounded bg-slate-100 text-slate-700 font-mono text-[10px]">
+                  {chartPoints.length} / 288 点已渲染
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                点击图表上的任意打点，即可在下方快速定位并审查该 5 分钟的功率容量与扣减原因。
+              </p>
+            </div>
 
           {/* Time Window Buttons */}
-          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded text-xs">
-            <button
-              onClick={() => setTimeWindow('fault_focus')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === 'fault_focus'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              异常重点时段
-            </button>
-            <button
-              onClick={() => setTimeWindow('all')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === 'all'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              全天288点
-            </button>
-            <button
-              onClick={() => setTimeWindow('00_06')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === '00_06'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              00-06时 (72点)
-            </button>
-            <button
-              onClick={() => setTimeWindow('06_12')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === '06_12'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              06-12时 (72点)
-            </button>
-            <button
-              onClick={() => setTimeWindow('12_18')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === '12_18'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              12-18时 (72点)
-            </button>
-            <button
-              onClick={() => setTimeWindow('18_24')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === '18_24'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              18-24时 (72点)
-            </button>
-            <button
-              onClick={() => setTimeWindow('custom')}
-              className={`px-2 py-1 rounded transition-colors ${
-                timeWindow === 'custom'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              自定义时段
-            </button>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+              <Link2 className="w-3 h-3 text-blue-600" />
+              <span>时段联动核心设备</span>
+            </span>
+            <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded text-xs flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('fault_focus');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === 'fault_focus'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                异常重点时段
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('all');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === 'all'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                全天288点
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('00_06');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === '00_06'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                00-06时 (72点)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('06_12');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === '06_12'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                06-12时 (72点)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('12_18');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === '12_18'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                12-18时 (72点)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('18_24');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === '18_24'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                18-24时 (72点)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTimeWindowChange('custom');
+                  handleSelectPointIndex(null);
+                }}
+                className={`px-2 py-1 rounded transition-colors ${
+                  effectiveTimeWindow === 'custom'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                自定义时段
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Custom Time Range Selector Row when 'custom' is active */}
-        {timeWindow === 'custom' && (
-          <div className="flex items-center gap-3 bg-blue-50/70 border border-blue-200 rounded-md px-3 py-2 text-xs">
+        {effectiveTimeWindow === 'custom' && (
+          <div className="flex items-center gap-3 bg-blue-50/70 border border-blue-200 rounded-md px-3 py-2 text-xs flex-wrap">
             <span className="text-blue-900 font-semibold flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-blue-600" />
               <span>设置采样时段:</span>
@@ -377,15 +634,15 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
             <div className="flex items-center gap-2">
               <input
                 type="time"
-                value={customStartTime}
-                onChange={e => setCustomStartTime(e.target.value)}
+                value={effectiveCustomStartTime}
+                onChange={e => handleCustomStartTimeChange(e.target.value)}
                 className="bg-white border border-slate-300 rounded px-2 py-0.5 font-mono text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-xs"
               />
               <span className="text-slate-500">至</span>
               <input
                 type="time"
-                value={customEndTime}
-                onChange={e => setCustomEndTime(e.target.value)}
+                value={effectiveCustomEndTime}
+                onChange={e => handleCustomEndTimeChange(e.target.value)}
                 className="bg-white border border-slate-300 rounded px-2 py-0.5 font-mono text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-xs"
               />
             </div>
@@ -394,19 +651,22 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
             </span>
             <div className="ml-auto flex items-center gap-1.5 text-[11px]">
               <button
-                onClick={() => { setCustomStartTime('08:00'); setCustomEndTime('18:00'); }}
+                type="button"
+                onClick={() => { handleCustomStartTimeChange('08:00'); handleCustomEndTimeChange('18:00'); }}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100"
               >
                 08:00~18:00
               </button>
               <button
-                onClick={() => { setCustomStartTime('09:00'); setCustomEndTime('12:00'); }}
+                type="button"
+                onClick={() => { handleCustomStartTimeChange('09:00'); handleCustomEndTimeChange('12:00'); }}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100"
               >
                 上午高峰
               </button>
               <button
-                onClick={() => { setCustomStartTime('14:00'); setCustomEndTime('18:00'); }}
+                type="button"
+                onClick={() => { handleCustomStartTimeChange('14:00'); handleCustomEndTimeChange('18:00'); }}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100"
               >
                 下午时段
@@ -457,7 +717,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
               margin={{ top: 10, right: 30, left: -10, bottom: 5 }}
               onClick={(e: any) => {
                 if (e && e.activePayload && e.activePayload[0]) {
-                  setSelectedPointIndex(e.activePayload[0].payload.index);
+                  handleSelectPointIndex(e.activePayload[0].payload.index);
                 }
               }}
             >
@@ -649,12 +909,27 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+
+        <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+          <span className="text-[11px] text-slate-500">
+            提示：在走势图上悬停或点击任意打点可锁定审查；亦可切换至【打点明细表】列表逐点检索全量 288 点。
+          </span>
+          <button
+            type="button"
+            onClick={() => setDisplayMode('table')}
+            className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 text-xs"
+          >
+            <span>切换至打点明细表 (288点)</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
       </div>
+      )}
 
       {/* Point Detail Callout (When selected) */}
       {selectedPoint && (
         <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 text-xs space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-600" />
               <span className="font-bold text-slate-900">
@@ -670,12 +945,35 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                 {selectedPoint.statusLabel}
               </span>
             </div>
-            <button
-              onClick={() => setSelectedPointIndex(null)}
-              className="text-[11px] text-slate-500 hover:text-slate-800 underline"
-            >
-              取消锁定
-            </button>
+
+            <div className="flex items-center gap-2">
+              {displayMode === 'table' && (
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode('chart')}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>在图表走势中定位此点</span>
+                </button>
+              )}
+              {displayMode === 'chart' && (
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode('table')}
+                  className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-xs font-semibold flex items-center gap-1 transition-colors"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>在打点明细表中查看</span>
+                </button>
+              )}
+              <button
+                onClick={() => handleSelectPointIndex(null)}
+                className="text-[11px] text-slate-500 hover:text-slate-800 underline"
+              >
+                取消锁定
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
@@ -705,27 +1003,28 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
 
           {selectedPoint.faultEventTitle && (
             <div className="text-[11px] text-red-700 bg-red-50 p-2 rounded border border-red-200 flex items-center justify-between">
-              <span>关联故障: {selectedPoint.faultEventTitle}</span>
+              <span>关联中断告警: {selectedPoint.faultEventTitle}</span>
               <button
-                onClick={() => onNavigateTab(2)}
+                onClick={() => onNavigateTab(1)}
                 className="text-red-700 hover:underline font-semibold"
               >
-                下钻故障时间线 &rarr;
+                下钻中断告警 &rarr;
               </button>
             </div>
           )}
         </div>
       )}
 
-      {/* 288 Dots Grid / Table Inspection Section */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-blue-600" />
-            <span className="text-xs font-bold text-slate-900">
-              5 分钟高精度打点全量台账清单 (共 288 点)
-            </span>
-          </div>
+      {/* 288 Dots Grid / Table Inspection Section (列表展示：打点明细表) */}
+      {(displayMode === 'table' || displayMode === 'all') && (
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-bold text-slate-900">
+                打点明细表（{activeDate} 全量 288 点位高精度台账清单）
+              </span>
+            </div>
 
           {/* Table Filters */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -775,11 +1074,21 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                 className="pl-7 pr-2.5 py-1 text-xs border border-slate-300 rounded bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 w-36"
               />
             </div>
+
+            {/* Jump to Chart View */}
+            <button
+              type="button"
+              onClick={() => setDisplayMode('chart')}
+              className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 text-xs ml-auto hover:underline"
+            >
+              <span>切换至走势图</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
         </div>
 
         {/* Dots Table Container */}
-        <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-md">
+        <div className={`${displayMode === 'table' ? 'max-h-[500px]' : 'max-h-72'} overflow-y-auto border border-slate-200 rounded-md transition-all`}>
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 text-[11px]">
               <tr>
@@ -800,7 +1109,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                 return (
                   <tr
                     key={pt.index}
-                    onClick={() => setSelectedPointIndex(pt.index)}
+                    onClick={() => handleSelectPointIndex(pt.index)}
                     className={`cursor-pointer transition-colors ${
                       isSelected
                         ? 'bg-blue-50/80 font-bold'
@@ -861,7 +1170,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          setSelectedPointIndex(pt.index);
+                          handleSelectPointIndex(pt.index);
                         }}
                         className="text-blue-600 hover:text-blue-800 text-[11px] font-sans font-medium"
                       >
@@ -875,6 +1184,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };

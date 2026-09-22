@@ -17,7 +17,9 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
-  FileText
+  FileText,
+  Activity,
+  Cpu
 } from 'lucide-react';
 
 export const SitesView: React.FC = () => {
@@ -256,7 +258,7 @@ export const SitesView: React.FC = () => {
                     <th className="py-3 px-3 font-mono">当期累计可用度</th>
                     <th className="py-3 px-3">状态灯</th>
                     <th className="py-3 px-3">最后导入时间</th>
-                    <th className="py-3 px-4 text-right">操作</th>
+                    <th className="py-3 px-4 text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -278,7 +280,7 @@ export const SitesView: React.FC = () => {
                         <tr
                           key={site.id}
                           className="hover:bg-blue-50/40 cursor-pointer transition-colors group"
-                          onClick={() => navigateToSiteDetail(site.id)}
+                          onClick={() => navigateToSiteDetail(site.id, 0)}
                         >
                           <td className="py-3 px-4">
                             <div className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
@@ -328,38 +330,61 @@ export const SitesView: React.FC = () => {
                           <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
                             {site.lastImportTime}
                           </td>
-                          <td className="py-3 px-4 text-right space-x-1.5">
-                            <button
-                              onClick={e => {
-                                e.stopPropagation();
-                                navigateToSiteDetail(site.id);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 rounded bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
-                              title="查看站点台账（全景态势、核心设备拓扑、合同SLA履约、离线日志批次）"
-                            >
-                              台账
-                            </button>
-                            <button
-                              onClick={e => {
-                                e.stopPropagation();
-                                navigateToAvailabilityDrilldown(site.id, 0);
-                              }}
-                              className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold px-2 py-1 rounded bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
-                              title="下钻至可用度监控（5分钟打点、故障因果链、PCare工单闭环）"
-                            >
-                              可用度下钻
-                            </button>
-                            <button
-                              onClick={e => {
-                                e.stopPropagation();
-                                setSelectedSiteId(site.id);
-                                setActiveTab('log_import');
-                              }}
-                              className="text-slate-600 hover:text-slate-900 text-xs px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors"
-                              title="为此站点导入离线日志"
-                            >
-                              <Upload className="w-3.5 h-3.5 inline" />
-                            </button>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <div className="inline-flex items-center justify-center gap-1.5">
+                              {/* 1. 查看台账 */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  navigateToSiteDetail(site.id, 0);
+                                }}
+                                className="p-1.5 rounded-lg text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs group/btn"
+                                title="查看台账 (站点全景态势、档案与合同SLA履约)"
+                                aria-label="查看台账"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* 2. 查看可用度 */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  navigateToAvailabilityDrilldown(site.id, 0);
+                                }}
+                                className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 transition-colors shadow-2xs group/btn"
+                                title="查看可用度 (5分钟打点监控、中断告警、工单详情)"
+                                aria-label="查看可用度"
+                              >
+                                <Activity className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* 3. 查看工况 */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  navigateToSiteDetail(site.id, 1);
+                                }}
+                                className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-2xs group/btn"
+                                title="查看工况 (核心设备拓扑、实时运行参数与设备工况)"
+                                aria-label="查看工况"
+                              >
+                                <Cpu className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* 4. 导入日志 */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setSelectedSiteId(site.id);
+                                  setActiveTab('log_import');
+                                }}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors shadow-2xs"
+                                title="为此站点导入离线日志"
+                                aria-label="导入离线日志"
+                              >
+                                <Upload className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

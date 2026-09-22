@@ -142,7 +142,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-600 mt-0.5">
-              从全局指标 &rarr; 逐日打点快照 &rarr; 归并故障因果链 &rarr; 核心设备台账 &rarr; 工单闭环与合同 SLA 追溯。
+              从全局指标 &rarr; 逐日打点快照 &rarr; 中断告警 &rarr; 核心设备台账 &rarr; 工单详情与合同 SLA 追溯。
             </p>
           </div>
         </div>
@@ -160,7 +160,7 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
             className="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium flex items-center gap-1 shadow-sm transition-colors"
           >
             <Clock className="w-3.5 h-3.5 text-amber-600" />
-            <span>故障时间线下钻 ({site.mergedFaults.length})</span>
+            <span>中断告警下钻 ({site.mergedFaults.length})</span>
           </button>
           <button
             onClick={() => onNavigateTab(1)}

@@ -40,7 +40,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
         <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <div>
           <strong className="text-blue-900 font-semibold">
-            PCare 工单闭环口径规则 (Rule R4)：
+            工单详情与方案闭环口径规则 (Rule R4)：
           </strong>
           本系统可用度统计与 MTTR 计算中，工单闭环时刻以到达<strong>【已输出解决方案、待执行】</strong>状态为准（即技术排查方案已敲定时刻），而非现场最终消缺或工单在管理平台完全关闭的时刻。
         </div>
@@ -86,7 +86,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Wrench className="w-4 h-4 text-blue-600" />
-              站点 PCare 现场运维工单台账 (点击查看全生命周期)
+              站点工单详情与运维消缺台账 (点击查看全生命周期)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               关联合同: <strong className="font-mono text-slate-800">{site.contractNo}</strong> · 非直连模式（离线报表导入）
@@ -99,7 +99,7 @@ export const WorkOrdersTab: React.FC<WorkOrdersTabProps> = ({ site, workOrders }
             className="px-3 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
           >
             <Upload className="w-3.5 h-3.5" />
-            导入/更新 PCare 工单
+            导入/更新工单数据
           </button>
         </div>
 

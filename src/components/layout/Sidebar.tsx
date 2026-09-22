@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, alerts, workOrders } = useApp();
+  const { activeTab, setActiveTab, navigateToPerformanceMonitor, alerts, workOrders } = useApp();
 
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length;
   const pendingOrdersCount = workOrders.filter(w => w.status === 'PROCESSING').length;
@@ -196,7 +196,13 @@ export const Sidebar: React.FC = () => {
                 <button
                   key={item.id}
                   id={`sidebar-nav-${item.id}`}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    if (item.id === 'performance_evaluation') {
+                      navigateToPerformanceMonitor();
+                    } else {
+                      setActiveTab(item.id);
+                    }
+                  }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group ${
                     isActive
                       ? 'bg-blue-600/20 text-blue-400 border-l-4 border-blue-500 font-semibold shadow-inner'

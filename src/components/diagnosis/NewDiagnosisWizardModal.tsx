@@ -319,7 +319,7 @@ export const NewDiagnosisWizardModal: React.FC<NewDiagnosisWizardModalProps> = (
             <div className="space-y-4">
               <div>
                 <label className="block font-bold text-slate-800 mb-1">
-                  关联该站点的故障因果链事件或当前预警 (可选):
+                  关联该站点的中断告警事件或当前预警 (可选):
                 </label>
                 <p className="text-[11px] text-slate-500 mb-2">
                   选择具体事件将有助于 AI 诊断引擎针对性提取前后时间窗的波形数据与告警代码。
