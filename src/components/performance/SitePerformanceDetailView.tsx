@@ -54,7 +54,7 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   onBackToList,
   onSwitchSite
 }) => {
-  const { sites, addReportItem } = useApp();
+  const { sites, addReportItem, navigateToFlexibleWarranty } = useApp();
 
   const currentSite = sites.find(s => s.id === siteId) || sites[0];
 
@@ -177,7 +177,6 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   };
 
   const navSubTabs = [
-    { id: 8, label: '灵活质保与SOH衰减', icon: ShieldCheck, badge: '灵活质保算法' },
     { id: 0, label: '评估结论与报告', icon: FileCheck2, badge: `${hitFactorsList.length} 因子命中` },
     { id: 1, label: '日志上传与历史记录', icon: UploadCloud, badge: `${historyRecords.length} 轮评估` },
     { id: 2, label: '影响因子库维护', icon: Sliders, badge: '13类因子' },
@@ -250,12 +249,12 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 self-end md:self-center flex-wrap">
           <button
-            onClick={() => setActiveSubTab(8)}
-            className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
-            title="查看该站点的灵活质保工况评估、双衰减曲线及超工况统计"
+            onClick={() => navigateToFlexibleWarranty(currentSite.id)}
+            className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
+            title="跳转至平级的灵活质保独立模块，查看该站点的基准工况、双衰减曲线及超工况统计"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>灵活质保工况评估</span>
+            <span>灵活质保独立工作台</span>
           </button>
 
           <button
@@ -492,8 +491,6 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
             records={defectRecords}
           />
         )}
-
-        {activeSubTab === 8 && <WarrantyConditionTab site={currentSite} />}
       </div>
     </div>
   );

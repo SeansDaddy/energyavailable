@@ -34,7 +34,7 @@ interface PerformanceMonitorViewProps {
 export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
   onSelectSite
 }) => {
-  const { sites } = useApp();
+  const { sites, navigateToFlexibleWarranty } = useApp();
 
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [regionFilter, setRegionFilter] = useState('ALL');
@@ -188,8 +188,8 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
           </p>
         </div>
 
-        {/* Evaluation Period Selector */}
-        <div className="flex items-center gap-3">
+        {/* Evaluation Period Selector & Quick Jump */}
+        <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 shadow-sm">
             <Calendar className="w-4 h-4 text-indigo-600" />
             <span className="text-slate-500">评估考核期:</span>
@@ -203,6 +203,15 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
               <option value="2026-06">2026-06 (基线评估)</option>
             </select>
           </div>
+
+          <button
+            onClick={() => navigateToFlexibleWarranty()}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+            title="前往平级的灵活质保大盘"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>灵活质保大盘</span>
+          </button>
         </div>
       </div>
 
@@ -680,20 +689,36 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
 
                     {/* Actions */}
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          onSelectSite(s.siteId);
-                        }}
-                        className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs group"
-                        title="查看该站点性能工况详情"
-                        aria-label="查看详情"
-                      >
-                        <Eye className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-                        <span className="hidden sm:inline font-medium text-slate-700 group-hover:text-indigo-700">
-                          查看详情
-                        </span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            navigateToFlexibleWarranty(s.siteId);
+                          }}
+                          className="p-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg border border-emerald-200 hover:border-emerald-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs"
+                          title="跳转至该站点的灵活质保详情工作台"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="hidden xl:inline font-medium text-emerald-800">
+                            灵活质保
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            onSelectSite(s.siteId);
+                          }}
+                          className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs group"
+                          title="查看该站点性能工况体检详情"
+                          aria-label="查看详情"
+                        >
+                          <Eye className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                          <span className="hidden sm:inline font-medium text-slate-700 group-hover:text-indigo-700">
+                            工况体检
+                          </span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -17,11 +17,19 @@ import {
   Database,
   HeartPulse,
   FileCheck2,
-  Sliders
+  Sliders,
+  ShieldCheck
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, navigateToPerformanceMonitor, alerts, workOrders } = useApp();
+  const {
+    activeTab,
+    setActiveTab,
+    navigateToPerformanceMonitor,
+    navigateToFlexibleWarranty,
+    alerts,
+    workOrders
+  } = useApp();
 
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length;
   const pendingOrdersCount = workOrders.filter(w => w.status === 'PROCESSING').length;
@@ -58,9 +66,9 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 2. 性能工况
+    // 2. 性能与质保 (性能工况 & 灵活质保平级展示)
     {
-      section: '性能工况',
+      section: '性能工况与质保',
       items: [
         {
           id: 'performance_evaluation',
@@ -68,6 +76,13 @@ export const Sidebar: React.FC = () => {
           icon: HeartPulse,
           badge: '体检分析',
           badgeColor: 'bg-indigo-600 text-white'
+        },
+        {
+          id: 'flexible_warranty',
+          label: '灵活质保',
+          icon: ShieldCheck,
+          badge: 'SOH衰减',
+          badgeColor: 'bg-emerald-600 text-white'
         }
       ]
     },
@@ -199,6 +214,8 @@ export const Sidebar: React.FC = () => {
                   onClick={() => {
                     if (item.id === 'performance_evaluation') {
                       navigateToPerformanceMonitor();
+                    } else if (item.id === 'flexible_warranty') {
+                      navigateToFlexibleWarranty();
                     } else {
                       setActiveTab(item.id);
                     }

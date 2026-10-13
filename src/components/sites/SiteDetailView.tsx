@@ -17,7 +17,8 @@ import {
   Radio,
   Info,
   ArrowUpRight,
-  Edit3
+  Edit3,
+  ShieldCheck
 } from 'lucide-react';
 
 import { SitePanoramaTab } from './SitePanoramaTab';
@@ -37,6 +38,7 @@ export const SiteDetailView: React.FC = () => {
     updateSiteRedundancy,
     navigateToAvailabilityDrilldown,
     navigateToPerformanceDetail,
+    navigateToFlexibleWarranty,
     batches,
     workOrders,
     contracts,
@@ -232,11 +234,20 @@ export const SiteDetailView: React.FC = () => {
               </button>
               <button
                 onClick={() => navigateToPerformanceDetail(site.id)}
-                className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
-                title="查看该站点的性能工况详情"
+                className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold border border-indigo-200 transition-colors flex items-center gap-1.5 shadow-xs"
+                title="查看该站点的性能工况体检详情"
               >
-                <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
+                <HeartPulse className="w-3.5 h-3.5 text-indigo-600" />
                 <span>性能工况</span>
+              </button>
+
+              <button
+                onClick={() => navigateToFlexibleWarranty(site.id)}
+                className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
+                title="查看该站点的灵活质保工况与SOH双衰减详情"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>灵活质保</span>
               </button>
               <button
                 onClick={() =>

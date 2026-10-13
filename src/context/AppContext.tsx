@@ -52,6 +52,7 @@ export type NavigationTab =
   | 'alerts'
   | 'analytics'
   | 'performance_evaluation'
+  | 'flexible_warranty'
   | 'fault_diagnosis'
   | 'reports'
   | 'work_orders'
@@ -87,6 +88,11 @@ interface AppContextType {
   setPerformanceDetailSiteId: (siteId: string | null) => void;
   navigateToPerformanceDetail: (siteId: string) => void;
   navigateToPerformanceMonitor: () => void;
+
+  // Flexible warranty state & drilldown
+  flexibleWarrantyDetailSiteId: string | null;
+  setFlexibleWarrantyDetailSiteId: (siteId: string | null) => void;
+  navigateToFlexibleWarranty: (siteId?: string) => void;
   
   // AI Drawer state
   isAiDrawerOpen: boolean;
@@ -186,6 +192,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   
   // Performance condition monitoring & detail state
   const [performanceDetailSiteId, setPerformanceDetailSiteId] = useState<string | null>(null);
+
+  // Flexible warranty monitoring & detail state
+  const [flexibleWarrantyDetailSiteId, setFlexibleWarrantyDetailSiteId] = useState<string | null>(null);
   
   // AI Drawer state
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState<boolean>(false);
@@ -270,6 +279,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const navigateToPerformanceMonitor = () => {
     setPerformanceDetailSiteId(null);
     setActiveTab('performance_evaluation');
+  };
+
+  const navigateToFlexibleWarranty = (siteId?: string) => {
+    if (siteId) {
+      setSelectedSiteId(siteId);
+      setFlexibleWarrantyDetailSiteId(siteId);
+    } else {
+      setFlexibleWarrantyDetailSiteId(null);
+    }
+    setActiveTab('flexible_warranty');
   };
 
   const navigateToAlertsWithFilter = (typeFilter?: string) => {
@@ -929,6 +948,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setPerformanceDetailSiteId,
         navigateToPerformanceDetail,
         navigateToPerformanceMonitor,
+        flexibleWarrantyDetailSiteId,
+        setFlexibleWarrantyDetailSiteId,
+        navigateToFlexibleWarranty,
         navigateToSiteDetail,
         navigateToAvailabilityDrilldown,
         navigateToAlertsWithFilter,
