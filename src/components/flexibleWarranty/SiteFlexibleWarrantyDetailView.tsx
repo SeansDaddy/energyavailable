@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { WarrantyConditionTab } from '../performance/WarrantyConditionTab';
 import {
@@ -9,12 +9,19 @@ import {
   Download,
   ExternalLink,
   Activity,
-  HeartPulse
+  HeartPulse,
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 import {
+  DEFAULT_SOH_BASELINE_CURVE,
+  getDefaultContractBaseline,
   downloadContractBaselineTemplate,
-  downloadSohBaselineCurveTemplate
+  downloadSohBaselineCurveTemplate,
+  generateStationDailyAndMonthlyData,
+  calculateFlexibleWarrantySohAlgorithm
 } from '../../utils/flexibleWarrantyAlgorithm';
+import { exportFlexibleWarrantyPdfReport } from '../../utils/flexibleWarrantyPdfReport';
 
 interface SiteFlexibleWarrantyDetailViewProps {
   siteId: string;
@@ -28,6 +35,8 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
   onSwitchSite
 }) => {
   const { sites, navigateToPerformanceDetail } = useApp();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const currentSite = sites.find(s => s.id === siteId) || sites[0] || {
     id: siteId,
@@ -40,14 +49,55 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
     contractNo: 'CSG-SZ-2025-SLA-081'
   };
 
+  const handleExportPdfReport = async () => {
+    try {
+      setIsExportingPdf(true);
+      const baseline = getDefaultContractBaseline(
+        currentSite.id,
+        currentSite.capacityMw ? currentSite.capacityMw * 2 : 20.0
+      );
+      const { daily, monthly } = generateStationDailyAndMonthlyData(currentSite.id, baseline);
+      const sohResult = calculateFlexibleWarrantySohAlgorithm(
+        baseline,
+        DEFAULT_SOH_BASELINE_CURVE,
+        monthly,
+        daily
+      );
+      await exportFlexibleWarrantyPdfReport({
+        site: currentSite as any,
+        contractBaseline: baseline,
+        sohResult,
+        monthlyConditions: monthly,
+        dailyConditions: daily,
+        sohBaselineCurve: DEFAULT_SOH_BASELINE_CURVE
+      });
+      setToastMsg(`《${currentSite.siteName} 灵活质保评估报告.pdf》已成功导出！`);
+      setTimeout(() => setToastMsg(null), 3500);
+    } catch (err) {
+      console.error('PDF export failed', err);
+      setToastMsg('导出评估报告失败，请重试');
+      setTimeout(() => setToastMsg(null), 3500);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-4 p-4 max-w-[1700px] mx-auto pb-16 animate-in fade-in duration-200">
+      {/* Toast Feedback */}
+      {toastMsg && (
+        <div className="fixed top-20 right-8 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2.5 animate-in slide-in-from-top duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
       {/* 1. Top Breadcrumb & Quick Site Switcher */}
       <div className="flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-xs">
         <div className="flex items-center gap-2 text-xs">
           <button
             onClick={onBackToList}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all font-medium group"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all font-medium group cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-600 transition-colors" />
             <span>返回全网灵活质保大盘</span>
@@ -64,7 +114,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
           <select
             value={siteId}
             onChange={e => onSwitchSite(e.target.value)}
-            className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 font-medium focus:outline-none focus:border-emerald-500"
+            className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
           >
             {sites.map(s => (
               <option key={s.id} value={s.id}>
@@ -102,8 +152,18 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         {/* Action Buttons */}
         <div className="flex items-center gap-2 self-end md:self-center flex-wrap">
           <button
+            onClick={handleExportPdfReport}
+            disabled={isExportingPdf}
+            className="px-3.5 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-sm shadow-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            title="将当前站点的灵活质保计算结果下载为PDF文档，含关键性能指标和计算逻辑说明"
+          >
+            <FileText className={`w-3.5 h-3.5 ${isExportingPdf ? 'animate-pulse' : ''}`} />
+            <span>{isExportingPdf ? '正在生成PDF报告...' : '导出评估报告'}</span>
+          </button>
+
+          <button
             onClick={downloadContractBaselineTemplate}
-            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5"
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
             title="下载合同基准工况标准CSV模板"
           >
             <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -112,7 +172,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
 
           <button
             onClick={downloadSohBaselineCurveTemplate}
-            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5"
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
             title="下载SOH基准衰减曲线打点标准CSV模板"
           >
             <Download className="w-3.5 h-3.5 text-blue-600" />
@@ -121,7 +181,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
 
           <button
             onClick={() => navigateToPerformanceDetail(currentSite.id)}
-            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
             title="联动查看该站点的性能工况全面体检与因子分析"
           >
             <HeartPulse className="w-3.5 h-3.5 text-indigo-600" />

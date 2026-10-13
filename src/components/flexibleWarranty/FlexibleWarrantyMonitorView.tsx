@@ -9,8 +9,11 @@ import {
   downloadSohBaselineCurveTemplate,
   exportDailyConditionsToCsv,
   generateStationDailyAndMonthlyData,
-  getDefaultContractBaseline
+  getDefaultContractBaseline,
+  DEFAULT_SOH_BASELINE_CURVE,
+  calculateFlexibleWarrantySohAlgorithm
 } from '../../utils/flexibleWarrantyAlgorithm';
+import { exportFlexibleWarrantyPdfReport } from '../../utils/flexibleWarrantyPdfReport';
 import {
   ShieldCheck,
   Search,
@@ -30,7 +33,8 @@ import {
   RefreshCw,
   Clock,
   Sparkles,
-  Info
+  Info,
+  FileText
 } from 'lucide-react';
 
 interface FlexibleWarrantyMonitorViewProps {
@@ -106,6 +110,8 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
       });
   }, [summaries, regionFilter, statusFilter, searchTerm, sortField, sortAsc]);
 
+  const [exportingSiteId, setExportingSiteId] = useState<string | null>(null);
+
   const handleExportSiteDaily = (summary: SiteFlexibleWarrantySummary, e: React.MouseEvent) => {
     e.stopPropagation();
     const { daily } = generateStationDailyAndMonthlyData(
@@ -113,6 +119,37 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
       getDefaultContractBaseline(summary.siteId, summary.ratedEnergyMwh)
     );
     exportDailyConditionsToCsv(daily, summary.siteName);
+  };
+
+  const handleExportSitePdf = async (summary: SiteFlexibleWarrantySummary, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setExportingSiteId(summary.siteId);
+      const baseline = getDefaultContractBaseline(summary.siteId, summary.ratedEnergyMwh);
+      const { daily, monthly } = generateStationDailyAndMonthlyData(summary.siteId, baseline);
+      const sohResult = calculateFlexibleWarrantySohAlgorithm(baseline, DEFAULT_SOH_BASELINE_CURVE, monthly, daily);
+      const siteObj = sites.find(s => s.id === summary.siteId) || {
+        id: summary.siteId,
+        siteCode: summary.siteCode,
+        siteName: summary.siteName,
+        region: summary.region,
+        representativeOffice: summary.representativeOffice,
+        customer: summary.customer,
+        capacityMw: summary.capacityMw
+      };
+      await exportFlexibleWarrantyPdfReport({
+        site: siteObj as any,
+        contractBaseline: baseline,
+        sohResult,
+        monthlyConditions: monthly,
+        dailyConditions: daily,
+        sohBaselineCurve: DEFAULT_SOH_BASELINE_CURVE
+      });
+    } catch (err) {
+      console.error('Failed to export PDF', err);
+    } finally {
+      setExportingSiteId(null);
+    }
   };
 
   return (
@@ -570,10 +607,19 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
 
                         <button
                           onClick={e => handleExportSiteDaily(item, e)}
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition-colors"
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition-colors cursor-pointer"
                           title="按天导出该站点全量工况与超工况CSV"
                         >
                           <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                        </button>
+
+                        <button
+                          onClick={e => handleExportSitePdf(item, e)}
+                          disabled={exportingSiteId === item.siteId}
+                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
+                          title="将当前站点的灵活质保计算结果下载为PDF评估报告"
+                        >
+                          <FileText className={`w-3.5 h-3.5 text-rose-600 ${exportingSiteId === item.siteId ? 'animate-pulse' : ''}`} />
                         </button>
 
                         <button
