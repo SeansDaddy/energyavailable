@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Zap,
+  ZapOff,
   Info,
   Layers,
   ArrowRight,
@@ -134,6 +135,20 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
     };
   }, [currentOrder, filteredTimeSeries]);
 
+  const ecoPoints = useMemo(() => {
+    return filteredTimeSeries.filter(p => Boolean(p.isEco));
+  }, [filteredTimeSeries]);
+
+  const ecoTimeBounds = useMemo(() => {
+    if (ecoPoints.length === 0) return null;
+    return {
+      startTime: ecoPoints[0].time,
+      endTime: ecoPoints[ecoPoints.length - 1].time,
+      totalMinutes: ecoPoints.length * 5,
+      reason: ecoPoints[0].ecoReason || '电网调度限电/检修停机 (SLA免责)'
+    };
+  }, [ecoPoints]);
+
   // Simulated metrics calculation
   const simDowntime = Math.max(0, panoramaData.conversionMetrics.faultDowntimeMinutes + simulationOffsetMins);
   const simAvailability = Number(
@@ -227,7 +242,7 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
       </div>
 
       {/* Panorama Legend & Milestone Indicators Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1: Equipment Fault Point */}
         <div className="p-3 rounded-lg border border-red-200 bg-red-50/60 flex items-start justify-between">
           <div className="space-y-1">
@@ -247,7 +262,26 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
           </span>
         </div>
 
-        {/* Metric 2: PCare Work Order Duration Span */}
+        {/* Metric 2: ECO External Cause Outage */}
+        <div className="p-3 rounded-lg border border-cyan-200 bg-cyan-50/60 flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-950">
+              <ZapOff className="w-3.5 h-3.5 text-cyan-700" />
+              <span>ECO 外因停机时间 (免责)</span>
+            </div>
+            <div className="text-xs font-mono font-bold text-cyan-800">
+              {ecoTimeBounds ? `${ecoTimeBounds.startTime} ~ ${ecoTimeBounds.endTime}` : '无外部限电停机'}
+            </div>
+            <div className="text-[11px] text-cyan-900 line-clamp-1" title={ecoTimeBounds ? ecoTimeBounds.reason : '电网正常供电'}>
+              {ecoTimeBounds ? ecoTimeBounds.reason : '电网指令正常 · SLA免扣减'}
+            </div>
+          </div>
+          <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-white text-cyan-800 border border-cyan-300 shrink-0">
+            {ecoTimeBounds ? `免责 ${ecoTimeBounds.totalMinutes} 分钟` : '0 分钟'}
+          </span>
+        </div>
+
+        {/* Metric 3: PCare Work Order Duration Span */}
         <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/60 flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
@@ -255,10 +289,10 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
               <span>PCare 工单持续时间跨度 (R4)</span>
             </div>
             <div className="text-xs font-mono font-bold text-amber-800">
-              {currentOrder ? `${currentOrder.createTime.slice(11)} 派发 → ${currentOrder.solutionTime.slice(11)} 方案闭环` : '无关联工单'}
+              {currentOrder ? `${currentOrder.createTime.slice(11)} 派发 → ${currentOrder.solutionTime.slice(11)} 闭环` : '无关联工单'}
             </div>
-            <div className="text-[11px] text-amber-800">
-              {currentOrder ? `负责人: ${currentOrder.assignee} · 方案输出即闭环` : '运行平稳无需现场派单'}
+            <div className="text-[11px] text-amber-800 line-clamp-1">
+              {currentOrder ? `负责人: ${currentOrder.assignee}` : '运行平稳无需现场派单'}
             </div>
           </div>
           <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-white text-amber-700 border border-amber-200 shrink-0">
@@ -266,7 +300,7 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
           </span>
         </div>
 
-        {/* Metric 3: Final Availability Conversion */}
+        {/* Metric 4: Final Availability Conversion */}
         <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/60 flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
@@ -280,7 +314,7 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
                 {panoramaData.conversionMetrics.effectiveAvailability}%
               </span>
               <span className="text-[11px] text-slate-500">
-                (SLA 基线: {site.slaThreshold}%)
+                (SLA: {site.slaThreshold}%)
               </span>
             </div>
             <div className="text-[11px] text-blue-800 font-mono">
@@ -294,7 +328,7 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
             }}
             className="text-[11px] px-2 py-1 bg-white hover:bg-blue-100 text-blue-700 border border-blue-200 rounded font-semibold flex items-center gap-0.5 transition-colors self-end"
           >
-            <span>5分钟打点明细</span>
+            <span>5分钟明细</span>
             <ArrowRight className="w-3 h-3" />
           </button>
         </div>
@@ -315,6 +349,10 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
             <span className="flex items-center gap-1.5 font-medium">
               <span className="w-2.5 h-2.5 rounded-full bg-red-600 border border-white" />
               <span>故障触发打点</span>
+            </span>
+            <span className="flex items-center gap-1.5 font-medium text-cyan-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 border border-white" />
+              <span>ECO外因停机打点 (免责)</span>
             </span>
             <span className="flex items-center gap-1.5 font-medium">
               <span className="w-3 h-2 bg-amber-200/80 border border-amber-400 rounded-xs" />
@@ -379,6 +417,13 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
                             <span className="font-mono text-slate-700">{site.slaThreshold}%</span>
                           </div>
 
+                          {data.isEco && (
+                            <div className="pt-1 mt-1 border-t border-cyan-100 text-cyan-800 flex items-start gap-1 font-medium">
+                              <ZapOff className="w-3.5 h-3.5 shrink-0 mt-0.5 text-cyan-600" />
+                              <span>ECO外因停机: {data.ecoReason || '电网调度限电/检修 (SLA核免)'}</span>
+                            </div>
+                          )}
+
                           {data.hasFaultMarker && (
                             <div className="pt-1 mt-1 border-t border-red-100 text-red-600 flex items-start gap-1 font-medium">
                               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -424,6 +469,22 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
                   position: 'right'
                 }}
               />
+
+              {/* ECO External Cause Outage Time Range Background Span (If on this date) */}
+              {ecoTimeBounds && (
+                <ReferenceArea
+                  {...({
+                    x1: ecoTimeBounds.startTime,
+                    x2: ecoTimeBounds.endTime,
+                    y1: 0,
+                    y2: 100,
+                    fill: '#cffafe',
+                    fillOpacity: 0.35,
+                    stroke: '#06b6d4',
+                    strokeDasharray: '3 3'
+                  } as any)}
+                />
+              )}
 
               {/* PCare Work Order Duration Background Span (If on this date) */}
               {orderTimeBounds && (
@@ -491,6 +552,19 @@ export const SitePanoramaTimelineChart: React.FC<SitePanoramaTimelineChartProps>
                 strokeWidth={2.5}
                 dot={props => {
                   const { cx, cy, payload } = props;
+                  if (payload.isEco) {
+                    return (
+                      <circle
+                        key={payload.time}
+                        cx={cx}
+                        cy={cy}
+                        r={5.5}
+                        fill="#06b6d4"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      />
+                    );
+                  }
                   if (payload.hasFaultMarker) {
                     return (
                       <circle

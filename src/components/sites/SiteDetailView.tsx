@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
 import { RedundancyLevel } from '../../types';
+import { EditSiteModal } from './EditSiteModal';
 import {
   ArrowLeft,
   Activity,
@@ -15,7 +16,8 @@ import {
   Zap,
   Radio,
   Info,
-  ArrowUpRight
+  ArrowUpRight,
+  Edit3
 } from 'lucide-react';
 
 import { SitePanoramaTab } from './SitePanoramaTab';
@@ -31,6 +33,7 @@ export const SiteDetailView: React.FC = () => {
     siteDetailTab,
     setSiteDetailTab,
     setActiveTab,
+    updateSite,
     updateSiteRedundancy,
     navigateToAvailabilityDrilldown,
     navigateToPerformanceDetail,
@@ -39,6 +42,8 @@ export const SiteDetailView: React.FC = () => {
     contracts,
     openAiDrawer
   } = useApp();
+
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const site = sites.find(s => s.id === selectedSiteId) || sites[0];
 
@@ -135,8 +140,15 @@ export const SiteDetailView: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 mt-2">
-                <span>
-                  所属客户: <strong className="text-slate-800 font-medium">{site.customer}</strong>
+                <span className="inline-flex items-center gap-1 group/field">
+                  所属客户: <strong className="text-slate-800 font-semibold">{site.customer}</strong>
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="p-0.5 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors opacity-70 group-hover/field:opacity-100"
+                    title="点击编辑所属客户"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
                 </span>
                 <span>
                   装机规模: <strong className="text-slate-800 font-medium">{site.capacityMw} MW</strong>
@@ -147,8 +159,18 @@ export const SiteDetailView: React.FC = () => {
                 <span>
                   核心设备数: <strong className="text-slate-800 font-mono font-medium">{site.coreDevices.length} 台</strong>
                 </span>
-                <span>
-                  运维负责人: <strong className="text-slate-800 font-medium">{site.owner}</strong>
+                <span className="inline-flex items-center gap-1 group/field">
+                  运维负责人: <strong className="text-slate-800 font-semibold">{site.owner}</strong>
+                  {site.contactPhone && (
+                    <span className="text-slate-400 font-mono text-[11px]">({site.contactPhone})</span>
+                  )}
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="p-0.5 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors opacity-70 group-hover/field:opacity-100"
+                    title="点击编辑运维负责人及电话"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
                 </span>
               </div>
             </div>
@@ -182,6 +204,15 @@ export const SiteDetailView: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold border border-amber-300 shadow-2xs transition-colors flex items-center gap-1.5"
+                title="编辑该站点台账档案：修改所属客户、运维负责人、装机容量、SLA及工程参数"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                <span>编辑台账信息</span>
+              </button>
+
               <button
                 onClick={() => navigateToAvailabilityDrilldown(site.id, 0)}
                 className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
@@ -322,6 +353,14 @@ export const SiteDetailView: React.FC = () => {
           onNavigateTab={idx => setSiteDetailTab(idx)}
         />
       )}
+
+      {/* Edit Site Ledger Modal */}
+      <EditSiteModal
+        site={site}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={updateSite}
+      />
     </div>
   );
 };

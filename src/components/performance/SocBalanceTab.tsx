@@ -26,10 +26,12 @@ import {
 } from 'recharts';
 
 interface SocBalanceTabProps {
-  socRecords: SocBalanceRecord[];
+  socRecords?: SocBalanceRecord[];
+  records?: SocBalanceRecord[];
 }
 
-export const SocBalanceTab: React.FC<SocBalanceTabProps> = ({ socRecords: initialRecords }) => {
+export const SocBalanceTab: React.FC<SocBalanceTabProps> = ({ socRecords, records: propRecords }) => {
+  const initialRecords = socRecords || propRecords || [];
   const [records, setRecords] = useState<SocBalanceRecord[]>(initialRecords);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'LOGS'>('OVERVIEW');
   const [triggeringId, setTriggeringId] = useState<string | null>(null);

@@ -26,7 +26,7 @@ import {
   ArrowLeft,
   Filter,
   Search,
-  Leaf,
+  ZapOff,
   RotateCcw,
   ShieldCheck,
   Cpu,
@@ -225,7 +225,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
   const handleOpenEcoModal = (alarm: AvailabilityAlarmItem) => {
     setEcoModalData({
       alarm,
-      reason: alarm.ecoExemptReason || '符合调度协议 Clause 4.2 节能温控自适应启停免责条款',
+      reason: alarm.ecoExemptReason || '电网调度指令性限电 / 负荷低谷备用停机 (ECO电网调度免责条款)',
       customReason: '',
       operator: alarm.ecoExemptOperator || '现场运维调度·李维'
     });
@@ -236,7 +236,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
     if (!ecoModalData) return;
     const finalReason =
       ecoModalData.reason === 'CUSTOM'
-        ? ecoModalData.customReason || '经现场审核确认的ECO节能运行策略免责'
+        ? ecoModalData.customReason || '经现场审核确认的ECO外因停机(电网限电/线路检修)免责'
         : ecoModalData.reason;
 
     const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -252,7 +252,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
     }));
 
     setToastMessage(
-      `已成功为告警【${ecoModalData.alarm.code}】标注 ECO 运行免责，SLA 考核停机时长已核免！`
+      `已成功为告警【${ecoModalData.alarm.code}】标注 ECO 外因停机免责，SLA 考核停机时长已核免！`
     );
     setEcoModalData(null);
     setTimeout(() => setToastMessage(null), 5000);
@@ -269,7 +269,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
         timestamp: ''
       }
     }));
-    setToastMessage(`已取消告警【${alarmCode}】的 ECO 免责标注，恢复纳入 SLA 考核。`);
+    setToastMessage(`已取消告警【${alarmCode}】的 ECO 外因停机免责标注，恢复纳入 SLA 考核。`);
     setTimeout(() => setToastMessage(null), 5000);
   };
 
@@ -412,8 +412,8 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                 {filteredAlarms.length}
               </span>
               {alarmsStats.ecoExempt > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-mono flex items-center gap-0.5">
-                  <Leaf className="w-2.5 h-2.5 text-emerald-600" />
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-cyan-100 text-cyan-800 font-mono flex items-center gap-0.5">
+                  <ZapOff className="w-2.5 h-2.5 text-cyan-600" />
                   <span>{alarmsStats.ecoExempt} ECO免责</span>
                 </span>
               )}
@@ -652,15 +652,15 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-emerald-50/60 border border-emerald-200">
-                <div className="text-[11px] text-emerald-800 font-semibold flex items-center justify-between">
-                  <span>ECO 免责标注数</span>
-                  <Leaf className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="p-3 rounded-lg bg-cyan-50/70 border border-cyan-300">
+                <div className="text-[11px] text-cyan-900 font-semibold flex items-center justify-between">
+                  <span>ECO 外因停机免责</span>
+                  <ZapOff className="w-3.5 h-3.5 text-cyan-700" />
                 </div>
-                <div className="text-lg font-black font-mono text-emerald-700 mt-1">
+                <div className="text-lg font-black font-mono text-cyan-800 mt-1">
                   {alarmsStats.ecoExempt} <span className="text-xs font-sans font-normal">条</span>
                 </div>
-                <div className="text-[10px] text-emerald-600 mt-0.5">已核免 SLA 考核扣减</div>
+                <div className="text-[10px] text-cyan-700 mt-0.5">外因停机 · 核免SLA考核</div>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-50 border border-red-200/80">
@@ -732,12 +732,12 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                     onClick={() => setAlarmSeverityFilter('ECO_EXEMPT')}
                     className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 ${
                       alarmSeverityFilter === 'ECO_EXEMPT'
-                        ? 'bg-emerald-600 text-white font-bold'
-                        : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
+                        ? 'bg-cyan-600 text-white font-bold'
+                        : 'bg-white text-cyan-800 border border-cyan-300 hover:bg-cyan-50'
                     }`}
                   >
-                    <Leaf className="w-3 h-3 text-emerald-500" />
-                    <span>ECO免责 ({alarmsStats.ecoExempt})</span>
+                    <ZapOff className="w-3 h-3 text-cyan-600" />
+                    <span>ECO外因免责 ({alarmsStats.ecoExempt})</span>
                   </button>
                   <button
                     onClick={() => setAlarmSeverityFilter('EXEMPT')}
@@ -822,7 +822,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                       key={alarm.id}
                       className={`rounded-xl border transition-all p-4 text-xs ${
                         alarm.isEcoExempt
-                          ? 'bg-emerald-50/20 border-emerald-300 shadow-2xs'
+                          ? 'bg-cyan-50/25 border-cyan-300 shadow-2xs'
                           : isCritical
                           ? 'bg-white border-red-200 hover:border-red-300 shadow-2xs'
                           : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
@@ -833,7 +833,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                           <div
                             className={`p-2 rounded-lg shrink-0 mt-0.5 ${
                               alarm.isEcoExempt
-                                ? 'bg-emerald-100 text-emerald-700'
+                                ? 'bg-cyan-100 text-cyan-800'
                                 : isCritical
                                 ? 'bg-red-100 text-red-700'
                                 : isMajor
@@ -842,7 +842,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                             }`}
                           >
                             {alarm.isEcoExempt ? (
-                              <Leaf className="w-4 h-4 text-emerald-600" />
+                              <ZapOff className="w-4 h-4 text-cyan-700" />
                             ) : (
                               <AlertTriangle className="w-4 h-4" />
                             )}
@@ -877,9 +877,9 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
 
                               {/* ECO Exemption Badge */}
                               {alarm.isEcoExempt ? (
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-2xs flex items-center gap-1">
-                                  <Leaf className="w-3 h-3" />
-                                  <span>ECO免责 (已豁免SLA考核扣减)</span>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-600 text-white shadow-2xs flex items-center gap-1">
+                                  <ZapOff className="w-3 h-3 text-white" />
+                                  <span>ECO外因停机免责 (电网限电/线路检修，已豁免SLA考核)</span>
                                 </span>
                               ) : alarm.isExempt ? (
                                 <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
@@ -934,12 +934,12 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
 
                             {/* ECO Rationale if exempt */}
                             {alarm.isEcoExempt && alarm.ecoExemptReason && (
-                              <div className="mt-2 text-[11px] bg-emerald-50 text-emerald-800 p-2 rounded-lg border border-emerald-200 flex items-start gap-1.5">
-                                <Leaf className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                              <div className="mt-2 text-[11px] bg-cyan-50/90 text-cyan-950 p-2 rounded-lg border border-cyan-200 flex items-start gap-1.5">
+                                <ZapOff className="w-3.5 h-3.5 text-cyan-700 shrink-0 mt-0.5" />
                                 <div>
-                                  <strong>ECO 免责条款依据:</strong> {alarm.ecoExemptReason}
+                                  <strong>ECO 外因停机免责依据:</strong> {alarm.ecoExemptReason}
                                   {alarm.ecoExemptOperator && (
-                                    <span className="text-emerald-700 ml-2">
+                                    <span className="text-cyan-800 ml-2">
                                       (核准人: {alarm.ecoExemptOperator} · 生效时间:{' '}
                                       {alarm.ecoExemptTime || '即时生效'})
                                     </span>
@@ -957,7 +957,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                             <button
                               onClick={() => handleCancelEcoExempt(alarm.id, alarm.code)}
                               className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                              title="撤销该告警的 ECO 免责标注，重新纳入 SLA 考核"
+                              title="撤销该告警的 ECO 外因停机免责标注，重新纳入 SLA 考核"
                             >
                               <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
                               <span>取消ECO免责</span>
@@ -965,11 +965,11 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                           ) : (
                             <button
                               onClick={() => handleOpenEcoModal(alarm)}
-                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
-                              title="标注符合节能运行策略的 ECO 待机免责"
+                              className="px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border border-cyan-300 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                              title="标注外部电网限电或线路检修等 ECO 外因停机免责"
                             >
-                              <Leaf className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>标注ECO免责</span>
+                              <ZapOff className="w-3.5 h-3.5 text-cyan-700" />
+                              <span>标注ECO外因免责</span>
                             </button>
                           )}
 
@@ -1087,13 +1087,13 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
           <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <Leaf className="w-5 h-5" />
+                <div className="p-2 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+                  <ZapOff className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">标注 ECO 运行免责</h3>
+                  <h3 className="text-base font-bold text-slate-900">标注 ECO 外因停机免责</h3>
                   <p className="text-xs text-slate-500 font-mono">
-                    告警编号: {ecoModalData.alarm.code} · 设备: {ecoModalData.alarm.deviceCode}
+                    告警: {ecoModalData.alarm.code} · 设备: {ecoModalData.alarm.deviceCode}
                   </p>
                 </div>
               </div>
@@ -1106,49 +1106,49 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
-                <div className="font-bold text-slate-800">{ecoModalData.alarm.title}</div>
-                <div className="text-slate-500 text-[11px] leading-relaxed">
+              <div className="p-3 bg-cyan-50/50 rounded-lg border border-cyan-200 space-y-1">
+                <div className="font-bold text-slate-900">{ecoModalData.alarm.title}</div>
+                <div className="text-slate-600 text-[11px] leading-relaxed">
                   {ecoModalData.alarm.rootCause}
                 </div>
-                <div className="text-[11px] text-amber-700 font-mono pt-1">
+                <div className="text-[11px] text-cyan-800 font-mono font-medium pt-1">
                   当前计入 SLA 考核停机: {ecoModalData.alarm.equivalentInterruptionMinutes} 分钟
-                  (标注后将核减为 0 分钟)
+                  (标注为外因停机后将全额核减为 0 分钟)
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  选择免责依据条款:
+                  选择外因停机(ECO)免责依据条款:
                 </label>
                 <div className="space-y-2">
                   {[
                     {
-                      key: 'Clause 4.2 节能温控自适应启停免责 (仓温在标准范围自适应停机)',
-                      label: 'Clause 4.2 节能温控自适应启停免责 (温控低耗待机)'
+                      key: '电网调度指令性限电 / 负荷低谷备用停机 (ECO电网调度免责条款)',
+                      label: '电网调度指令性限电 / 负荷低谷备用停机 (ECO电网调度免责条款)'
                     },
                     {
-                      key: '电网低负荷/现货低谷电价经济待机 EMS ECO Mode 免责',
-                      label: '电网低负荷/现货低谷电价经济待机 EMS ECO Mode 免责'
+                      key: '外部输配电线路检修 / 变电站配合停电停机 (外因线路免责条款)',
+                      label: '外部输配电线路检修 / 变电站配合停电停机 (外因线路免责条款)'
                     },
                     {
-                      key: '无功自适应补偿低损耗待机免责',
-                      label: '无功自适应补偿低损耗待机免责'
+                      key: '电网频率/电压异常越限导致机组外部联锁解列停机 (电网故障外因免责)',
+                      label: '电网频率/电压异常越限导致机组外部联锁解列停机 (电网故障外因免责)'
                     },
                     {
-                      key: '电池簇待机微弱均衡自适应免责',
-                      label: '电池簇待机微弱均衡自适应免责'
+                      key: '极端天气防灾指令 / 外部不可抗力要求解列备用 (不可抗力外因免责)',
+                      label: '极端天气防灾指令 / 外部不可抗力要求解列备用 (不可抗力外因免责)'
                     },
                     {
                       key: 'CUSTOM',
-                      label: '其他自定义免责依据说明...'
+                      label: '其他自定义外因停机(ECO)免责依据与调度令号...'
                     }
                   ].map(opt => (
                     <label
                       key={opt.key}
                       className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
                         ecoModalData.reason === opt.key
-                          ? 'bg-emerald-50/60 border-emerald-400 text-emerald-900 font-semibold'
+                          ? 'bg-cyan-50/70 border-cyan-400 text-cyan-950 font-semibold'
                           : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
@@ -1159,7 +1159,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                         onChange={() =>
                           setEcoModalData({ ...ecoModalData, reason: opt.key })
                         }
-                        className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                        className="mt-0.5 text-cyan-600 focus:ring-cyan-500"
                       />
                       <span className="text-xs">{opt.label}</span>
                     </label>
@@ -1170,7 +1170,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
               {ecoModalData.reason === 'CUSTOM' && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    请输入自定义免责条款与说明:
+                    请输入自定义外因停机免责条款与调度令号:
                   </label>
                   <textarea
                     rows={2}
@@ -1178,15 +1178,15 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                     onChange={e =>
                       setEcoModalData({ ...ecoModalData, customReason: e.target.value })
                     }
-                    placeholder="请输入现场调度签认或合同免责条款号..."
-                    className="w-full p-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                    placeholder="请输入调度令号或供电局线路检修通知文号..."
+                    className="w-full p-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-cyan-500"
                   />
                 </div>
               )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  审核人 / 运维调度员:
+                  核准人 / 运维调度员:
                 </label>
                 <input
                   type="text"
@@ -1195,7 +1195,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                     setEcoModalData({ ...ecoModalData, operator: e.target.value })
                   }
                   placeholder="例如: 现场运维调度·李维"
-                  className="w-full p-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                  className="w-full p-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-cyan-500"
                 />
               </div>
             </div>
@@ -1209,10 +1209,10 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
               </button>
               <button
                 onClick={handleConfirmEcoExempt}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow-2xs flex items-center gap-1.5"
+                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow-2xs flex items-center gap-1.5"
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>确认免责并核减SLA考核</span>
+                <span>确认外因停机并核减SLA考核</span>
               </button>
             </div>
           </div>

@@ -26,20 +26,20 @@ import {
 } from 'recharts';
 
 interface CmuThermalTabProps {
-  cmuRecords: CmuThermalRecord[];
+  cmuRecords?: CmuThermalRecord[];
 }
 
-export const CmuThermalTab: React.FC<CmuThermalTabProps> = ({ cmuRecords }) => {
-  const [selectedCmu, setSelectedCmu] = useState<CmuThermalRecord>(
-    cmuRecords.find(c => c.thermalStatus === 'OVERHEATED') || cmuRecords[0]
+export const CmuThermalTab: React.FC<CmuThermalTabProps> = ({ cmuRecords: propRecords }) => {
+  const cmuRecords = propRecords || [];
+  const [selectedCmu, setSelectedCmu] = useState<CmuThermalRecord | null>(
+    cmuRecords.find(c => c.thermalStatus === 'OVERHEATED') || cmuRecords[0] || null
   );
 
-  const maxTempRecord = cmuRecords.reduce(
-    (max, cur) => (cur.maxTemp > max.maxTemp ? cur : max),
-    cmuRecords[0]
-  );
+  const maxTempRecord = cmuRecords.length > 0
+    ? cmuRecords.reduce((max, cur) => (cur.maxTemp > max.maxTemp ? cur : max), cmuRecords[0])
+    : null;
 
-  const maxDeltaT = Math.max(...cmuRecords.map(c => c.deltaT));
+  const maxDeltaT = cmuRecords.length > 0 ? Math.max(...cmuRecords.map(c => c.deltaT)) : 0;
 
   return (
     <div className="space-y-6">
@@ -63,9 +63,9 @@ export const CmuThermalTab: React.FC<CmuThermalTabProps> = ({ cmuRecords }) => {
             <div className="bg-rose-50 border border-rose-200 px-3 py-2 rounded-lg text-center min-w-[110px]">
               <div className="text-[11px] text-rose-600">电芯最高测点温</div>
               <div className="text-base font-black text-rose-700 font-mono mt-0.5">
-                {maxTempRecord.maxTemp} ℃
+                {maxTempRecord?.maxTemp || 0} ℃
               </div>
-              <div className="text-[9px] text-rose-400 font-mono mt-0.5">{maxTempRecord.cmuCode}</div>
+              <div className="text-[9px] text-rose-400 font-mono mt-0.5">{maxTempRecord?.cmuCode || '-'}</div>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg text-center min-w-[110px]">

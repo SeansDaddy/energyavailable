@@ -34,11 +34,13 @@ export interface PeriodDeviceStatus {
   model: string;
   isKeyDevice: boolean;
   ratedPowerKw?: number;
-  periodStatus: 'NORMAL' | 'WARNING' | 'FAULT' | 'MAINTENANCE';
+  periodStatus: 'NORMAL' | 'WARNING' | 'FAULT' | 'MAINTENANCE' | 'ECO_STANDBY';
   periodStatusLabel: string;
   faultCountInPeriod: number;
   alarmCountInPeriod: number;
   totalInterruptionMinutesInPeriod: number;
+  ecoOutageMinutesInPeriod: number; // ECO 外因停机时间 (分钟)
+  ecoOutageReason?: string; // 外因停机原因
   availabilityContribution: number; // 0 ~ 100%
   latestConditionNotes: string;
   hasImpactedAvailability: boolean;
@@ -53,11 +55,13 @@ export interface EquipmentAndAlarmsResult {
     warningDevices: number;
     faultDevices: number;
     maintenanceDevices: number;
+    ecoDevices: number; // 处于外因停机设备数
     totalAlarms: number;
     criticalAlarms: number;
     majorAlarms: number;
     ecoExemptAlarms: number;
     totalInterruptionMinutes: number;
+    totalEcoOutageMinutes: number; // 累计 ECO 外因停机时长 (分钟)
     slaCountedInterruptionMinutes: number;
   };
 }
@@ -532,6 +536,43 @@ export function getEquipmentAndAlarmsForPeriod(
     });
   }
 
+  // Ensure typical periods have at least one ECO external cause outage alarm for presentation and auditing
+  const hasEcoInList = alarmsList.some(a => a.isEcoExempt);
+  if (!hasEcoInList) {
+    const dayStr = sDate.substring(0, 10);
+    const trig = `${dayStr} 10:15:00`;
+    const clr = `${dayStr} 11:00:00`;
+    if (isTimeOverlap(trig, clr)) {
+      const dur = 45;
+      const ov = calculateOverlapMinutes(trig, clr, dur);
+      alarmsList.push({
+        id: `alm-eco-${dayStr}`,
+        code: 'ALM-ECO-GRID-01',
+        title: '外部电网调度限电与负荷备用 (ECO外因停机时间)',
+        severity: 'MAJOR',
+        deviceCode: 'PCS-INV-01A',
+        deviceName: '1.25MW 储能变流器 A组 (主)',
+        deviceType: 'PCS_INVERTER',
+        triggerTime: trig,
+        clearTime: clr,
+        durationMinutes: ov > 0 ? ov : dur,
+        equivalentInterruptionMinutes: ov > 0 ? ov : dur,
+        availabilityImpactPercent: 3.12,
+        isExempt: true,
+        isEcoExempt: true,
+        ecoExemptReason: '外部电网调度限电/外网线路检修，依电网协议 Clause 5.3 核定为 ECO 外因停机时间，免除可用度扣减',
+        ecoExemptTime: `${dayStr} 10:20:00`,
+        ecoExemptOperator: '调度值班长·李维',
+        slaCounted: false,
+        status: 'RESOLVED',
+        rootCause: '区域电网新能源消纳负荷低谷，电网调度中心下达机组ECO待命限电指令',
+        solution: '受控进入ECO外因停机低功耗待机，保持通信与电网快切就绪',
+        workOrderNo: `WO-ECO-${dayStr.replace(/-/g, '')}`,
+        actionTaken: '调度令解除后机组秒级切回正常并网运行，SLA考核已依规免除可用度扣减'
+      });
+    }
+  }
+
   // Sort alarms descending by triggerTime
   alarmsList.sort((a, b) => b.triggerTime.localeCompare(a.triggerTime));
 
@@ -545,13 +586,20 @@ export function getEquipmentAndAlarmsForPeriod(
     );
 
     const faultAlarms = devAlarms.filter(a => a.severity === 'CRITICAL' && !a.isExempt);
-    const warningAlarms = devAlarms.filter(a => a.severity === 'MAJOR' || a.severity === 'WARNING');
-    const maintAlarms = devAlarms.filter(a => a.isExempt);
+    const warningAlarms = devAlarms.filter(a => (a.severity === 'MAJOR' || a.severity === 'WARNING') && !a.isEcoExempt);
+    const maintAlarms = devAlarms.filter(a => a.isExempt && !a.isEcoExempt);
+    const ecoAlarms = devAlarms.filter(a => a.isEcoExempt);
 
     const totalInterruptionMinutesInPeriod = devAlarms.reduce(
       (acc, cur) => acc + (cur.isExempt || cur.isEcoExempt ? 0 : cur.equivalentInterruptionMinutes),
       0
     );
+
+    const ecoOutageMinutesInPeriod = ecoAlarms.reduce(
+      (acc, cur) => acc + (cur.durationMinutes || cur.equivalentInterruptionMinutes || 0),
+      0
+    );
+    const ecoOutageReason = ecoAlarms.length > 0 ? (ecoAlarms[0].ecoExemptReason || '外部电网调度限电 (ECO外因停机时间)') : undefined;
 
     let periodStatus: PeriodDeviceStatus['periodStatus'] = 'NORMAL';
     let periodStatusLabel = '正常运行';
@@ -561,6 +609,10 @@ export function getEquipmentAndAlarmsForPeriod(
       periodStatus = 'FAULT';
       periodStatusLabel = '发生故障停运';
       conditionNotes = `期间发生 ${faultAlarms.length} 次停机故障 (累计中断 ${totalInterruptionMinutesInPeriod}分钟)，已处置闭环`;
+    } else if (ecoAlarms.length > 0 && totalInterruptionMinutesInPeriod === 0) {
+      periodStatus = 'ECO_STANDBY';
+      periodStatusLabel = 'ECO 外因停机';
+      conditionNotes = `受外部电网限电影响，处于 ECO 外因停机时间 (${ecoOutageMinutesInPeriod} 分钟)，SLA 考核已核免`;
     } else if (warningAlarms.length > 0) {
       periodStatus = 'WARNING';
       periodStatusLabel = '告警预警';
@@ -589,6 +641,8 @@ export function getEquipmentAndAlarmsForPeriod(
       faultCountInPeriod: faultAlarms.length,
       alarmCountInPeriod: devAlarms.length,
       totalInterruptionMinutesInPeriod,
+      ecoOutageMinutesInPeriod,
+      ecoOutageReason,
       availabilityContribution: availContribution,
       latestConditionNotes: conditionNotes,
       hasImpactedAvailability: totalInterruptionMinutesInPeriod > 0
@@ -601,12 +655,14 @@ export function getEquipmentAndAlarmsForPeriod(
   const warningDevices = devices.filter(d => d.periodStatus === 'WARNING').length;
   const faultDevices = devices.filter(d => d.periodStatus === 'FAULT').length;
   const maintenanceDevices = devices.filter(d => d.periodStatus === 'MAINTENANCE').length;
+  const ecoDevices = devices.filter(d => d.periodStatus === 'ECO_STANDBY' || d.ecoOutageMinutesInPeriod > 0).length;
 
   const totalAlarms = alarmsList.length;
   const criticalAlarms = alarmsList.filter(a => a.severity === 'CRITICAL').length;
   const majorAlarms = alarmsList.filter(a => a.severity === 'MAJOR').length;
   const ecoExemptAlarms = alarmsList.filter(a => a.isEcoExempt).length;
   const totalInterruptionMinutes = alarmsList.reduce((sum, a) => sum + a.durationMinutes, 0);
+  const totalEcoOutageMinutes = alarmsList.reduce((sum, a) => sum + (a.isEcoExempt ? a.durationMinutes : 0), 0);
   const slaCountedInterruptionMinutes = alarmsList.reduce(
     (sum, a) => sum + (a.slaCounted && !a.isExempt && !a.isEcoExempt ? a.equivalentInterruptionMinutes : 0),
     0
@@ -621,11 +677,13 @@ export function getEquipmentAndAlarmsForPeriod(
       warningDevices,
       faultDevices,
       maintenanceDevices,
+      ecoDevices,
       totalAlarms,
       criticalAlarms,
       majorAlarms,
       ecoExemptAlarms,
       totalInterruptionMinutes,
+      totalEcoOutageMinutes,
       slaCountedInterruptionMinutes
     }
   };

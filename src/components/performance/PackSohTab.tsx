@@ -25,18 +25,19 @@ import {
 } from 'recharts';
 
 interface PackSohTabProps {
-  packMetrics: PackSohMetric[];
+  packMetrics?: PackSohMetric[];
 }
 
-export const PackSohTab: React.FC<PackSohTabProps> = ({ packMetrics }) => {
-  const [selectedPack, setSelectedPack] = useState<PackSohMetric>(
-    packMetrics.find(p => !p.isStandard) || packMetrics[0]
+export const PackSohTab: React.FC<PackSohTabProps> = ({ packMetrics: propMetrics }) => {
+  const packMetrics = propMetrics || [];
+  const [selectedPack, setSelectedPack] = useState<PackSohMetric | null>(
+    packMetrics.find(p => !p.isStandard) || packMetrics[0] || null
   );
 
   const substandardPacks = packMetrics.filter(p => !p.isStandard);
-  const avgSoh = (
-    packMetrics.reduce((sum, p) => sum + p.soh, 0) / packMetrics.length
-  ).toFixed(1);
+  const avgSoh = packMetrics.length > 0
+    ? (packMetrics.reduce((sum, p) => sum + p.soh, 0) / packMetrics.length).toFixed(1)
+    : '0.0';
 
   return (
     <div className="space-y-6">

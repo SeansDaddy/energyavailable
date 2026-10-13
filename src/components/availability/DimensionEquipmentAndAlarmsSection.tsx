@@ -25,9 +25,9 @@ import {
   Activity,
   FileText,
   Tag,
-  Leaf,
   RotateCcw,
-  Link2
+  Link2,
+  ZapOff
 } from 'lucide-react';
 
 interface DimensionEquipmentAndAlarmsSectionProps {
@@ -55,7 +55,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
 }) => {
   // Device filter & search states
   const [deviceStatusFilter, setDeviceStatusFilter] = useState<
-    'ALL' | 'NORMAL' | 'WARNING' | 'FAULT' | 'MAINTENANCE'
+    'ALL' | 'NORMAL' | 'WARNING' | 'FAULT' | 'MAINTENANCE' | 'ECO_STANDBY'
   >('ALL');
   const [deviceSearchTerm, setDeviceSearchTerm] = useState<string>('');
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<string | null>(null);
@@ -72,7 +72,13 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
       // Device code selection filter
       if (selectedDeviceCode && d.deviceCode !== selectedDeviceCode) return false;
       // Status filter
-      if (deviceStatusFilter !== 'ALL' && d.periodStatus !== deviceStatusFilter) return false;
+      if (deviceStatusFilter !== 'ALL') {
+        if (deviceStatusFilter === 'ECO_STANDBY') {
+          if (d.periodStatus !== 'ECO_STANDBY' && (d.ecoOutageMinutesInPeriod || 0) === 0) return false;
+        } else if (d.periodStatus !== deviceStatusFilter) {
+          return false;
+        }
+      }
       // Search term
       if (deviceSearchTerm) {
         const term = deviceSearchTerm.toLowerCase();
@@ -169,8 +175,8 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
         </div>
       </div>
 
-      {/* 4 KPI Summary Cards (保留核心统计) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      {/* 5 KPI Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
             <span>核心设备健康度</span>
@@ -181,9 +187,14 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
             <span className="text-xs font-sans text-slate-500 font-normal">台正常</span>
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5">
+            {stats.ecoDevices > 0 && (
+              <span className="text-cyan-700 font-semibold">
+                {stats.ecoDevices}台ECO外因停机{' '}
+              </span>
+            )}
             {stats.warningDevices > 0 && (
               <span className="text-amber-600 font-semibold">
-                {stats.warningDevices}台预警{' '}
+                · {stats.warningDevices}台预警{' '}
               </span>
             )}
             {stats.faultDevices > 0 && (
@@ -196,13 +207,13 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                 · {stats.maintenanceDevices}台检修
               </span>
             )}
-            {stats.faultDevices === 0 && stats.warningDevices === 0 && (
+            {stats.faultDevices === 0 && stats.warningDevices === 0 && stats.ecoDevices === 0 && (
               <span className="text-emerald-600 font-semibold">全量核心设备稳定运行</span>
             )}
           </div>
         </div>
 
-        {/* 可用度告警 KPI: Click jumps directly to Interruption Alarms Tab */}
+        {/* 可用度告警 KPI */}
         <div
           onClick={() => handleDrilldownToCausalChain()}
           className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/20 cursor-pointer transition-all group"
@@ -222,15 +233,24 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
           <div className="text-[10px] text-slate-500 mt-0.5">
             严重停运 <strong className="text-red-600 font-mono">{stats.criticalAlarms}</strong>{' '}
             · 重要 <strong className="text-amber-600 font-mono">{stats.majorAlarms}</strong>
-            {stats.ecoExemptAlarms > 0 && (
-              <span>
-                {' '}
-                · ECO免责{' '}
-                <strong className="text-emerald-600 font-mono">
-                  {stats.ecoExemptAlarms}
-                </strong>
-              </span>
-            )}
+          </div>
+        </div>
+
+        {/* NEW: ECO 外因停机时间 (免责) KPI */}
+        <div className="p-3 rounded-lg bg-cyan-50/50 border border-cyan-200">
+          <div className="text-[11px] text-cyan-800 font-medium flex items-center justify-between">
+            <span>ECO 外因停机时间</span>
+            <ZapOff className="w-3.5 h-3.5 text-cyan-600" />
+          </div>
+          <div className="text-lg font-black font-mono text-cyan-800 mt-1">
+            {stats.totalEcoOutageMinutes}{' '}
+            <span className="text-xs font-sans text-cyan-700 font-normal">分钟</span>
+          </div>
+          <div className="text-[10px] text-cyan-700 mt-0.5 flex items-center justify-between">
+            <span>电网限电/外因停运</span>
+            <span className="font-bold font-mono px-1 py-0.2 rounded bg-cyan-100/80 text-cyan-900 border border-cyan-300 text-[9px]">
+              SLA免责
+            </span>
           </div>
         </div>
 
@@ -248,7 +268,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
             <strong className="text-slate-700 font-mono">
               {(stats.slaCountedInterruptionMinutes / 60).toFixed(1)}
             </strong>{' '}
-            小时 (扣减考核)
+            小时 (责任停机)
           </div>
         </div>
 
@@ -258,7 +278,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
             <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
           </div>
           <div className="text-lg font-black font-mono text-blue-700 mt-1">100%</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">工单闭环与免责追溯完成</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">工单闭环与免责核销完成</div>
         </div>
       </div>
 
@@ -325,6 +345,19 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                 <span>计划检修 ({stats.maintenanceDevices})</span>
+              </button>
+            )}
+            {stats.ecoDevices > 0 && (
+              <button
+                onClick={() => setDeviceStatusFilter('ECO_STANDBY')}
+                className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 ${
+                  deviceStatusFilter === 'ECO_STANDBY'
+                    ? 'bg-cyan-600 text-white font-bold'
+                    : 'bg-white text-cyan-800 border border-cyan-300 hover:bg-cyan-50'
+                }`}
+              >
+                <ZapOff className="w-3.5 h-3.5 text-cyan-600" />
+                <span>ECO外因停机 ({stats.ecoDevices})</span>
               </button>
             )}
           </div>
@@ -431,6 +464,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                     text: 'text-slate-700'
                   };
                   const isFault = dev.periodStatus === 'FAULT';
+                  const isEco = dev.periodStatus === 'ECO_STANDBY' || (dev.ecoOutageMinutesInPeriod || 0) > 0;
                   const isWarning = dev.periodStatus === 'WARNING';
                   const isMaint = dev.periodStatus === 'MAINTENANCE';
 
@@ -440,6 +474,8 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                         className={`hover:bg-blue-50/20 transition-colors ${
                           isFault
                             ? 'bg-red-50/15'
+                            : isEco
+                            ? 'bg-cyan-50/20'
                             : isWarning
                             ? 'bg-amber-50/15'
                             : ''
@@ -501,6 +537,8 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                               isFault
                                 ? 'bg-red-100 text-red-700 border border-red-200'
+                                : isEco
+                                ? 'bg-cyan-100 text-cyan-800 border border-cyan-300'
                                 : isWarning
                                 ? 'bg-amber-100 text-amber-800 border border-amber-200'
                                 : isMaint
@@ -512,6 +550,8 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                               className={`w-2 h-2 rounded-full ${
                                 isFault
                                   ? 'bg-red-600 animate-pulse'
+                                  : isEco
+                                  ? 'bg-cyan-600'
                                   : isWarning
                                   ? 'bg-amber-500'
                                   : isMaint
@@ -550,17 +590,28 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                           </div>
                         </td>
 
-                        {/* Interruption Minutes */}
+                        {/* Interruption Minutes & ECO Outage Minutes */}
                         <td className="py-3 px-3 text-center">
-                          <span
-                            className={`font-mono font-bold ${
-                              dev.totalInterruptionMinutesInPeriod > 0
-                                ? 'text-red-600'
-                                : 'text-slate-600'
-                            }`}
-                          >
-                            {dev.totalInterruptionMinutesInPeriod} 分钟
-                          </span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            {dev.totalInterruptionMinutesInPeriod > 0 ? (
+                              <span className="font-mono font-bold text-red-600">
+                                考核: {dev.totalInterruptionMinutesInPeriod} 分钟
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-500 text-[11px]">
+                                考核停机: 0 分钟
+                              </span>
+                            )}
+                            {(dev.ecoOutageMinutesInPeriod || 0) > 0 && (
+                              <span
+                                className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-cyan-800 bg-cyan-100/90 px-1.5 py-0.5 rounded border border-cyan-300"
+                                title={`ECO 外因停机时间: ${dev.ecoOutageMinutesInPeriod}分钟 (电网限电/线路检修，SLA免责)\n原因: ${dev.ecoOutageReason || '外部电网调度限电'}`}
+                              >
+                                <ZapOff className="w-2.5 h-2.5 text-cyan-700" />
+                                <span>ECO: {dev.ecoOutageMinutesInPeriod}分 (免责)</span>
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* 关联可用度告警: 点击下钻跳转至中断告警 */}
@@ -658,6 +709,25 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                                   </p>
                                 </div>
                               </div>
+
+                              {(dev.ecoOutageMinutesInPeriod || 0) > 0 && (
+                                <div className="p-3 bg-cyan-50/80 rounded-lg border border-cyan-200 flex items-start gap-2.5">
+                                  <ZapOff className="w-4 h-4 text-cyan-700 shrink-0 mt-0.5" />
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-cyan-900 text-xs">
+                                        ECO 外因停机时间 (免责): {dev.ecoOutageMinutesInPeriod} 分钟
+                                      </span>
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-cyan-200/80 text-cyan-900 font-bold border border-cyan-300">
+                                        SLA已核免 · 不扣减可用度
+                                      </span>
+                                    </div>
+                                    <p className="text-cyan-800 text-[11px] mt-1 leading-relaxed">
+                                      {dev.ecoOutageReason || '外部电网调度限电或线路检修停机。该时间段属于外因停机时间(External Cause Outage)，系统依据SLA电网免责协议全额核免可用度扣减。'}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
 
                               {/* Prominent CTA to jump to Interruption Alarms */}
                               <div className="flex items-center justify-between pt-2 border-t border-slate-100">

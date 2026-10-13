@@ -83,7 +83,7 @@ export interface FiveMinAvailabilityPoint {
   time: string; // "00:00", "00:05", ... "23:55"
   timestamp: string; // "2026-08-15 09:15"
   availability: number; // 0 ~ 100
-  status: 'NORMAL' | 'FAULT_TRIP' | 'DEGRADED' | 'MAINTENANCE' | 'WORKORDER_ACTIVE';
+  status: 'NORMAL' | 'FAULT_TRIP' | 'DEGRADED' | 'MAINTENANCE' | 'WORKORDER_ACTIVE' | 'ECO_OUTAGE';
   statusLabel: string;
   pcsAvailableKw: number;
   pcsTotalKw: number;
@@ -95,6 +95,9 @@ export interface FiveMinAvailabilityPoint {
   workOrderNo?: string;
   workOrderStatus?: string;
   isExempt?: boolean; // 是否免责
+  isEco?: boolean; // 是否为 ECO 外因停机时间
+  ecoMins?: number; // ECO 外因停机时间 (分钟)
+  ecoReason?: string; // 外因停机原因说明
   cumulativeDayAvailability: number; // 当日累计可用度
 }
 
@@ -137,6 +140,11 @@ export interface Site {
   contractId: string;
   contractNo: string;
   owner: string;
+  contactPhone?: string; // 运维负责人电话
+  commissioningDate?: string; // 投运日期
+  location?: string; // 站点地址/经纬度
+  gridVoltageLevel?: string; // 并网电压等级 (如 35kV / 10kV / 110kV)
+  updatedAt?: string; // 台账更新时间
   domain: string;
   coreDevices: CoreDevice[];
   reliabilityScore: ReliabilityScore;

@@ -15,13 +15,18 @@ import {
 } from 'lucide-react';
 
 interface DefectEliminationTabProps {
-  defectRecords: DefectActionRecord[];
+  defectRecords?: DefectActionRecord[];
+  records?: DefectActionRecord[];
 }
 
-export const DefectEliminationTab: React.FC<DefectEliminationTabProps> = ({ defectRecords }) => {
+export const DefectEliminationTab: React.FC<DefectEliminationTabProps> = ({
+  defectRecords,
+  records: propRecords
+}) => {
+  const records = defectRecords || propRecords || [];
   const [filterType, setFilterType] = useState<string>('ALL');
 
-  const filteredRecords = defectRecords.filter(d =>
+  const filteredRecords = records.filter(d =>
     filterType === 'ALL' ? true : d.defectType === filterType
   );
 

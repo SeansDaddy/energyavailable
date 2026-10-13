@@ -114,6 +114,48 @@ export function generateFiveMinutePointsForDate(
     });
   }
 
+  // Determine ECO External Cause Outage intervals (外因停机时间：外部电网调度限电、线路检修等外因免责停机)
+  const ecoRanges: {
+    startMin: number;
+    endMin: number;
+    title: string;
+    reason: string;
+  }[] = [];
+
+  // 1. Extract from merged faults that are marked eco/external
+  siteFaults.forEach(f => {
+    if (
+      f.title?.includes('ECO') ||
+      f.title?.includes('外因') ||
+      f.title?.includes('电网') ||
+      f.rootCause?.includes('ECO') ||
+      f.rootCause?.includes('外因')
+    ) {
+      const sMin = f.startTime?.startsWith(date) ? timeToMinutes(f.startTime) : 0;
+      const eMin = f.endTime?.startsWith(date) ? timeToMinutes(f.endTime) : 1440;
+      ecoRanges.push({
+        startMin: sMin,
+        endMin: Math.max(sMin + 5, eMin),
+        title: f.title || '外部电网调度限电 (ECO外因停机)',
+        reason: f.rootCause || '外部电网调度负荷备用 / 现货低谷限电停运，SLA已核免'
+      });
+    }
+  });
+
+  // 2. Synthesize realistic ECO outage interval for presentation if none specified
+  const dayNum = parseInt(date.split('-')[2] || '15', 10);
+  if (ecoRanges.length === 0) {
+    // Generate an ECO external outage interval during typical grid dispatch hours (e.g. 10:15 - 11:00 or 14:30 - 15:15)
+    const ecoStartMin = dayNum % 2 === 0 ? 870 : 615; // 14:30 or 10:15
+    const ecoDurationMins = 45; // 45分钟 ECO 外因停机时间
+    ecoRanges.push({
+      startMin: ecoStartMin,
+      endMin: ecoStartMin + ecoDurationMins,
+      title: '电网调度备用/外部线路限电 (ECO外因停机)',
+      reason: '电网调度指令：外部新能源大发消纳受限，指令机组进入ECO经济待机(外因停机时间，SLA核免)'
+    });
+  }
+
   let accumulatedInterruptionMins = 0;
 
   for (let i = 0; i < totalPoints; i++) {
@@ -124,6 +166,11 @@ export function generateFiveMinutePointsForDate(
 
     // Check if in planned maintenance (Rule R2: exempt)
     const isInMaintenance = maintenanceRanges.some(
+      r => pointMin >= r.startMin && pointMin < r.endMin
+    );
+
+    // Check active ECO external cause outage (外因停机时间：外部电网原因停机，SLA免责不扣减可用度)
+    const activeEco = ecoRanges.find(
       r => pointMin >= r.startMin && pointMin < r.endMin
     );
 
@@ -148,6 +195,13 @@ export function generateFiveMinutePointsForDate(
       statusLabel = '计划维护 (免责)';
       pcsAvailableKw = 0;
       // Rule R2: Planned maintenance does not deduct availability
+      availability = 100;
+      interruptionMins = 0;
+    } else if (activeEco && !activeFault) {
+      status = 'ECO_OUTAGE';
+      statusLabel = 'ECO 外因停机 (免责)';
+      pcsAvailableKw = 0;
+      // ECO External Cause Outage: deemed available under SLA contract
       availability = 100;
       interruptionMins = 0;
     } else if (activeFault) {
@@ -198,7 +252,10 @@ export function generateFiveMinutePointsForDate(
       isWorkOrderActive: Boolean(activeOrder),
       workOrderNo: activeOrder?.orderNo,
       workOrderStatus: activeOrder?.status,
-      isExempt: isInMaintenance,
+      isExempt: isInMaintenance || Boolean(activeEco),
+      isEco: Boolean(activeEco),
+      ecoMins: activeEco ? 5 : 0,
+      ecoReason: activeEco?.reason,
       cumulativeDayAvailability: dayAvailability
     });
   }
@@ -221,6 +278,10 @@ export interface PanoramaTimelineData {
     hasFaultMarker: boolean;
     faultTitle?: string;
     faultCode?: string;
+    // ECO External Cause Outage signal
+    isEco?: boolean;
+    ecoMins?: number;
+    ecoReason?: string;
     // PCare work order status
     workOrderActive: boolean;
     workOrderNo?: string;
@@ -299,6 +360,9 @@ export function buildPanoramaTimelineData(
     hasFaultMarker: Boolean(pt.hasFaultEvent),
     faultTitle: pt.faultEventTitle,
     faultCode: pt.faultEventCode,
+    isEco: pt.isEco,
+    ecoMins: pt.ecoMins,
+    ecoReason: pt.ecoReason,
     workOrderActive: Boolean(pt.isWorkOrderActive),
     workOrderNo: pt.workOrderNo,
     workOrderDurationMins: pt.interruptionMins

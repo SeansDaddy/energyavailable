@@ -15,6 +15,7 @@ import {
   Layers,
   Sparkles,
   Zap,
+  ZapOff,
   Sliders,
   Link2
 } from 'lucide-react';
@@ -94,7 +95,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
   const effectiveCustomEndTime = propCustomEndTime !== undefined ? propCustomEndTime : internalCustomEndTime;
 
   // Dot status filter for the data table
-  const [statusFilter, setStatusFilter] = useState<'all' | 'interrupted' | 'workorder' | 'normal'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'interrupted' | 'workorder' | 'eco' | 'normal'>('all');
   const [searchTime, setSearchTime] = useState<string>('');
 
   const [internalPointIndex, setInternalPointIndex] = useState<number | null>(null);
@@ -264,9 +265,11 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
     const interruptedCount = allPoints.filter(p => p.status === 'FAULT_TRIP').length;
     const workOrderCount = allPoints.filter(p => p.status === 'WORKORDER_ACTIVE').length;
     const maintenanceCount = allPoints.filter(p => p.status === 'MAINTENANCE').length;
+    const ecoCount = allPoints.filter(p => Boolean(p.isEco)).length;
+    const totalEcoMinutes = allPoints.reduce((acc, p) => acc + (p.ecoMins || 0), 0);
     const totalInterruptionMinutes = allPoints.reduce((acc, p) => acc + p.interruptionMins, 0);
     
-    // Exact daily availability from 288 5-min dots
+    // Exact daily availability from 288 5-min dots (ECO minutes are fully exempt!)
     const finalDailyAvailability = Number(
       Math.max(0, Math.min(100, ((1440 - totalInterruptionMinutes) / 1440) * 100)).toFixed(2)
     );
@@ -277,6 +280,8 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
       interruptedCount,
       workOrderCount,
       maintenanceCount,
+      ecoCount,
+      totalEcoMinutes,
       totalInterruptionMinutes,
       finalDailyAvailability,
       isBreached: finalDailyAvailability < site.slaThreshold
@@ -326,11 +331,26 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
     };
   }, [activeOrder, chartPoints]);
 
+  const ecoPoints = useMemo(() => {
+    return chartPoints.filter(p => Boolean(p.isEco));
+  }, [chartPoints]);
+
+  const ecoTimeBounds = useMemo(() => {
+    if (ecoPoints.length === 0) return null;
+    return {
+      startTime: ecoPoints[0].time,
+      endTime: ecoPoints[ecoPoints.length - 1].time,
+      totalMinutes: ecoPoints.length * 5,
+      reason: ecoPoints[0].ecoReason || '电网调度限电/检修停机 (SLA免责)'
+    };
+  }, [ecoPoints]);
+
   // Filtered points for table display
   const tablePoints = useMemo(() => {
     return allPoints.filter(pt => {
       if (statusFilter === 'interrupted' && pt.status !== 'FAULT_TRIP') return false;
       if (statusFilter === 'workorder' && pt.status !== 'WORKORDER_ACTIVE') return false;
+      if (statusFilter === 'eco' && !pt.isEco) return false;
       if (statusFilter === 'normal' && pt.status !== 'NORMAL') return false;
       if (searchTime.trim() && !pt.time.includes(searchTime.trim())) return false;
       return true;
@@ -378,7 +398,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
       </div>
 
       {/* 288 Dots High-Level KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
         <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
           <span className="text-slate-500 font-medium">全天 5 分钟打点总数</span>
           <div className="text-xl font-black font-mono text-slate-900 mt-0.5">
@@ -403,6 +423,17 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
             {stats.interruptedCount} <span className="text-xs font-normal text-slate-400">点</span>
           </div>
           <div className="text-[10px] text-slate-400">硬件报警联锁停机</div>
+        </div>
+
+        <div className="p-3 bg-cyan-50/70 rounded-lg border border-cyan-200 shadow-xs">
+          <div className="text-cyan-900 font-semibold flex items-center justify-between">
+            <span>ECO 外因停机打点</span>
+            <ZapOff className="w-3.5 h-3.5 text-cyan-700" />
+          </div>
+          <div className="text-xl font-black font-mono text-cyan-800 mt-0.5">
+            {stats.ecoCount} <span className="text-xs font-normal text-cyan-600">点</span>
+          </div>
+          <div className="text-[10px] text-cyan-700 font-medium">免责 {stats.totalEcoMinutes} 分钟 · 不扣SLA</div>
         </div>
 
         <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
@@ -686,6 +717,10 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
               <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
               <span>故障中断 (0%)</span>
             </span>
+            <span className="flex items-center gap-1.5 font-medium text-cyan-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+              <span>ECO外因停机打点 (免责)</span>
+            </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
               <span>PCare工单处置中</span>
@@ -788,6 +823,13 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                             </span>
                           </div>
 
+                          {pt.isEco && (
+                            <div className="text-[11px] text-cyan-800 pt-1 border-t border-cyan-100 font-medium flex items-start gap-1">
+                              <ZapOff className="w-3.5 h-3.5 shrink-0 mt-0.5 text-cyan-600" />
+                              <span>ECO外因停机: {pt.ecoReason || '电网调度限电/检修 (SLA核免)'}</span>
+                            </div>
+                          )}
+
                           {pt.hasFaultEvent && (
                             <div className="text-[11px] text-red-600 pt-1 border-t border-red-100 font-medium">
                               ⚠️ 触发故障: {pt.faultEventTitle}
@@ -817,6 +859,22 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                   position: 'right'
                 }}
               />
+
+              {/* ECO External Cause Outage Time Range Background Span */}
+              {ecoTimeBounds && (
+                <ReferenceArea
+                  {...({
+                    x1: ecoTimeBounds.startTime,
+                    x2: ecoTimeBounds.endTime,
+                    y1: 0,
+                    y2: 100,
+                    fill: '#cffafe',
+                    fillOpacity: 0.35,
+                    stroke: '#06b6d4',
+                    strokeDasharray: '3 3'
+                  } as any)}
+                />
+              )}
 
               {/* PCare Work Order Duration Background Span */}
               {orderTimeBounds && (
@@ -878,6 +936,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                   const isSelected = selectedPointIndex === payload.index;
                   let color = '#10b981';
                   if (payload.status === 'FAULT_TRIP') color = '#ef4444';
+                  else if (payload.isEco) color = '#06b6d4';
                   else if (payload.status === 'WORKORDER_ACTIVE') color = '#f59e0b';
                   else if (payload.status === 'MAINTENANCE') color = '#3b82f6';
 
@@ -1046,6 +1105,15 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                 故障中断 ({stats.interruptedCount})
               </button>
               <button
+                onClick={() => setStatusFilter('eco')}
+                className={`px-2 py-0.5 rounded transition-colors flex items-center gap-1 ${
+                  statusFilter === 'eco' ? 'bg-white text-cyan-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ZapOff className="w-3 h-3 text-cyan-600" />
+                <span>ECO外因 ({stats.ecoCount})</span>
+              </button>
+              <button
                 onClick={() => setStatusFilter('workorder')}
                 className={`px-2 py-0.5 rounded transition-colors ${
                   statusFilter === 'workorder' ? 'bg-white text-amber-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
@@ -1115,6 +1183,8 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                         ? 'bg-blue-50/80 font-bold'
                         : pt.status === 'FAULT_TRIP'
                         ? 'bg-red-50/40 hover:bg-red-50/70'
+                        : pt.isEco
+                        ? 'bg-cyan-50/40 hover:bg-cyan-50/70'
                         : pt.status === 'WORKORDER_ACTIVE'
                         ? 'bg-amber-50/40 hover:bg-amber-50/70'
                         : 'hover:bg-slate-50'
@@ -1134,21 +1204,32 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                     <td className="py-1.5 px-3">
                       <span
                         className={`px-1.5 py-0.2 rounded text-[10px] font-sans font-bold ${
-                          pt.status === 'NORMAL'
+                          pt.isEco
+                            ? 'bg-cyan-100 text-cyan-800 border border-cyan-300 flex items-center gap-1 w-fit'
+                            : pt.status === 'NORMAL'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : pt.status === 'FAULT_TRIP'
                             ? 'bg-red-50 text-red-700 border border-red-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}
                       >
-                        {pt.statusLabel}
+                        {pt.isEco ? (
+                          <>
+                            <ZapOff className="w-2.5 h-2.5 text-cyan-700" />
+                            <span>ECO外因停机</span>
+                          </>
+                        ) : (
+                          pt.statusLabel
+                        )}
                       </span>
                     </td>
                     <td className="py-1.5 px-3 text-slate-700">
                       {pt.pcsAvailableKw} / {pt.pcsTotalKw} kW
                     </td>
                     <td className="py-1.5 px-3 text-slate-700">
-                      {pt.interruptionMins > 0 ? (
+                      {pt.isEco ? (
+                        <span className="text-cyan-700 font-bold">免责 0 分钟 (外因)</span>
+                      ) : pt.interruptionMins > 0 ? (
                         <span className="text-red-600 font-bold">-{pt.interruptionMins} 分钟</span>
                       ) : (
                         <span className="text-slate-400">0 分钟</span>
@@ -1160,6 +1241,11 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                     <td className="py-1.5 px-3 font-sans text-slate-600 text-[11px] truncate max-w-[240px]">
                       {pt.hasFaultEvent ? (
                         <span className="text-red-600 font-medium">⚠️ {pt.faultEventTitle}</span>
+                      ) : pt.isEco ? (
+                        <span className="text-cyan-800 font-medium flex items-center gap-1">
+                          <ZapOff className="w-3 h-3 text-cyan-600 shrink-0" />
+                          <span>ECO外因免责: {pt.ecoReason || '电网限电/线路检修'}</span>
+                        </span>
                       ) : pt.isWorkOrderActive ? (
                         <span className="text-amber-700 font-medium">🛠️ {pt.workOrderNo} (排查)</span>
                       ) : (

@@ -25,33 +25,36 @@ import {
 } from 'recharts';
 
 interface ModuleWorkloadTabProps {
-  moduleMetrics: ModuleMetric[];
+  moduleMetrics?: ModuleMetric[];
+  modules?: ModuleMetric[];
   onFocusModule?: (moduleId: string) => void;
 }
 
 export const ModuleWorkloadTab: React.FC<ModuleWorkloadTabProps> = ({
-  moduleMetrics,
+  moduleMetrics: propMetrics,
+  modules,
   onFocusModule
 }) => {
+  const metrics = propMetrics || modules || [];
   const [selectedModule, setSelectedModule] = useState<ModuleMetric | null>(
-    moduleMetrics.find(m => m.status === 'CRITICAL') || moduleMetrics[0]
+    metrics.find(m => m.status === 'CRITICAL') || metrics[0] || null
   );
   const [filterCluster, setFilterCluster] = useState<string>('ALL');
 
-  const clusters = ['ALL', ...Array.from(new Set(moduleMetrics.map(m => m.cluster)))];
+  const clusters = ['ALL', ...Array.from(new Set(metrics.map(m => m.cluster)))];
 
-  const filteredMetrics = moduleMetrics.filter(m =>
+  const filteredMetrics = metrics.filter(m =>
     filterCluster === 'ALL' ? true : m.cluster === filterCluster
   );
 
   // Stats
-  const avgVoltageDelta = (
-    moduleMetrics.reduce((sum, m) => sum + m.voltageDeltaMv, 0) / moduleMetrics.length
-  ).toFixed(1);
-  const criticalModulesCount = moduleMetrics.filter(m => m.status === 'CRITICAL').length;
-  const avgCapacityRetention = (
-    moduleMetrics.reduce((sum, m) => sum + m.capacityRetentionPct, 0) / moduleMetrics.length
-  ).toFixed(1);
+  const avgVoltageDelta = metrics.length > 0
+    ? (metrics.reduce((sum, m) => sum + m.voltageDeltaMv, 0) / metrics.length).toFixed(1)
+    : '0.0';
+  const criticalModulesCount = metrics.filter(m => m.status === 'CRITICAL').length;
+  const avgCapacityRetention = metrics.length > 0
+    ? (metrics.reduce((sum, m) => sum + m.capacityRetentionPct, 0) / metrics.length).toFixed(1)
+    : '0.0';
 
   // Chart data for Voltage Delta comparison
   const chartData = filteredMetrics.map(m => ({

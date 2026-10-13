@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Site, StatusLamp, RedundancyLevel } from '../../types';
 import { DimensionTreeFilter } from '../common/DimensionTreeFilter';
 import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
+import { EditSiteModal } from './EditSiteModal';
 import {
   Plus,
   FileSpreadsheet,
@@ -13,6 +14,7 @@ import {
   Upload,
   ChevronRight,
   Edit,
+  Edit3,
   SlidersHorizontal,
   CheckCircle2,
   AlertCircle,
@@ -26,6 +28,7 @@ export const SitesView: React.FC = () => {
   const {
     sites,
     addSite,
+    updateSite,
     navigateToSiteDetail,
     navigateToAvailabilityDrilldown,
     drilldownFilter,
@@ -37,6 +40,7 @@ export const SitesView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [redundancyFilter, setRedundancyFilter] = useState<string>('ALL');
   const [keyword, setKeyword] = useState<string>('');
+  const [editingSite, setEditingSite] = useState<Site | null>(null);
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -332,6 +336,19 @@ export const SitesView: React.FC = () => {
                           </td>
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             <div className="inline-flex items-center justify-center gap-1.5">
+                              {/* 0. 编辑台账 */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setEditingSite(site);
+                                }}
+                                className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs group/btn"
+                                title="编辑站点台账 (所属客户、运维负责人、装机容量、SLA及组网信息)"
+                                aria-label="编辑站点台账"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
                               {/* 1. 查看台账 */}
                               <button
                                 onClick={e => {
@@ -655,6 +672,14 @@ export const SitesView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal 3: Edit Site Ledger Modal */}
+      <EditSiteModal
+        site={editingSite}
+        isOpen={Boolean(editingSite)}
+        onClose={() => setEditingSite(null)}
+        onSave={updateSite}
+      />
     </div>
   );
 };

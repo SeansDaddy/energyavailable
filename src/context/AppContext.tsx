@@ -131,6 +131,7 @@ interface AppContextType {
   // Actions
   handleAlert: (alertId: string, action: 'confirmed' | 'ignored', note?: string) => void;
   addSite: (site: Partial<Site>) => void;
+  updateSite: (siteId: string, updatedData: Partial<Site>) => void;
   updateSiteRedundancy: (siteId: string, redundancy: RedundancyLevel, notes: string) => void;
   importLogBatch: (siteId: string, fileName: string, periodStart: string, periodEnd: string, isOverride: boolean) => ImportBatch;
   generateReport: (type: ReportItem['type'], scopeName: string, period: string, format: 'PDF' | 'EXCEL' | 'BOTH') => ReportItem;
@@ -332,6 +333,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       dailySnapshots: []
     };
     setSites(prev => [newSite, ...prev]);
+  };
+
+  const updateSite = (siteId: string, updatedData: Partial<Site>) => {
+    setSites(prev =>
+      prev.map(site => {
+        if (site.id === siteId) {
+          const updated: Site = {
+            ...site,
+            ...updatedData,
+            updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          };
+          if (updatedData.slaThreshold !== undefined || updatedData.currentAvailability !== undefined) {
+            updated.statusLamp = updated.currentAvailability >= updated.slaThreshold ? 'green' : 'red';
+          }
+          return updated;
+        }
+        return site;
+      })
+    );
   };
 
   const updateSiteRedundancy = (siteId: string, redundancy: RedundancyLevel, notes: string) => {
@@ -914,6 +934,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         navigateToAlertsWithFilter,
         handleAlert,
         addSite,
+        updateSite,
         updateSiteRedundancy,
         importLogBatch,
         generateReport,

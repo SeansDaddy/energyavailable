@@ -20,6 +20,7 @@ import { SocBalanceTab } from './SocBalanceTab';
 import { DefectEliminationTab } from './DefectEliminationTab';
 import { EvaluationSummaryTab } from './EvaluationSummaryTab';
 import { LogUploadAndHistoryTab } from './LogUploadAndHistoryTab';
+import { WarrantyConditionTab } from './WarrantyConditionTab';
 import {
   HeartPulse,
   Sliders,
@@ -38,7 +39,8 @@ import {
   ArrowLeft,
   ChevronRight,
   TrendingUp,
-  FileText
+  FileText,
+  ShieldCheck
 } from 'lucide-react';
 
 interface SitePerformanceDetailViewProps {
@@ -175,6 +177,7 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   };
 
   const navSubTabs = [
+    { id: 8, label: '灵活质保与SOH衰减', icon: ShieldCheck, badge: '灵活质保算法' },
     { id: 0, label: '评估结论与报告', icon: FileCheck2, badge: `${hitFactorsList.length} 因子命中` },
     { id: 1, label: '日志上传与历史记录', icon: UploadCloud, badge: `${historyRecords.length} 轮评估` },
     { id: 2, label: '影响因子库维护', icon: Sliders, badge: '13类因子' },
@@ -246,6 +249,15 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 self-end md:self-center flex-wrap">
+          <button
+            onClick={() => setActiveSubTab(8)}
+            className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
+            title="查看该站点的灵活质保工况评估、双衰减曲线及超工况统计"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>灵活质保工况评估</span>
+          </button>
+
           <button
             onClick={() => setActiveSubTab(1)}
             className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5"
@@ -456,15 +468,32 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           />
         )}
 
-        {activeSubTab === 3 && <ModuleWorkloadTab modules={moduleMetrics} />}
+        {activeSubTab === 3 && (
+          <ModuleWorkloadTab
+            moduleMetrics={moduleMetrics}
+            modules={moduleMetrics}
+          />
+        )}
 
         {activeSubTab === 4 && <CmuThermalTab cmuRecords={cmuRecords} />}
 
         {activeSubTab === 5 && <PackSohTab packMetrics={packMetrics} />}
 
-        {activeSubTab === 6 && <SocBalanceTab records={socRecords} />}
+        {activeSubTab === 6 && (
+          <SocBalanceTab
+            socRecords={socRecords}
+            records={socRecords}
+          />
+        )}
 
-        {activeSubTab === 7 && <DefectEliminationTab records={defectRecords} />}
+        {activeSubTab === 7 && (
+          <DefectEliminationTab
+            defectRecords={defectRecords}
+            records={defectRecords}
+          />
+        )}
+
+        {activeSubTab === 8 && <WarrantyConditionTab site={currentSite} />}
       </div>
     </div>
   );
