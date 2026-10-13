@@ -39,6 +39,12 @@ import {
   INITIAL_SOPS,
   INITIAL_FEEDBACK_STATS
 } from '../mock/faultDiagnosisData';
+import {
+  ReportCenterItem,
+  ReportCategory,
+  ReportStatus
+} from '../types/reportCenter';
+import { INITIAL_REPORT_CENTER_DATA } from '../mock/initialReportCenterData';
 
 export type NavigationTab =
   | 'login'
@@ -115,6 +121,18 @@ interface AppContextType {
   contracts: Contract[];
   reports: ReportItem[];
   chatMessages: ChatMessage[];
+  
+  // 报告中心 (Report Center) - 按照站点维度管理历史报告
+  reportCenterItems: ReportCenterItem[];
+  addReportToCenter: (report: Partial<ReportCenterItem>) => ReportCenterItem;
+  deleteReportFromCenter: (reportId: string) => void;
+  batchDeleteReportsFromCenter: (reportIds: string[]) => void;
+  updateReportStatus: (reportId: string, status: ReportStatus) => void;
+  selectedReportSiteFilter: string;
+  setSelectedReportSiteFilter: (siteId: string) => void;
+  selectedReportCategoryFilter: string;
+  setSelectedReportCategoryFilter: (cat: string) => void;
+  navigateToReportsCenter: (siteId?: string, category?: string) => void;
   
   // Navigation & Drilldown
   drilldownFilter: {
@@ -208,6 +226,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [contracts, setContracts] = useState<Contract[]>(INITIAL_CONTRACTS);
   const [reports, setReports] = useState<ReportItem[]>(INITIAL_REPORTS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
+  
+  // 报告中心 (Report Center) - 本地持久化与状态管理
+  const [reportCenterItems, setReportCenterItems] = useState<ReportCenterItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('tech_grid_report_center_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to parse saved report center items', e);
+    }
+    return INITIAL_REPORT_CENTER_DATA;
+  });
+
+  const [selectedReportSiteFilter, setSelectedReportSiteFilter] = useState<string>('ALL');
+  const [selectedReportCategoryFilter, setSelectedReportCategoryFilter] = useState<string>('ALL');
   
   // AI Fault Diagnosis State
   const [diagnosisTasks, setDiagnosisTasks] = useState<DiagnosisTask[]>(INITIAL_DIAGNOSIS_TASKS);
@@ -509,6 +541,84 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addReportItem = (report: ReportItem) => {
     setReports(prev => [report, ...prev]);
+  };
+
+  // 报告中心历史报告持久化与新增/删除管理
+  const persistReports = (items: ReportCenterItem[]) => {
+    setReportCenterItems(items);
+    try {
+      localStorage.setItem('tech_grid_report_center_v1', JSON.stringify(items));
+    } catch (e) {
+      console.warn('Failed to save report center items to localStorage', e);
+    }
+  };
+
+  const addReportToCenter = (item: Partial<ReportCenterItem>): ReportCenterItem => {
+    const now = new Date();
+    const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const cat = item.category || 'FLEXIBLE_WARRANTY';
+    const defaultCatNames: Record<ReportCategory, string> = {
+      FLEXIBLE_WARRANTY: '灵活质保SOH评估',
+      PERFORMANCE_CONDITION: '性能工况体检',
+      AVAILABILITY_SLA: 'SLA可用度履约',
+      FAULT_DIAGNOSIS: 'AI故障诊断报告',
+      PRE_CONTRACT_EVAL: '售前签约前评估'
+    };
+
+    const newId = item.id || `rep-${Date.now()}`;
+    const reportItem: ReportCenterItem = {
+      id: newId,
+      reportNo: item.reportNo || `REP-${cat.slice(0, 4)}-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`,
+      title: item.title || `${item.siteName || '目标储能站点'} 综合技术评估报告`,
+      category: cat,
+      categoryName: item.categoryName || defaultCatNames[cat] || '综合评估报告',
+      siteId: item.siteId || 'ALL',
+      siteCode: item.siteCode || 'UNKNOWN',
+      siteName: item.siteName || '综合能源站点',
+      region: item.region || '华东区',
+      period: item.period || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')} (当期累计)`,
+      format: item.format || 'PDF',
+      fileSize: item.fileSize || '3.8 MB',
+      createdTime: item.createdTime || timeStr,
+      author: item.author || `${currentUser.name} (${currentUser.roleTitle})`,
+      downloadCount: item.downloadCount || 1,
+      status: item.status || 'APPROVED',
+      version: item.version || 'v1.0',
+      summary: item.summary || '已基于实测工况数据调用算法模型估算，指标处于健康可控区间。',
+      kpis: item.kpis || [],
+      diagnostics: item.diagnostics || [],
+      recommendations: item.recommendations || [],
+      approvalDept: item.approvalDept || '能源储能质量技术委员会 / 算法工程组',
+      approvalSigner: item.approvalSigner || '陈建华 (首席可靠性算法专家)',
+      approvalTime: item.approvalTime || timeStr,
+      rawSnapshotData: item.rawSnapshotData
+    };
+
+    const updated = [reportItem, ...reportCenterItems.filter(r => r.id !== newId)];
+    persistReports(updated);
+    return reportItem;
+  };
+
+  const deleteReportFromCenter = (reportId: string) => {
+    const updated = reportCenterItems.filter(r => r.id !== reportId);
+    persistReports(updated);
+  };
+
+  const batchDeleteReportsFromCenter = (reportIds: string[]) => {
+    const idSet = new Set(reportIds);
+    const updated = reportCenterItems.filter(r => !idSet.has(r.id));
+    persistReports(updated);
+  };
+
+  const updateReportStatus = (reportId: string, status: ReportStatus) => {
+    const updated = reportCenterItems.map(r => (r.id === reportId ? { ...r, status } : r));
+    persistReports(updated);
+  };
+
+  const navigateToReportsCenter = (siteId?: string, category?: string) => {
+    if (siteId) setSelectedReportSiteFilter(siteId);
+    if (category) setSelectedReportCategoryFilter(category);
+    setActiveTab('reports');
   };
 
   const syncContracts = () => {
@@ -938,6 +1048,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         contracts,
         reports,
         chatMessages,
+        reportCenterItems,
+        addReportToCenter,
+        deleteReportFromCenter,
+        batchDeleteReportsFromCenter,
+        updateReportStatus,
+        selectedReportSiteFilter,
+        setSelectedReportSiteFilter,
+        selectedReportCategoryFilter,
+        setSelectedReportCategoryFilter,
+        navigateToReportsCenter,
         drilldownFilter,
         setDrilldownFilter,
         availabilityDrilldownTab,

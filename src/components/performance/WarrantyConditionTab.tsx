@@ -23,6 +23,7 @@ import {
   exportDailyConditionsToCsv
 } from '../../utils/flexibleWarrantyAlgorithm';
 import { exportFlexibleWarrantyPdfReport } from '../../utils/flexibleWarrantyPdfReport';
+import { useApp } from '../../context/AppContext';
 import {
   LineChart,
   Line,
@@ -66,7 +67,8 @@ import {
   Info,
   Maximize2,
   Check,
-  FileCheck2
+  FileCheck2,
+  FolderKanban
 } from 'lucide-react';
 
 interface WarrantyConditionTabProps {
@@ -74,6 +76,7 @@ interface WarrantyConditionTabProps {
 }
 
 export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({ site }) => {
+  const { addReportToCenter, navigateToReportsCenter, reportCenterItems } = useApp();
   // 5个子模块视图切换
   // 0: 双曲线对比与算法估算
   // 1: 合同与SOH基准模版录入/导入
@@ -291,7 +294,40 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({ site
         dailyConditions,
         sohBaselineCurve
       });
-      showToast(`《${site.siteName} 灵活质保工况评估报告.pdf》已成功导出！`);
+
+      // 归档至统一历史报告中心
+      addReportToCenter({
+        title: `${site.siteName} 灵活质保工况与SOH衰减综合评估报告 (2026-08)`,
+        category: 'FLEXIBLE_WARRANTY',
+        categoryName: '灵活质保SOH评估',
+        siteId: site.id,
+        siteCode: site.siteCode,
+        siteName: site.siteName,
+        region: site.region,
+        period: '2026-08 (当期累计)',
+        format: 'PDF',
+        fileSize: '3.8 MB',
+        author: '质量技术部算法工程组',
+        status: 'APPROVED',
+        version: 'v2.1',
+        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活质保模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin}%，资产处于健康受控状态。`,
+        kpis: [
+          { label: '灵活估算SOH', value: `${sohResult.currentFlexibleSoh}%`, benchmark: '95.40%', status: 'success' },
+          { label: '基准偏离裕度', value: `${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin}%`, benchmark: '≥0.00%', status: 'success' },
+          { label: '超工况天数', value: `${dailyConditions.filter(d => d.isOverCondition).length} 天`, benchmark: '≤5天/月', status: dailyConditions.filter(d => d.isOverCondition).length > 5 ? 'warning' : 'success' },
+          { label: '累计等效循环 (EFC)', value: `${monthlyConditions.reduce((s, m) => s + m.actualEfc, 0).toFixed(1)} 次`, benchmark: '30.0 次', status: 'info' }
+        ],
+        diagnostics: [
+          `实测月度等效循环 ${monthlyConditions.reduce((s, m) => s + m.actualEfc, 0).toFixed(1)} EFC，实际平均工作温度 ${(monthlyConditions[0]?.avgTemp || 25.0).toFixed(1)}℃。`,
+          `工况衰减动力学模型计算健康度偏离正常，未发生加速老化析锂风险。`
+        ],
+        recommendations: [
+          '建议根据夏季负荷优化液冷机组启动温度阈值。',
+          '维持充放电调度平稳，避免在极限高温时段长时间大倍率放电。'
+        ]
+      });
+
+      showToast(`《${site.siteName} 灵活质保工况评估报告.pdf》已导出并成功归档至报告中心！`);
     } catch (err) {
       console.error('PDF export failed', err);
       showToast('导出评估报告失败，请重试');
@@ -373,6 +409,14 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({ site
             >
               <FileText className={`w-3.5 h-3.5 ${isExportingPdf ? 'animate-pulse' : ''}`} />
               <span>{isExportingPdf ? '正在生成PDF报告...' : '导出评估报告'}</span>
+            </button>
+            <button
+              onClick={() => navigateToReportsCenter(site.id, 'FLEXIBLE_WARRANTY')}
+              className="px-3.5 py-2 bg-indigo-800/80 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 cursor-pointer border border-indigo-600/50"
+              title="前往报告中心按站点维度查看历史归档报告"
+            >
+              <FolderKanban className="w-3.5 h-3.5 text-indigo-300" />
+              <span>报告中心 ({reportCenterItems.filter(r => r.siteId === site.id).length} 份)</span>
             </button>
           </div>
         </div>

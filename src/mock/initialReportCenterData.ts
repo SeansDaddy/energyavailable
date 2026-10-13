@@ -1,0 +1,377 @@
+import { ReportCenterItem } from '../types/reportCenter';
+
+export const INITIAL_REPORT_CENTER_DATA: ReportCenterItem[] = [
+  // 1. 深圳光明储能电站二期-04号站 (site-001)
+  {
+    id: 'rep-fw-001-202608',
+    reportNo: 'REP-FW-SZ-202608-01',
+    title: '深圳光明储能电站二期-04号站 灵活质保工况与SOH衰减综合评估报告 (2026-08)',
+    category: 'FLEXIBLE_WARRANTY',
+    categoryName: '灵活质保SOH评估',
+    siteId: 'site-001',
+    siteCode: 'SZ-ESS-0042',
+    siteName: '深圳光明储能电站二期-04号站',
+    region: '华南区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '3.8 MB',
+    createdTime: '2026-08-20 15:30',
+    author: '王质量 (质量技术部算法工程组)',
+    downloadCount: 14,
+    status: 'APPROVED',
+    version: 'v2.0',
+    summary: '基于实测PACK级工况数据转站级工况积分计算，当前运行累计等效循环(EFC)为 1.28 次/日，低于合同基准上限；实测平均工作温度 26.8℃。经双曲线算法模型估算，当前实测SOH为 96.82%，高于基准衰减曲线打点值 (95.40%) 1.42 个百分点，整体质保资产处于健康受控状态。',
+    kpis: [
+      { label: '灵活估算SOH', value: '96.82%', benchmark: '95.40%', status: 'success' },
+      { label: '基准偏离裕度', value: '+1.42%', benchmark: '≥0.00%', status: 'success' },
+      { label: '超工况天数', value: '3 天', benchmark: '≤5天/月', status: 'warning' },
+      { label: '累计等效循环 (EFC)', value: '38.4 次', benchmark: '30.0 次', status: 'info' },
+      { label: '平均运行温度', value: '26.8 ℃', benchmark: '25.0 ℃', status: 'info' }
+    ],
+    diagnostics: [
+      '8月上旬存在连续2日午间调峰放电倍率达到0.58C，触发超倍率工况警告。',
+      '5#簇存在局部温差发散，经双曲线多项式修正后未造成不可逆SEI膜损伤。',
+      '全站SOH衰减动力学速率保持在 1.59%/年，优于合同保底衰减率 (2.30%/年)。'
+    ],
+    recommendations: [
+      '建议下调夏季液冷机组启动死区阈值（从30℃微调至28℃），降低极端午间电芯最高温差。',
+      '维持峰谷时段两充两放调度策略，建议在充放电末端预留10分钟静置均流时间。',
+      '启动主动式均衡板巡检，进一步收敛簇间开路电压离散度。'
+    ],
+    approvalDept: '能源储能质量技术委员会 / 算法工程组',
+    approvalSigner: '陈建华 (首席可靠性算法专家)',
+    approvalTime: '2026-08-20 16:00',
+    rawSnapshotData: {
+      sohEstimated: 96.82,
+      sohBaseline: 95.40,
+      sohDelta: 1.42,
+      agingAcceleratedPct: 0.18,
+      overConditionDays: 3,
+      totalThroughputMwh: 142.8,
+      equivalentCyclesEfc: 38.4,
+      avgTemp: 26.8,
+      maxCrate: 0.58
+    }
+  },
+  {
+    id: 'rep-fw-001-202607',
+    reportNo: 'REP-FW-SZ-202607-01',
+    title: '深圳光明储能电站二期-04号站 灵活质保工况与SOH衰减月度评估报告 (2026-07)',
+    category: 'FLEXIBLE_WARRANTY',
+    categoryName: '灵活质保SOH评估',
+    siteId: 'site-001',
+    siteCode: 'SZ-ESS-0042',
+    siteName: '深圳光明储能电站二期-04号站',
+    region: '华南区',
+    period: '2026-07 (自然月)',
+    format: 'PDF',
+    fileSize: '3.6 MB',
+    createdTime: '2026-07-31 17:15',
+    author: '王质量 (质量技术部算法工程组)',
+    downloadCount: 9,
+    status: 'ARCHIVED',
+    version: 'v1.0',
+    summary: '2026年7月单月评估：日均等效循环 1.15 EFC，平均运行温度 25.4℃，超工况天数 2 天。灵活质保估算SOH打点值为 97.05%，基准衰减曲线同期值为 95.80%，资产健康裕度 +1.25%。',
+    kpis: [
+      { label: '灵活估算SOH', value: '97.05%', benchmark: '95.80%', status: 'success' },
+      { label: '基准偏离裕度', value: '+1.25%', benchmark: '≥0.00%', status: 'success' },
+      { label: '超工况天数', value: '2 天', benchmark: '≤5天/月', status: 'success' },
+      { label: '累计等效循环 (EFC)', value: '35.6 次', benchmark: '30.0 次', status: 'info' }
+    ],
+    diagnostics: [
+      '全月充放电波形平稳，电芯极化阻抗增长符合Arrhenius老化曲线预期。'
+    ],
+    recommendations: [
+      '保持现有温控参数与功率调度计划。'
+    ],
+    approvalDept: '能源储能质量技术委员会',
+    approvalSigner: '陈建华 (首席可靠性算法专家)',
+    approvalTime: '2026-08-01 09:30'
+  },
+  {
+    id: 'rep-perf-001-202608',
+    reportNo: 'REP-PERF-SZ-202608-01',
+    title: '深圳光明储能电站二期-04号站 8月性能工况体检与容量保持率诊断分析',
+    category: 'PERFORMANCE_CONDITION',
+    categoryName: '性能工况体检',
+    siteId: 'site-001',
+    siteCode: 'SZ-ESS-0042',
+    siteName: '深圳光明储能电站二期-04号站',
+    region: '华南区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '4.2 MB',
+    createdTime: '2026-08-19 14:00',
+    author: '张体检 (性能工况评估组)',
+    downloadCount: 6,
+    status: 'VALID',
+    version: 'v1.1',
+    summary: '针对全站 24 个电池簇、384 个 PACK 进行完整健康度扫描，系统综合性能工况健康度得分 92.4 分。一致性极化偏离度压降至 1.8% 以内，内阻分布对称。',
+    kpis: [
+      { label: '综合性能得分', value: '92.4 分', benchmark: '85.0 分', status: 'success' },
+      { label: '容量保持率', value: '97.10%', benchmark: '95.00%', status: 'success' },
+      { label: '簇间压差离散度', value: '28 mV', benchmark: '≤50 mV', status: 'success' }
+    ],
+    diagnostics: ['部分电池簇在满充静置初期的自放电率稍高，建议安排一次完整的标定充放电。'],
+    recommendations: ['在月末谷电时段执行一次 0.1C 小倍率充满标定。']
+  },
+  {
+    id: 'rep-sla-001-202608',
+    reportNo: 'REP-SLA-SZ-202608-01',
+    title: '深圳光明储能电站二期-04号站 8月SLA可用度履约与扣罚风险评估报告',
+    category: 'AVAILABILITY_SLA',
+    categoryName: 'SLA可用度履约',
+    siteId: 'site-001',
+    siteCode: 'SZ-ESS-0042',
+    siteName: '深圳光明储能电站二期-04号站',
+    region: '华南区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '2.9 MB',
+    createdTime: '2026-08-18 10:20',
+    author: '林可用 (可用度保障中心)',
+    downloadCount: 18,
+    status: 'VALID',
+    version: 'v1.0',
+    summary: '当期实测可用度 98.62%，由于 8月5日 变流器 IGBT 过温停机事件造成 200 分钟等效中断，当前暂跌破合同 SLA 阈值 (99.50%)。工单已闭环，预计月末修复后可用度有望回升至 99.25%。',
+    kpis: [
+      { label: '当期可用度', value: '98.62%', benchmark: '99.50%', status: 'danger' },
+      { label: 'SLA缺口', value: '-0.88%', benchmark: '≥0.00%', status: 'danger' },
+      { label: '本月中断时长', value: '200 分钟', benchmark: '≤30分钟', status: 'danger' }
+    ],
+    diagnostics: ['主要影响事件为 ALM-PCS-0805 逆变桥臂温升保护，已更换风道散热组件。'],
+    recommendations: ['加强辅机散热风机定时反吹自洁，避免灰尘积聚再次导致局部过温。']
+  },
+
+  // 2. 上海宝武钢铁微电网储能示范站-01站 (site-002)
+  {
+    id: 'rep-fw-002-202608',
+    reportNo: 'REP-FW-BW-202608-01',
+    title: '上海宝武钢铁微电网储能示范站-01站 灵活质保工况与SOH衰减综合评估报告 (2026-08)',
+    category: 'FLEXIBLE_WARRANTY',
+    categoryName: '灵活质保SOH评估',
+    siteId: 'site-002',
+    siteCode: 'SH-BW-0108',
+    siteName: '上海宝武钢铁微电网储能示范站-01站',
+    region: '华东区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '3.9 MB',
+    createdTime: '2026-08-20 16:40',
+    author: '陈工 (高级可靠性工程师)',
+    downloadCount: 11,
+    status: 'APPROVED',
+    version: 'v1.2',
+    summary: '全站光纤环网与微电网配合运行良好，8月实测日均 EFC 为 0.92 次，平均运行温度 24.2℃，超工况天数 0 天。灵活质保模型估算SOH为 98.20%，大幅优于合同基准保底值 (96.50%) 1.70 个百分点。',
+    kpis: [
+      { label: '灵活估算SOH', value: '98.20%', benchmark: '96.50%', status: 'success' },
+      { label: '基准偏离裕度', value: '+1.70%', benchmark: '≥0.00%', status: 'success' },
+      { label: '超工况天数', value: '0 天', benchmark: '≤5天/月', status: 'success' },
+      { label: '累计等效循环 (EFC)', value: '27.6 次', benchmark: '30.0 次', status: 'success' },
+      { label: '平均运行温度', value: '24.2 ℃', benchmark: '25.0 ℃', status: 'success' }
+    ],
+    diagnostics: ['运行工况极其平稳，无超倍率、无超温运行记录，寿命损耗速率显著低于出厂设计上限。'],
+    recommendations: ['继续维持现有微电网多能互补调度策略，建议作为全国标杆站点进行经验推广。'],
+    approvalDept: '能源储能质量技术委员会 / 算法工程组',
+    approvalSigner: '陈建华 (首席可靠性算法专家)',
+    approvalTime: '2026-08-20 17:00',
+    rawSnapshotData: {
+      sohEstimated: 98.20,
+      sohBaseline: 96.50,
+      sohDelta: 1.70,
+      agingAcceleratedPct: -0.22,
+      overConditionDays: 0,
+      totalThroughputMwh: 125.4,
+      equivalentCyclesEfc: 27.6,
+      avgTemp: 24.2,
+      maxCrate: 0.42
+    }
+  },
+  {
+    id: 'rep-perf-002-202608',
+    reportNo: 'REP-PERF-BW-202608-01',
+    title: '上海宝武钢铁微电网储能示范站-01站 8月性能工况与环网通信可靠度报告',
+    category: 'PERFORMANCE_CONDITION',
+    categoryName: '性能工况体检',
+    siteId: 'site-002',
+    siteCode: 'SH-BW-0108',
+    siteName: '上海宝武钢铁微电网储能示范站-01站',
+    region: '华东区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '3.4 MB',
+    createdTime: '2026-08-18 11:30',
+    author: '陈工 (高级可靠性工程师)',
+    downloadCount: 7,
+    status: 'VALID',
+    version: 'v1.0',
+    summary: '全站综合可用度 99.89%，可用度指标达标率 100%。光纤环网毫秒级自愈保护运行稳定，电池组容量保持率 98.4%。',
+    kpis: [
+      { label: '综合可用度', value: '99.89%', benchmark: '99.80%', status: 'success' },
+      { label: '环网自愈成功率', value: '100%', benchmark: '99.9%', status: 'success' },
+      { label: '容量保持率', value: '98.4%', benchmark: '96.0%', status: 'success' }
+    ],
+    diagnostics: ['全网电气拓扑与热场分布处于最优状态。'],
+    recommendations: ['进行例行半年度绝缘接地电阻测试。']
+  },
+
+  // 3. 江苏常州金坛光储电站 (site-003)
+  {
+    id: 'rep-fw-003-202608',
+    reportNo: 'REP-FW-CZ-202608-01',
+    title: '江苏常州金坛光储示范站 灵活质保工况与SOH衰减综合评估报告 (2026-08)',
+    category: 'FLEXIBLE_WARRANTY',
+    categoryName: '灵活质保SOH评估',
+    siteId: 'site-003',
+    siteCode: 'JS-CZ-0091',
+    siteName: '江苏常州金坛光储示范电站',
+    region: '华东区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '3.5 MB',
+    createdTime: '2026-08-20 11:10',
+    author: '刘工 (质保工程师)',
+    downloadCount: 8,
+    status: 'APPROVED',
+    version: 'v1.0',
+    summary: '实测平均工作温度 25.8℃，月度等效循环 33.2 EFC，超工况天数 1 天。灵活质保估算SOH为 97.45%，优于基准保证值 (96.10%) 1.35 个百分点。',
+    kpis: [
+      { label: '灵活估算SOH', value: '97.45%', benchmark: '96.10%', status: 'success' },
+      { label: '基准偏离裕度', value: '+1.35%', benchmark: '≥0.00%', status: 'success' },
+      { label: '超工况天数', value: '1 天', benchmark: '≤5天/月', status: 'success' },
+      { label: '累计等效循环 (EFC)', value: '33.2 次', benchmark: '30.0 次', status: 'info' }
+    ],
+    diagnostics: ['光伏大发时段充电倍率瞬时达到 0.52C，持续时间仅 15 分钟，未超过动态容忍门限。'],
+    recommendations: ['在光伏大发高峰时段优化储能平滑吸收斜率。'],
+    approvalDept: '能源储能质量技术委员会',
+    approvalSigner: '陈建华 (首席可靠性算法专家)',
+    approvalTime: '2026-08-20 14:00',
+    rawSnapshotData: {
+      sohEstimated: 97.45,
+      sohBaseline: 96.10,
+      sohDelta: 1.35,
+      agingAcceleratedPct: 0.05,
+      overConditionDays: 1,
+      totalThroughputMwh: 132.0,
+      equivalentCyclesEfc: 33.2,
+      avgTemp: 25.8,
+      maxCrate: 0.52
+    }
+  },
+
+  // 4. 广州南沙综合能源港储能站 (site-004)
+  {
+    id: 'rep-fw-004-202608',
+    reportNo: 'REP-FW-NS-202608-01',
+    title: '广州南沙综合能源港储能站 灵活质保工况与SOH衰减综合评估报告 (2026-08)',
+    category: 'FLEXIBLE_WARRANTY',
+    categoryName: '灵活质保SOH评估',
+    siteId: 'site-004',
+    siteCode: 'GD-GZ-0089',
+    siteName: '广州南沙综合能源港储能站',
+    region: '华南区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '3.7 MB',
+    createdTime: '2026-08-19 16:20',
+    author: '王质量 (质量技术部算法工程组)',
+    downloadCount: 12,
+    status: 'VALID',
+    version: 'v1.1',
+    summary: '实测平均工作温度 28.2℃，超温运行天数 4 天，月度 EFC 为 41.5 次。由于沿海高温高湿负荷偏重，灵活质保估算SOH为 95.80%，基准打点值为 95.40%，裕度缩小至 +0.40%。',
+    kpis: [
+      { label: '灵活估算SOH', value: '95.80%', benchmark: '95.40%', status: 'warning' },
+      { label: '基准偏离裕度', value: '+0.40%', benchmark: '≥0.00%', status: 'warning' },
+      { label: '超工况天数', value: '4 天', benchmark: '≤5天/月', status: 'warning' },
+      { label: '累计等效循环 (EFC)', value: '41.5 次', benchmark: '30.0 次', status: 'warning' },
+      { label: '平均运行温度', value: '28.2 ℃', benchmark: '25.0 ℃', status: 'warning' }
+    ],
+    diagnostics: ['受夏季高温和高频调频影响，电芯温升加速老化效应明显。'],
+    recommendations: ['紧急提高空调制冷功率，设置电芯最高允许工作温度为 32℃。'],
+    approvalDept: '能源储能质量技术委员会',
+    approvalSigner: '陈建华 (首席可靠性算法专家)',
+    approvalTime: '2026-08-20 09:10',
+    rawSnapshotData: {
+      sohEstimated: 95.80,
+      sohBaseline: 95.40,
+      sohDelta: 0.40,
+      agingAcceleratedPct: 0.45,
+      overConditionDays: 4,
+      totalThroughputMwh: 168.2,
+      equivalentCyclesEfc: 41.5,
+      avgTemp: 28.2,
+      maxCrate: 0.56
+    }
+  },
+
+  // 5. 呼和浩特沙尔沁微网储能电站 (site-005)
+  {
+    id: 'rep-fw-005-202608',
+    reportNo: 'REP-FW-HHHT-202608-01',
+    title: '呼和浩特沙尔沁微网储能电站 灵活质保工况与SOH衰减综合评估报告 (2026-08)',
+    category: 'FLEXIBLE_WARRANTY',
+    categoryName: '灵活质保SOH评估',
+    siteId: 'site-005',
+    siteCode: 'IM-NMD-0058',
+    siteName: '呼和浩特沙尔沁工业园区微网储能电站',
+    region: '华北区',
+    period: '2026-08 (当期累计)',
+    format: 'PDF',
+    fileSize: '3.4 MB',
+    createdTime: '2026-08-17 15:40',
+    author: '包工 (华北现场运维)',
+    downloadCount: 5,
+    status: 'VALID',
+    version: 'v1.0',
+    summary: '高寒气候运行良好，平均工作温度 22.4℃，超工况天数 0 天。灵活质保估算SOH为 97.80%，基准保底值为 96.00%，裕度达到 +1.80%。',
+    kpis: [
+      { label: '灵活估算SOH', value: '97.80%', benchmark: '96.00%', status: 'success' },
+      { label: '基准偏离裕度', value: '+1.80%', benchmark: '≥0.00%', status: 'success' },
+      { label: '超工况天数', value: '0 天', benchmark: '≤5天/月', status: 'success' },
+      { label: '平均运行温度', value: '22.4 ℃', benchmark: '25.0 ℃', status: 'success' }
+    ],
+    diagnostics: ['低温加热膜自适应逻辑执行正常，未产生析锂风险。'],
+    recommendations: ['在即将到来的秋季例行检测电池包外壳绝缘与防凝露加热回路。'],
+    rawSnapshotData: {
+      sohEstimated: 97.80,
+      sohBaseline: 96.00,
+      sohDelta: 1.80,
+      agingAcceleratedPct: -0.15,
+      overConditionDays: 0,
+      totalThroughputMwh: 98.6,
+      equivalentCyclesEfc: 24.2,
+      avgTemp: 22.4,
+      maxCrate: 0.40
+    }
+  },
+
+  // 6. 全网综合报告 (站点ID为 ALL)
+  {
+    id: 'rep-net-202608',
+    reportNo: 'REP-NET-202608-01',
+    title: '2026年08月全网能源站点可用度、SLA履约与工况质保综合运营月报',
+    category: 'AVAILABILITY_SLA',
+    categoryName: 'SLA可用度履约',
+    siteId: 'ALL',
+    siteCode: 'NETWORK',
+    siteName: '全网能源站点综合汇总 (38,420 站)',
+    region: '全网',
+    period: '2026-08 (自然月)',
+    format: 'PDF',
+    fileSize: '6.5 MB',
+    createdTime: '2026-08-20 08:30',
+    author: '系统自动任务 (统一调度中心)',
+    downloadCount: 45,
+    status: 'APPROVED',
+    version: 'v1.0',
+    summary: '全网累计纳管储能站点 38,420 座，8月全网综合可用度为 99.42%，高于考核基准 99.20%。全网SLA履约率 97.8%，灵活质保健康受控率达 98.4%。',
+    kpis: [
+      { label: '全网综合可用度', value: '99.42%', benchmark: '99.20%', status: 'success' },
+      { label: 'SLA达标率', value: '97.8%', benchmark: '95.0%', status: 'success' },
+      { label: '灵活质保受控率', value: '98.4%', benchmark: '95.0%', status: 'success' },
+      { label: '超工况预警站点数', value: '6 站', benchmark: '≤15站', status: 'warning' }
+    ],
+    diagnostics: ['华南高温区域及西北高寒区域存在局部电芯温升差异，其余区域各项工况处于稳定受控带。'],
+    recommendations: ['在即将到来的迎峰度夏负荷期，加强重点签约客户储能站点的日频巡检与远程SOH打点监测。']
+  }
+];

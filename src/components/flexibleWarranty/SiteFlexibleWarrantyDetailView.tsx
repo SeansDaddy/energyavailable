@@ -11,7 +11,8 @@ import {
   Activity,
   HeartPulse,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  FolderKanban
 } from 'lucide-react';
 import {
   DEFAULT_SOH_BASELINE_CURVE,
@@ -34,7 +35,13 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
   onBackToList,
   onSwitchSite
 }) => {
-  const { sites, navigateToPerformanceDetail } = useApp();
+  const {
+    sites,
+    navigateToPerformanceDetail,
+    addReportToCenter,
+    navigateToReportsCenter,
+    reportCenterItems
+  } = useApp();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -71,7 +78,40 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         dailyConditions: daily,
         sohBaselineCurve: DEFAULT_SOH_BASELINE_CURVE
       });
-      setToastMsg(`《${currentSite.siteName} 灵活质保评估报告.pdf》已成功导出！`);
+
+      // 自动保存归档至历史报告中心 (站点维度管理)
+      addReportToCenter({
+        title: `${currentSite.siteName} 灵活质保工况与SOH衰减综合评估报告 (2026-08)`,
+        category: 'FLEXIBLE_WARRANTY',
+        categoryName: '灵活质保SOH评估',
+        siteId: currentSite.id,
+        siteCode: currentSite.siteCode,
+        siteName: currentSite.siteName,
+        region: currentSite.region,
+        period: '2026-08 (当期累计)',
+        format: 'PDF',
+        fileSize: '3.8 MB',
+        author: '质量技术部算法工程组',
+        status: 'APPROVED',
+        version: 'v2.1',
+        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活质保模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh.toFixed(2)}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh.toFixed(2)}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%，资产处于健康受控状态。`,
+        kpis: [
+          { label: '灵活估算SOH', value: `${sohResult.currentFlexibleSoh.toFixed(2)}%`, benchmark: '95.40%', status: 'success' },
+          { label: '基准偏离裕度', value: `${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%`, benchmark: '≥0.00%', status: 'success' },
+          { label: '超工况天数', value: `${daily.filter(d => d.isOverCondition).length} 天`, benchmark: '≤5天/月', status: daily.filter(d => d.isOverCondition).length > 5 ? 'warning' : 'success' },
+          { label: '累计等效循环 (EFC)', value: `${monthly.reduce((s, m) => s + m.actualEfc, 0).toFixed(1)} 次`, benchmark: '30.0 次', status: 'info' }
+        ],
+        diagnostics: [
+          `实测月度等效循环 ${monthly.reduce((s, m) => s + m.actualEfc, 0).toFixed(1)} EFC，实际平均工作温度 ${(monthly[0]?.avgTemp || 25.0).toFixed(1)}℃。`,
+          `工况衰减动力学模型计算健康度偏离正常，未发生加速老化析锂风险。`
+        ],
+        recommendations: [
+          '建议根据夏季负荷优化液冷机组启动温度阈值。',
+          '维持充放电调度平稳，避免在极限高温时段长时间大倍率放电。'
+        ]
+      });
+
+      setToastMsg(`《${currentSite.siteName} 灵活质保评估报告.pdf》已导出并成功归档至报告中心！`);
       setTimeout(() => setToastMsg(null), 3500);
     } catch (err) {
       console.error('PDF export failed', err);
@@ -81,6 +121,8 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
       setIsExportingPdf(false);
     }
   };
+
+  const siteReportsCount = reportCenterItems.filter(r => r.siteId === currentSite.id).length;
 
   return (
     <div className="space-y-4 p-4 max-w-[1700px] mx-auto pb-16 animate-in fade-in duration-200">
@@ -159,6 +201,16 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
           >
             <FileText className={`w-3.5 h-3.5 ${isExportingPdf ? 'animate-pulse' : ''}`} />
             <span>{isExportingPdf ? '正在生成PDF报告...' : '导出评估报告'}</span>
+          </button>
+
+          {/* 站点报告中心直达按钮 */}
+          <button
+            onClick={() => navigateToReportsCenter(currentSite.id, 'FLEXIBLE_WARRANTY')}
+            className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="前往报告中心按站点维度查看和管理历史评估报告"
+          >
+            <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
+            <span>报告中心 ({siteReportsCount} 份)</span>
           </button>
 
           <button

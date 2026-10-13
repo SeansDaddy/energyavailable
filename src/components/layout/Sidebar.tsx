@@ -28,7 +28,8 @@ export const Sidebar: React.FC = () => {
     navigateToPerformanceMonitor,
     navigateToFlexibleWarranty,
     alerts,
-    workOrders
+    workOrders,
+    reportCenterItems
   } = useApp();
 
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length;
@@ -138,8 +139,10 @@ export const Sidebar: React.FC = () => {
         },
         {
           id: 'reports',
-          label: '报告生成中心',
-          icon: FileSpreadsheet
+          label: '报告中心',
+          icon: FileSpreadsheet,
+          badge: `${reportCenterItems.length}份`,
+          badgeColor: 'bg-blue-600 text-white shadow-xs'
         }
       ]
     },

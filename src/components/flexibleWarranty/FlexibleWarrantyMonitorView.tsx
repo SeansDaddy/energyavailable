@@ -34,7 +34,8 @@ import {
   Clock,
   Sparkles,
   Info,
-  FileText
+  FileText,
+  FolderKanban
 } from 'lucide-react';
 
 interface FlexibleWarrantyMonitorViewProps {
@@ -44,7 +45,13 @@ interface FlexibleWarrantyMonitorViewProps {
 export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewProps> = ({
   onSelectSite
 }) => {
-  const { sites, navigateToPerformanceDetail } = useApp();
+  const {
+    sites,
+    navigateToPerformanceDetail,
+    addReportToCenter,
+    navigateToReportsCenter,
+    reportCenterItems
+  } = useApp();
 
   const [regionFilter, setRegionFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -145,6 +152,38 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
         dailyConditions: daily,
         sohBaselineCurve: DEFAULT_SOH_BASELINE_CURVE
       });
+
+      // 归档至统一历史报告中心
+      addReportToCenter({
+        title: `${siteObj.siteName} 灵活质保工况与SOH衰减综合评估报告 (2026-08)`,
+        category: 'FLEXIBLE_WARRANTY',
+        categoryName: '灵活质保SOH评估',
+        siteId: siteObj.id,
+        siteCode: siteObj.siteCode,
+        siteName: siteObj.siteName,
+        region: siteObj.region,
+        period: '2026-08 (当期累计)',
+        format: 'PDF',
+        fileSize: '3.8 MB',
+        author: '质量技术部算法工程组',
+        status: 'APPROVED',
+        version: 'v2.1',
+        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活质保模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh.toFixed(2)}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh.toFixed(2)}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%，资产处于健康受控状态。`,
+        kpis: [
+          { label: '灵活估算SOH', value: `${sohResult.currentFlexibleSoh.toFixed(2)}%`, benchmark: '95.40%', status: 'success' },
+          { label: '基准偏离裕度', value: `${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%`, benchmark: '≥0.00%', status: 'success' },
+          { label: '超工况天数', value: `${daily.filter(d => d.isOverCondition).length} 天`, benchmark: '≤5天/月', status: daily.filter(d => d.isOverCondition).length > 5 ? 'warning' : 'success' },
+          { label: '累计等效循环 (EFC)', value: `${monthly.reduce((s, m) => s + m.actualEfc, 0).toFixed(1)} 次`, benchmark: '30.0 次', status: 'info' }
+        ],
+        diagnostics: [
+          `实测月度等效循环 ${monthly.reduce((s, m) => s + m.actualEfc, 0).toFixed(1)} EFC，实际平均工作温度 ${(monthly[0]?.avgTemp || 25.0).toFixed(1)}℃。`,
+          `工况衰减动力学模型计算健康度偏离正常，未发生加速老化析锂风险。`
+        ],
+        recommendations: [
+          '建议根据夏季负荷优化液冷机组启动温度阈值。',
+          '维持充放电调度平稳，避免在极限高温时段长时间大倍率放电。'
+        ]
+      });
     } catch (err) {
       console.error('Failed to export PDF', err);
     } finally {
@@ -198,6 +237,15 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
             >
               <Download className="w-3.5 h-3.5 text-blue-300" />
               <span>SOH曲线模板</span>
+            </button>
+
+            <button
+              onClick={() => navigateToReportsCenter(undefined, 'FLEXIBLE_WARRANTY')}
+              className="px-3.5 py-2 rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/40 text-xs font-semibold text-white transition-all flex items-center gap-1.5 shadow-sm"
+              title="前往统一报告中心按站点维度查看所有历史评估报告"
+            >
+              <FolderKanban className="w-3.5 h-3.5 text-blue-200" />
+              <span>报告中心 ({reportCenterItems.length} 份)</span>
             </button>
 
             <div className="h-6 w-px bg-white/20 hidden sm:block mx-1" />
@@ -617,9 +665,20 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
                           onClick={e => handleExportSitePdf(item, e)}
                           disabled={exportingSiteId === item.siteId}
                           className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
-                          title="将当前站点的灵活质保计算结果下载为PDF评估报告"
+                          title="将当前站点的灵活质保计算结果下载为PDF评估报告并归档至报告中心"
                         >
                           <FileText className={`w-3.5 h-3.5 text-rose-600 ${exportingSiteId === item.siteId ? 'animate-pulse' : ''}`} />
+                        </button>
+
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            navigateToReportsCenter(item.siteId, 'FLEXIBLE_WARRANTY');
+                          }}
+                          className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs transition-colors cursor-pointer"
+                          title="前往报告中心查看该站点的所有历史评估报告"
+                        >
+                          <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
                         </button>
 
                         <button
