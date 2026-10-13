@@ -153,7 +153,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
             >
               {sites.map(s => (
                 <option key={s.id} value={s.id}>
-                  [{s.statusLamp.toUpperCase()}] {s.siteCode} - {s.siteName}
+                  [{(s.statusLamp || 'UNKNOWN').toUpperCase()}] {s.siteCode} - {s.siteName}
                 </option>
               ))}
             </select>

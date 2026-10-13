@@ -187,6 +187,7 @@ export interface AlertItem {
   dataStarvedDays?: number;
   triggerTime: string;
   status: AlertStatus;
+  severity?: string;
   handler?: string;
   handleTime?: string;
   handleNote?: string;

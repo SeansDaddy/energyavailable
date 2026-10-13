@@ -176,7 +176,7 @@ export const Header: React.FC = () => {
               <div className="text-xs font-semibold text-slate-900 leading-tight flex items-center gap-1">
                 {currentUser.name.split(' ')[0]}
                 <span className="text-[9px] font-mono px-1 rounded bg-slate-200 text-slate-700">
-                  {currentUser.role.toUpperCase()}
+                  {currentUser?.role ? currentUser.role.toUpperCase() : 'USER'}
                 </span>
               </div>
               <div className="text-[10px] text-slate-500 leading-tight truncate max-w-[110px]">

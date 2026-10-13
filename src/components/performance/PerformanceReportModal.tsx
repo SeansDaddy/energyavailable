@@ -54,7 +54,7 @@ export const PerformanceReportModal: React.FC<PerformanceReportModalProps> = ({
                 储能站点系统级性能体检报告 (性能评估分析)
               </h2>
               <div className="text-[10px] text-blue-300 font-mono">
-                REPORT NO: ESS-PERF-{siteSummary.siteId.toUpperCase()}-202608 | 生成时间: {siteSummary.evaluatedAt}
+                REPORT NO: ESS-PERF-{(siteSummary?.siteId || 'SITE').toUpperCase()}-202608 | 生成时间: {siteSummary.evaluatedAt}
               </div>
             </div>
           </div>

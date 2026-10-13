@@ -48,6 +48,9 @@ export const AlertsView: React.FC = () => {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [globalStarveThreshold, setGlobalStarveThreshold] = useState(30);
 
+  // Toast notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const filteredAlerts = alerts.filter(a => {
     if (typeFilter !== 'ALL' && a.type !== typeFilter) return false;
     if (statusFilter !== 'ALL' && a.status !== statusFilter) return false;
@@ -322,7 +325,8 @@ export const AlertsView: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          window.alert(`模拟跳转至 PCare 工单创建系统外链...\n已自动携带站点: ${alert.siteName} 与客户: ${alert.customer}`);
+                          setToastMessage(`已模拟跳转至 PCare 工单创建系统外链：已自动携带站点 [${alert.siteName}] 与客户 [${alert.customer}]`);
+                          setTimeout(() => setToastMessage(null), 4000);
                         }}
                         className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-xs border border-blue-200 transition-colors"
                         title="转工单至 PCare 系统"
@@ -487,7 +491,9 @@ export const AlertsView: React.FC = () => {
             eventTitle: `${diagnosisAlert.type === 'sla_breached' ? 'SLA已跌破预警' : '预测将跌破预警'} (${diagnosisAlert.currentValue}%)`,
             eventType: 'availability_alert',
             eventTime: diagnosisAlert.triggerTime,
-            severity: diagnosisAlert.severity.toUpperCase(),
+            severity: (diagnosisAlert.severity
+              ? diagnosisAlert.severity.toUpperCase()
+              : (diagnosisAlert.type === 'sla_breached' ? 'CRITICAL' : 'WARNING')),
             description: `当前站点可用度 ${diagnosisAlert.currentValue}%，低于合同阈值 ${diagnosisAlert.slaThreshold}%`
           }}
           onClose={() => setDiagnosisAlert(null)}
@@ -497,6 +503,19 @@ export const AlertsView: React.FC = () => {
             setActiveTab('fault_diagnosis');
           }}
         />
+      )}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="ml-2 text-slate-400 hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       )}
     </div>
   );
