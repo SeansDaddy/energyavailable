@@ -345,7 +345,105 @@ export const INITIAL_REPORT_CENTER_DATA: ReportCenterItem[] = [
     }
   },
 
-  // 6. 全网综合报告 (站点ID为 ALL)
+  // 6. 站点台账与设备档案报告示例 (SITE_LEDGER)
+  {
+    id: 'rep-ledger-001-2026',
+    reportNo: 'REP-LDG-SZ-2026-01',
+    title: '深圳光明储能电站二期-04号站 站点资产台账与核心设备全生命周期档案报告',
+    category: 'SITE_LEDGER',
+    categoryName: '站点台账档案',
+    siteId: 'site-001',
+    siteCode: 'SZ-ESS-0042',
+    siteName: '深圳光明储能电站二期-04号站',
+    region: '华南区',
+    period: '2026年度档案',
+    format: 'PDF',
+    fileSize: '4.5 MB',
+    createdTime: '2026-08-15 11:00',
+    author: '陈台账 (资产与台账管理组)',
+    downloadCount: 22,
+    status: 'APPROVED',
+    version: 'v2.1',
+    summary: '全站固定资产原值核定完成，配置 10MW/20MWh 磷酸铁锂液冷系统，核心关键设备 12 台套全部入网完成数字化建档。双机热备冗余等级满足合同 SLA 99.50% 设计要求，备品备件充足率 100%。',
+    kpis: [
+      { label: '装机额定功率', value: '10.0 MW', benchmark: '10.0 MW', status: 'info' },
+      { label: '核心设备纳管数', value: '12 台套', benchmark: '12 台套', status: 'success' },
+      { label: '冗余容错架构', value: '双机热备 (DUAL_HOT_BACKUP)', benchmark: '≥N+1', status: 'success' },
+      { label: '台账资料完整度', value: '100%', benchmark: '≥98%', status: 'success' }
+    ],
+    diagnostics: [
+      'PCS变流柜、BMS高压箱、液冷管路、箱变四遥遥信点位测试 100% 验收通过。',
+      '核心设备三包质保期至 2031-12-31，原厂出厂合格证与检测报告电子档案齐全。'
+    ],
+    recommendations: [
+      '按季度更新备品备件库易损易耗清单，维持IGBT与接触器现场安全冗余库存。'
+    ],
+    approvalDept: '资产管理与工程运维委员会',
+    approvalSigner: '赵建国 (资产总监)',
+    approvalTime: '2026-08-15 14:30'
+  },
+  {
+    id: 'rep-ledger-002-2026',
+    reportNo: 'REP-LDG-BW-2026-01',
+    title: '上海宝武钢铁微电网储能示范站-01站 站点资产台账与设备档案总册',
+    category: 'SITE_LEDGER',
+    categoryName: '站点台账档案',
+    siteId: 'site-002',
+    siteCode: 'SH-BW-0108',
+    siteName: '上海宝武钢铁微电网储能示范站-01站',
+    region: '华东区',
+    period: '2026年度档案',
+    format: 'PDF',
+    fileSize: '5.1 MB',
+    createdTime: '2026-08-16 09:20',
+    author: '陈台账 (资产与台账管理组)',
+    downloadCount: 16,
+    status: 'APPROVED',
+    version: 'v1.3',
+    summary: '宝武园区工业级 12MW/24MWh 储能微网标杆项目，环网拓扑高可靠架构，全站核心部件台账编码与国家电网调度接入编码已完成两网互通映射。',
+    kpis: [
+      { label: '装机额定功率', value: '12.0 MW', benchmark: '12.0 MW', status: 'info' },
+      { label: '纳管设备总数', value: '16 台套', benchmark: '16 台套', status: 'success' },
+      { label: '网络拓扑架构', value: '环网拓扑 (RING_TOPOLOGY)', benchmark: '环网', status: 'success' },
+      { label: '数字化健康度', value: '99.2 分', benchmark: '≥90.0 分', status: 'success' }
+    ],
+    diagnostics: [
+      '所有变压器与PCS断路器在投运前均取得国家电网型式试验合格认证。'
+    ],
+    recommendations: [
+      '每年迎峰度冬前组织一次全站红外热成像与电气连接螺栓力矩复紧巡检。'
+    ]
+  },
+  {
+    id: 'rep-ledger-003-2026',
+    reportNo: 'REP-LDG-NB-2026-01',
+    title: '宁波舟山港金塘智慧港口储能电站 港口重载储能设备资产与履约档案报告',
+    category: 'SITE_LEDGER',
+    categoryName: '站点台账档案',
+    siteId: 'site-003',
+    siteCode: 'ZJ-NB-0230',
+    siteName: '宁波舟山港金塘智慧港口储能电站',
+    region: '华东区',
+    period: '2026年度档案',
+    format: 'PDF',
+    fileSize: '4.8 MB',
+    createdTime: '2026-08-14 16:15',
+    author: '陈台账 (资产与台账管理组)',
+    downloadCount: 12,
+    status: 'APPROVED',
+    version: 'v1.0',
+    summary: '针对高盐雾、高湿热海洋港口工况，全站配置 IP65 防腐等级储能集装箱，防腐涂层与盐雾防护台账验收达标，SLA设定为 99.70%。',
+    kpis: [
+      { label: '装机额定功率', value: '15.0 MW', benchmark: '15.0 MW', status: 'info' },
+      { label: '防腐设计等级', value: 'C5-M 海洋重防腐', benchmark: 'C5-M', status: 'success' },
+      { label: '冗余备份架构', value: '多活集群 (MULTI_ACTIVE)', benchmark: '多活', status: 'success' },
+      { label: '签约SLA基线', value: '99.70%', benchmark: '99.50%', status: 'success' }
+    ],
+    diagnostics: ['海洋重防腐涂层厚度及附着力无损伤，温湿度联动排湿系统运行无异常。'],
+    recommendations: ['每半年检查一次集装箱进风口除盐雾过滤棉及冷凝排水管路。']
+  },
+
+  // 7. 全网综合报告 (站点ID为 ALL)
   {
     id: 'rep-net-202608',
     reportNo: 'REP-NET-202608-01',

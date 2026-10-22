@@ -46,15 +46,29 @@ export const FlexibleWarrantyView: React.FC = () => {
     setFlexibleWarrantyDetailSiteId(siteId);
   };
 
-  if (viewMode === 'detail') {
-    return (
-      <SiteFlexibleWarrantyDetailView
-        siteId={currentSiteId}
-        onBackToList={handleBackToList}
-        onSwitchSite={handleSwitchSiteInDetail}
-      />
-    );
-  }
+  const handleOpenReportCenter = (siteId?: string) => {
+    if (siteId) {
+      setCurrentSiteId(siteId);
+      setSelectedSiteId(siteId);
+      setFlexibleWarrantyDetailSiteId(siteId);
+    }
+    setViewMode('detail');
+  };
 
-  return <FlexibleWarrantyMonitorView onSelectSite={handleSelectSiteFromList} />;
+  return (
+    <div className="p-6 space-y-5 max-w-[1700px] mx-auto animate-in fade-in duration-200">
+      {viewMode === 'detail' ? (
+        <SiteFlexibleWarrantyDetailView
+          siteId={currentSiteId}
+          onBackToList={handleBackToList}
+          onSwitchSite={handleSwitchSiteInDetail}
+        />
+      ) : (
+        <FlexibleWarrantyMonitorView
+          onSelectSite={handleSelectSiteFromList}
+          onOpenReports={handleOpenReportCenter}
+        />
+      )}
+    </div>
+  );
 };

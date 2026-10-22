@@ -24,15 +24,18 @@ import {
   Sparkles,
   CheckCircle2,
   ChevronRight,
-  Filter
+  Filter,
+  FolderKanban
 } from 'lucide-react';
 
 interface PerformanceMonitorViewProps {
   onSelectSite: (siteId: string) => void;
+  onOpenReports?: (siteId?: string) => void;
 }
 
 export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
-  onSelectSite
+  onSelectSite,
+  onOpenReports
 }) => {
   const { sites, navigateToFlexibleWarranty } = useApp();
 
@@ -477,12 +480,15 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
                   </div>
                 </th>
                 <th className="py-3 px-3">工况评级</th>
+                <th className="py-3 px-3">可用度 (EAF)</th>
+                <th className="py-3 px-3">综合 RTE</th>
+                <th className="py-3 px-3">实测可用容量</th>
                 <th
                   onClick={() => toggleSort('deltaV')}
                   className="py-3 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                 >
                   <div className="flex items-center gap-1">
-                    <span>模组最大极差 ΔV</span>
+                    <span>模组极差 ΔV</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
@@ -491,7 +497,7 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
                   className="py-3 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                 >
                   <div className="flex items-center gap-1">
-                    <span>CMU最大温差 ΔT</span>
+                    <span>CMU温差 ΔT</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
@@ -500,7 +506,7 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
                   className="py-3 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                 >
                   <div className="flex items-center gap-1">
-                    <span>最低 PACK SOH</span>
+                    <span>最低 SOH</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
@@ -577,6 +583,37 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
                         {isGradeGood && '🔵 良好'}
                         {isGradeExcellent && '🟢 优良'}
                       </span>
+                    </td>
+
+                    {/* Availability (EAF) */}
+                    <td className="py-3 px-3 font-mono">
+                      <span
+                        className={`font-semibold ${
+                          (s.eaf || 99.0) < 98.5 ? 'text-rose-600 font-bold' : 'text-slate-800'
+                        }`}
+                      >
+                        {s.eaf || 99.15}%
+                      </span>
+                    </td>
+
+                    {/* RTE */}
+                    <td className="py-3 px-3 font-mono">
+                      <span className="font-semibold text-indigo-700">
+                        {s.rtePct}%
+                      </span>
+                    </td>
+
+                    {/* Usable Capacity */}
+                    <td className="py-3 px-3 font-mono">
+                      <div>
+                        <span className="font-semibold text-slate-900">
+                          {s.usableCapacityMwh || (s.capacityMw * 1.93).toFixed(1)}
+                        </span>
+                        <span className="text-[10px] text-slate-400 ml-0.5">MWh</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        保持率 {s.capacityRetentionPct || 96.4}%
+                      </div>
                     </td>
 
                     {/* Module Max Voltage Delta */}
@@ -718,6 +755,22 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
                             工况体检
                           </span>
                         </button>
+
+                        {onOpenReports && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              onOpenReports(s.siteId);
+                            }}
+                            className="p-1.5 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg border border-indigo-200 hover:border-indigo-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs group"
+                            title="查看/生成该站专属性能报告"
+                          >
+                            <FolderKanban className="w-3.5 h-3.5 text-indigo-600 group-hover:scale-110 transition-transform" />
+                            <span className="hidden xl:inline font-medium text-indigo-800">
+                              报告中心
+                            </span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

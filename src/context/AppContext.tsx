@@ -561,6 +561,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       FLEXIBLE_WARRANTY: '灵活质保SOH评估',
       PERFORMANCE_CONDITION: '性能工况体检',
       AVAILABILITY_SLA: 'SLA可用度履约',
+      SITE_LEDGER: '站点台账档案',
       FAULT_DIAGNOSIS: 'AI故障诊断报告',
       PRE_CONTRACT_EVAL: '售前签约前评估'
     };
@@ -616,7 +617,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const navigateToReportsCenter = (siteId?: string, category?: string) => {
-    if (siteId) setSelectedReportSiteFilter(siteId);
+    if (siteId) {
+      setSelectedReportSiteFilter(siteId);
+      setSelectedSiteId(siteId);
+
+      if (category === 'AVAILABILITY_SLA' || activeTab === 'availability_monitor' || activeTab === 'availability_drilldown') {
+        setAvailabilityDrilldownTab(3);
+        setActiveTab('availability_drilldown');
+        return;
+      }
+      if (category === 'PERFORMANCE_CONDITION' || activeTab === 'performance_evaluation') {
+        setPerformanceDetailSiteId(siteId);
+        setActiveTab('performance_evaluation');
+        return;
+      }
+      if (category === 'FLEXIBLE_WARRANTY' || activeTab === 'flexible_warranty') {
+        setFlexibleWarrantyDetailSiteId(siteId);
+        setActiveTab('flexible_warranty');
+        return;
+      }
+      if (category === 'SITE_LEDGER' || activeTab === 'sites' || activeTab === 'site_detail') {
+        setSiteDetailTab(4);
+        setActiveTab('site_detail');
+        return;
+      }
+
+      // Default site drilldown report center
+      setSiteDetailTab(4);
+      setActiveTab('site_detail');
+      return;
+    }
+
     if (category) setSelectedReportCategoryFilter(category);
     setActiveTab('reports');
   };

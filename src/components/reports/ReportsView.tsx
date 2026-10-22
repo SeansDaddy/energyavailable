@@ -358,6 +358,7 @@ export const ReportsView: React.FC = () => {
         FLEXIBLE_WARRANTY: '灵活质保工况与SOH衰减综合评估报告',
         PERFORMANCE_CONDITION: '性能工况月度深度体检分析报告',
         AVAILABILITY_SLA: 'SLA可用度履约与运行考核月报',
+        SITE_LEDGER: '站点资产台账与设备档案全景报告',
         FAULT_DIAGNOSIS: '核心设备异常与AI根因诊断报告',
         PRE_CONTRACT_EVAL: '销售签约前可用度参考评估意见书'
       };
@@ -409,6 +410,11 @@ export const ReportsView: React.FC = () => {
         return {
           label: 'SLA可用度履约',
           className: 'bg-blue-50 text-blue-700 border-blue-200'
+        };
+      case 'SITE_LEDGER':
+        return {
+          label: '站点台账档案',
+          className: 'bg-amber-50 text-amber-700 border-amber-200'
         };
       case 'FAULT_DIAGNOSIS':
         return {

@@ -21,7 +21,8 @@ import { AvailabilityDetailsTab } from './AvailabilityDetailsTab';
 import { MergedFaultsTab } from '../sites/MergedFaultsTab';
 import { WorkOrdersTab } from '../sites/WorkOrdersTab';
 import { EditSiteModal } from '../sites/EditSiteModal';
-import { Edit3 } from 'lucide-react';
+import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
+import { Edit3, FolderKanban } from 'lucide-react';
 
 export const SiteAvailabilityDetailView: React.FC = () => {
   const {
@@ -36,6 +37,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     navigateToSiteDetail,
     updateSite,
     workOrders,
+    reportCenterItems,
     openAiDrawer
   } = useApp();
 
@@ -61,7 +63,11 @@ export const SiteAvailabilityDetailView: React.FC = () => {
   const isBreached = site.currentAvailability < site.slaThreshold;
   const gap = Number((site.currentAvailability - site.slaThreshold).toFixed(2));
 
-  // The 3 availability detail & drilldown tabs
+  const siteReportsCount = reportCenterItems.filter(
+    r => r.siteId === site.id && (r.category === 'AVAILABILITY_SLA' || !r.category)
+  ).length;
+
+  // The 4 availability detail & drilldown tabs
   const tabs = [
     {
       id: 0,
@@ -82,6 +88,13 @@ export const SiteAvailabilityDetailView: React.FC = () => {
       subtext: 'Rule R4 · 现场消缺 / 方案闭环 / MTTR',
       icon: Wrench,
       count: siteOrders.length
+    },
+    {
+      id: 3,
+      label: '站点报告中心',
+      subtext: 'SLA可用度履约与运行考核报告',
+      icon: FolderKanban,
+      count: siteReportsCount
     }
   ];
 
@@ -359,6 +372,15 @@ export const SiteAvailabilityDetailView: React.FC = () => {
         <WorkOrdersTab
           site={site}
           workOrders={workOrders}
+        />
+      )}
+
+      {/* Tab 3: 站点报告中心 (SLA可用度履约与运行考核报告) */}
+      {availabilityDrilldownTab === 3 && (
+        <SiteScopedReportCenter
+          moduleScope="AVAILABILITY"
+          initialSiteId={site.id}
+          lockSite={true}
         />
       )}
 

@@ -9,9 +9,19 @@ import {
   DefectActionRecord,
   SiteHealthSummary,
   OptimizationAdviceItem,
-  PerformanceHistoryRecord
+  PerformanceHistoryRecord,
+  AvailabilityMetricData,
+  RtePerformanceData,
+  UsableCapacityData,
+  SohComprehensiveData
 } from '../../types/performanceEvaluation';
-import { getSitePerformanceDetailData } from '../../mock/sitePerformanceConditionData';
+import {
+  getSitePerformanceDetailData,
+  getSiteAvailabilityMetricData,
+  getSiteRtePerformanceData,
+  getSiteUsableCapacityData,
+  getSiteSohComprehensiveData
+} from '../../mock/sitePerformanceConditionData';
 import { FactorLibraryConfigTab } from './FactorLibraryConfigTab';
 import { ModuleWorkloadTab } from './ModuleWorkloadTab';
 import { CmuThermalTab } from './CmuThermalTab';
@@ -21,6 +31,11 @@ import { DefectEliminationTab } from './DefectEliminationTab';
 import { EvaluationSummaryTab } from './EvaluationSummaryTab';
 import { LogUploadAndHistoryTab } from './LogUploadAndHistoryTab';
 import { WarrantyConditionTab } from './WarrantyConditionTab';
+import { AvailabilityMetricTab } from './AvailabilityMetricTab';
+import { RtePerformanceTab } from './RtePerformanceTab';
+import { UsableCapacityTab } from './UsableCapacityTab';
+import { SohPerformanceTab } from './SohPerformanceTab';
+import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 import {
   HeartPulse,
   Sliders,
@@ -40,7 +55,10 @@ import {
   ChevronRight,
   TrendingUp,
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  BatteryCharging,
+  FolderKanban
 } from 'lucide-react';
 
 interface SitePerformanceDetailViewProps {
@@ -54,11 +72,11 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   onBackToList,
   onSwitchSite
 }) => {
-  const { sites, addReportItem, navigateToFlexibleWarranty } = useApp();
+  const { sites, addReportItem, navigateToFlexibleWarranty, reportCenterItems } = useApp();
 
   const currentSite = sites.find(s => s.id === siteId) || sites[0];
 
-  // Active sub-tab state (0 - 7)
+  // Active sub-tab state
   const [activeSubTab, setActiveSubTab] = useState<number>(0);
 
   // Initialize site-specific data from mock loader
@@ -79,6 +97,20 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   const [defectRecords, setDefectRecords] = useState<DefectActionRecord[]>(siteData.defectRecords);
   const [lastEvaluatedTime, setLastEvaluatedTime] = useState<string>(siteData.summary.lastEvaluatedTime);
 
+  // 四项新增核心性能指标数据
+  const [availabilityData, setAvailabilityData] = useState<AvailabilityMetricData>(() =>
+    getSiteAvailabilityMetricData(siteId)
+  );
+  const [rteData, setRteData] = useState<RtePerformanceData>(() =>
+    getSiteRtePerformanceData(siteId)
+  );
+  const [usableCapacityData, setUsableCapacityData] = useState<UsableCapacityData>(() =>
+    getSiteUsableCapacityData(siteId)
+  );
+  const [sohComprehensiveData, setSohComprehensiveData] = useState<SohComprehensiveData>(() =>
+    getSiteSohComprehensiveData(siteId)
+  );
+
   // Sync state when siteId changes
   useEffect(() => {
     const freshData = getSitePerformanceDetailData(siteId);
@@ -91,6 +123,11 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
     setSocRecords(freshData.socRecords);
     setDefectRecords(freshData.defectRecords);
     setLastEvaluatedTime(freshData.summary.lastEvaluatedTime);
+
+    setAvailabilityData(getSiteAvailabilityMetricData(siteId));
+    setRteData(getSiteRtePerformanceData(siteId));
+    setUsableCapacityData(getSiteUsableCapacityData(siteId));
+    setSohComprehensiveData(getSiteSohComprehensiveData(siteId));
   }, [siteId]);
 
   // Evaluating animation state
@@ -176,15 +213,23 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
     keyHighlights: siteData.siteHealthSummary.keyHighlights
   };
 
+  const sitePerfReportsCount = reportCenterItems.filter(
+    r => r.siteId === currentSite.id && (r.category === 'PERFORMANCE_CONDITION' || !r.category)
+  ).length;
+
   const navSubTabs = [
     { id: 0, label: '评估结论与报告', icon: FileCheck2, badge: `${hitFactorsList.length} 因子命中` },
-    { id: 1, label: '日志上传与历史记录', icon: UploadCloud, badge: `${historyRecords.length} 轮评估` },
-    { id: 2, label: '影响因子库维护', icon: Sliders, badge: '13类因子' },
-    { id: 3, label: '模组工况评估', icon: Layers, badge: `${siteData.summary.bottleneckModuleCode} 短板` },
-    { id: 4, label: 'CMU 温度分析', icon: Thermometer, badge: `ΔT ${siteData.summary.maxCmuDeltaT}℃` },
-    { id: 5, label: 'PACK SOH 评估', icon: Activity, badge: `${siteData.summary.abnormalPackCount > 0 ? `${siteData.summary.abnormalPackCount}组超标` : '达标'}` },
-    { id: 6, label: 'SOC 均衡支持', icon: Scale, badge: `ΔSOC ${siteData.summary.deltaSocPct}%` },
-    { id: 7, label: '故障消缺复盘', icon: Wrench, badge: `${siteData.summary.pendingActionsCount} 项建议` }
+    { id: 1, label: '可用度与故障告警关联', icon: ShieldCheck, badge: `${availabilityData.availabilityRate}% 可用度` },
+    { id: 2, label: 'RTE 综合能效分析', icon: Zap, badge: `${rteData.overallRtePct}% RTE` },
+    { id: 3, label: '可用容量标定', icon: BatteryCharging, badge: `${usableCapacityData.actualUsableCapacityMwh} MWh` },
+    { id: 4, label: 'SOH 综合性能指标', icon: Activity, badge: `SOH ${sohComprehensiveData.sohConsistency.avgSohPct}%` },
+    { id: 5, label: '模组工况评估', icon: Layers, badge: `${siteData.summary.bottleneckModuleCode} 短板` },
+    { id: 6, label: 'CMU 温度分析', icon: Thermometer, badge: `ΔT ${siteData.summary.maxCmuDeltaT}℃` },
+    { id: 7, label: 'SOC 均衡支持', icon: Scale, badge: `ΔSOC ${siteData.summary.deltaSocPct}%` },
+    { id: 8, label: '影响因子库维护', icon: Sliders, badge: '13类因子' },
+    { id: 9, label: '故障消缺复盘', icon: Wrench, badge: `${siteData.summary.pendingActionsCount} 项建议` },
+    { id: 10, label: '日志上传与历史记录', icon: UploadCloud, badge: `${historyRecords.length} 轮评估` },
+    { id: 11, label: '站点报告中心', icon: FolderKanban, badge: `${sitePerfReportsCount} 份归档` }
   ];
 
   return (
@@ -258,7 +303,7 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           </button>
 
           <button
-            onClick={() => setActiveSubTab(1)}
+            onClick={() => setActiveSubTab(10)}
             className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5"
           >
             <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
@@ -275,8 +320,17 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           </button>
 
           <button
+            onClick={() => setActiveSubTab(11)}
+            className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="查看该站点历史沉淀的性能工况报告"
+          >
+            <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
+            <span>报告中心 ({sitePerfReportsCount})</span>
+          </button>
+
+          <button
             onClick={handleExportToReportCenter}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5 text-indigo-300" />
             <span>导出体检报告</span>
@@ -284,7 +338,7 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
         </div>
       </div>
 
-      {/* KPI Summary Status Bar */}
+      {/* KPI Summary Status Bar: Highlighting Availability, RTE, Usable Capacity, SOH */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Score & Grade */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
@@ -308,99 +362,103 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           </div>
         </div>
 
-        {/* Hit Factors */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">影响因子命中</div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
-              {hitFactorsList.length}
-            </span>
-            <span className="text-xs text-slate-500">/ 13 项</span>
+        {/* 1. 可用度指标 */}
+        <div
+          onClick={() => setActiveSubTab(1)}
+          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
+        >
+          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+            <span className="group-hover:text-indigo-600 transition-colors">系统可用度指标</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
           </div>
-          <div className="mt-1 text-[10px] text-amber-600 truncate">
-            {hitFactorsList.length > 0 ? '存在短板木桶制约' : '全因子在理想区间'}
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-indigo-600 font-mono tracking-tight">
+              {availabilityData.availabilityRate}
+            </span>
+            <span className="text-xs text-slate-500">%</span>
+          </div>
+          <div className="mt-1 text-[10px] text-slate-500 flex items-center justify-between">
+            <span>EAF: <strong>{availabilityData.eaf}%</strong></span>
+            <span className="text-rose-600 font-medium">关联失效: {availabilityData.failureCount}起</span>
           </div>
         </div>
 
-        {/* Voltage Delta */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">模组最大极差 ΔV</div>
+        {/* 2. RTE 性能指标 */}
+        <div
+          onClick={() => setActiveSubTab(2)}
+          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
+        >
+          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+            <span className="group-hover:text-indigo-600 transition-colors">综合 RTE 性能</span>
+            <Zap className="w-3.5 h-3.5 text-indigo-500" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-indigo-600 font-mono tracking-tight">
+              {rteData.overallRtePct}
+            </span>
+            <span className="text-xs text-slate-500">%</span>
+          </div>
+          <div className="mt-1 text-[10px] text-slate-500 truncate">
+            PCS: <strong>{rteData.pcsEfficiency.actualEfficiency}%</strong> · 箱变: <strong>{rteData.transformerEfficiency.actualEfficiency}%</strong>
+          </div>
+        </div>
+
+        {/* 3. 可用容量指标 */}
+        <div
+          onClick={() => setActiveSubTab(3)}
+          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
+        >
+          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+            <span className="group-hover:text-indigo-600 transition-colors">实测可用容量</span>
+            <BatteryCharging className="w-3.5 h-3.5 text-indigo-500" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+              {usableCapacityData.actualUsableCapacityMwh}
+            </span>
+            <span className="text-xs text-slate-500">MWh</span>
+          </div>
+          <div className="mt-1 text-[10px] text-emerald-600 font-medium truncate">
+            保持率: {usableCapacityData.capacityRetentionPct}% (裕度 +{usableCapacityData.capacityMarginMwh}MWh)
+          </div>
+        </div>
+
+        {/* 4. SOH 性能指标 */}
+        <div
+          onClick={() => setActiveSubTab(4)}
+          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
+        >
+          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+            <span className="group-hover:text-indigo-600 transition-colors">SOH 性能指标</span>
+            <Activity className="w-3.5 h-3.5 text-rose-500" />
+          </div>
           <div className="mt-1 flex items-baseline gap-1">
             <span
               className={`text-2xl font-black font-mono tracking-tight ${
-                siteData.summary.maxVoltageDeltaMv > 60
-                  ? 'text-red-600'
-                  : siteData.summary.maxVoltageDeltaMv > 30
-                  ? 'text-amber-600'
-                  : 'text-emerald-600'
+                sohComprehensiveData.sohConsistency.minSohPct < 90 ? 'text-red-600' : 'text-emerald-600'
               }`}
             >
+              {sohComprehensiveData.sohConsistency.avgSohPct}
+            </span>
+            <span className="text-xs text-slate-500">% 均值</span>
+          </div>
+          <div className="mt-1 text-[10px] text-slate-500 flex items-center justify-between">
+            <span>ΔSOC: <strong>{sohComprehensiveData.socConsistency.maxDeltaSocPct}%</strong></span>
+            <span>FEC: <strong>{sohComprehensiveData.operatingCondition.cumulativeFecCycles}次</strong></span>
+          </div>
+        </div>
+
+        {/* 模组与CMU温差 */}
+        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
+          <div className="text-[11px] text-slate-500 font-medium">模组极差与CMU温差</div>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
               {siteData.summary.maxVoltageDeltaMv}
             </span>
             <span className="text-xs text-slate-500">mV</span>
           </div>
-          <div className="mt-1 text-[10px] text-slate-500">
-            短板: <strong className="text-indigo-600">{siteData.summary.bottleneckModuleCode}</strong>
-          </div>
-        </div>
-
-        {/* Thermal Delta */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">CMU 最大温差 ΔT</div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span
-              className={`text-2xl font-black font-mono tracking-tight ${
-                siteData.summary.maxCmuDeltaT > 4.0
-                  ? 'text-red-600'
-                  : siteData.summary.maxCmuDeltaT > 2.5
-                  ? 'text-amber-600'
-                  : 'text-emerald-600'
-              }`}
-            >
-              {siteData.summary.maxCmuDeltaT}
-            </span>
-            <span className="text-xs text-slate-500">℃</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500">
-            最高温: {siteData.summary.maxCmuTemp}℃
-          </div>
-        </div>
-
-        {/* SOH */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">PACK 最低 SOH</div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span
-              className={`text-2xl font-black font-mono tracking-tight ${
-                siteData.summary.minPackSoh < 90 ? 'text-red-600' : 'text-emerald-600'
-              }`}
-            >
-              {siteData.summary.minPackSoh}
-            </span>
-            <span className="text-xs text-slate-500">%</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500">
-            {siteData.summary.abnormalPackCount > 0 ? (
-              <span className="text-red-600 font-medium">
-                {siteData.summary.abnormalPackCount} 组 SOH 低于90%
-              </span>
-            ) : (
-              <span className="text-emerald-600">全站达标</span>
-            )}
-          </div>
-        </div>
-
-        {/* RTE & SOC */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">能效与不均衡度</div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-indigo-600 font-mono tracking-tight">
-              {siteData.summary.rtePct}
-            </span>
-            <span className="text-xs text-slate-500">% RTE</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500">
-            ΔSOC: <strong className="text-slate-800">{siteData.summary.deltaSocPct}%</strong>
+          <div className="mt-1 text-[10px] text-slate-500 truncate">
+            CMU ΔT: <strong className="text-indigo-600">{siteData.summary.maxCmuDeltaT}℃</strong> (短板 {siteData.summary.bottleneckModuleCode})
           </div>
         </div>
       </div>
@@ -451,6 +509,65 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
         )}
 
         {activeSubTab === 1 && (
+          <AvailabilityMetricTab
+            availabilityData={availabilityData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {activeSubTab === 2 && (
+          <RtePerformanceTab
+            rteData={rteData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {activeSubTab === 3 && (
+          <UsableCapacityTab
+            capacityData={usableCapacityData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {activeSubTab === 4 && (
+          <SohPerformanceTab
+            sohData={sohComprehensiveData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {activeSubTab === 5 && (
+          <ModuleWorkloadTab
+            moduleMetrics={moduleMetrics}
+            modules={moduleMetrics}
+          />
+        )}
+
+        {activeSubTab === 6 && <CmuThermalTab cmuRecords={cmuRecords} />}
+
+        {activeSubTab === 7 && (
+          <SocBalanceTab
+            socRecords={socRecords}
+            records={socRecords}
+          />
+        )}
+
+        {activeSubTab === 8 && (
+          <FactorLibraryConfigTab
+            factors={factors}
+            onUpdateFactors={handleUpdateFactors}
+            onResetToDefault={handleResetFactors}
+          />
+        )}
+
+        {activeSubTab === 9 && (
+          <DefectEliminationTab
+            defectRecords={defectRecords}
+            records={defectRecords}
+          />
+        )}
+
+        {activeSubTab === 10 && (
           <LogUploadAndHistoryTab
             historyRecords={historyRecords}
             activeVersionId={activeVersionId}
@@ -459,37 +576,14 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           />
         )}
 
-        {activeSubTab === 2 && (
-          <FactorLibraryConfigTab
-            factors={factors}
-            onUpdateFactors={handleUpdateFactors}
-            onResetToDefault={handleResetFactors}
-          />
-        )}
-
-        {activeSubTab === 3 && (
-          <ModuleWorkloadTab
-            moduleMetrics={moduleMetrics}
-            modules={moduleMetrics}
-          />
-        )}
-
-        {activeSubTab === 4 && <CmuThermalTab cmuRecords={cmuRecords} />}
-
-        {activeSubTab === 5 && <PackSohTab packMetrics={packMetrics} />}
-
-        {activeSubTab === 6 && (
-          <SocBalanceTab
-            socRecords={socRecords}
-            records={socRecords}
-          />
-        )}
-
-        {activeSubTab === 7 && (
-          <DefectEliminationTab
-            defectRecords={defectRecords}
-            records={defectRecords}
-          />
+        {activeSubTab === 11 && (
+          <div className="p-1">
+            <SiteScopedReportCenter
+              moduleScope="PERFORMANCE"
+              initialSiteId={currentSite.id}
+              lockSite={true}
+            />
+          </div>
         )}
       </div>
     </div>

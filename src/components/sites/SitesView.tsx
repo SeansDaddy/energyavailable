@@ -21,8 +21,10 @@ import {
   X,
   FileText,
   Activity,
-  Cpu
+  Cpu,
+  FolderKanban
 } from 'lucide-react';
+import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 
 export const SitesView: React.FC = () => {
   const {
@@ -37,6 +39,8 @@ export const SitesView: React.FC = () => {
     setSelectedSiteId
   } = useApp();
 
+  const [subTab, setSubTab] = useState<'ledger' | 'reports'>('ledger');
+  const [reportSiteId, setReportSiteId] = useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [redundancyFilter, setRedundancyFilter] = useState<string>('ALL');
   const [keyword, setKeyword] = useState<string>('');
@@ -125,22 +129,58 @@ export const SitesView: React.FC = () => {
 
   return (
     <div className="p-6 space-y-5 max-w-[1700px] mx-auto animate-in fade-in duration-200">
-      {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-5 rounded-lg shadow-sm">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <Radio className="w-5 h-5 text-blue-600" />
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              站点台账管理 (Site Registry)
-            </h1>
-            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono font-medium border border-slate-200">
-              共 {sites.length} 站 / 筛选出 {filteredSites.length} 站
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            全网站点信息的集中维护。初始来源为合同系统同步 + Excel 批量导入，支持核心设备与组网冗余度持续运维。
-          </p>
+      {/* Module Top Navigation Switcher */}
+      <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+        <div className="flex items-center bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
+          <button
+            onClick={() => setSubTab('ledger')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
+              subTab === 'ledger'
+                ? 'bg-white text-blue-700 shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Radio className="w-4 h-4 text-blue-600" />
+            <span>站点台账与设备档案</span>
+          </button>
+          <button
+            onClick={() => setSubTab('reports')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
+              subTab === 'reports'
+                ? 'bg-white text-blue-700 shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FolderKanban className="w-4 h-4 text-blue-600" />
+            <span>站点台账报告中心</span>
+          </button>
         </div>
+      </div>
+
+      {subTab === 'reports' ? (
+        <SiteScopedReportCenter
+          moduleScope="SITE_LEDGER"
+          initialSiteId={reportSiteId}
+          onBackToOverview={() => setSubTab('ledger')}
+        />
+      ) : (
+        <>
+          {/* Header Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-5 rounded-lg shadow-sm">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <Radio className="w-5 h-5 text-blue-600" />
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                  站点台账管理 (Site Registry)
+                </h1>
+                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono font-medium border border-slate-200">
+                  共 {sites.length} 站 / 筛选出 {filteredSites.length} 站
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                全网站点信息的集中维护。初始来源为合同系统同步 + Excel 批量导入，支持核心设备与组网冗余度持续运维。
+              </p>
+            </div>
 
         <div className="flex items-center gap-2.5">
           <button
@@ -401,6 +441,20 @@ export const SitesView: React.FC = () => {
                               >
                                 <Upload className="w-3.5 h-3.5" />
                               </button>
+
+                              {/* 5. 站点台账报告中心 */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setReportSiteId(site.id);
+                                  setSubTab('reports');
+                                }}
+                                className="p-1.5 rounded-lg text-blue-700 hover:text-blue-900 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs group/btn"
+                                title="查看/生成该站点台账档案报告"
+                                aria-label="报告中心"
+                              >
+                                <FolderKanban className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -413,6 +467,8 @@ export const SitesView: React.FC = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* Modal 1: Add New Site */}
       {showAddModal && (

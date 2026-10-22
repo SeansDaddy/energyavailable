@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Database,
-  Eye
+  Eye,
+  FolderKanban,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const AvailabilityMonitorView: React.FC = () => {
@@ -88,38 +90,38 @@ export const AvailabilityMonitorView: React.FC = () => {
     <div className="p-6 space-y-5 max-w-[1700px] mx-auto animate-in fade-in duration-200">
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <Activity className="w-5 h-5 text-blue-600" />
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              全网可用度持续监控
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
-              Rule R7: 北京时间 0 点日界
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            动态汇总全网各站点可用度达标情况、四色状态分布、大区质量对比及履约预警指标。
-          </p>
-        </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-5 h-5 text-blue-600" />
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                  全网可用度持续监控
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
+                  Rule R7: 北京时间 0 点日界
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                动态汇总全网各站点可用度达标情况、四色状态分布、大区质量对比及履约预警指标。
+              </p>
+            </div>
 
-        {/* Evaluation Period Selector */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 shadow-sm">
-            <Calendar className="w-4 h-4 text-blue-600" />
-            <span className="text-slate-500">考核期 (自然月):</span>
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-slate-50 font-bold text-blue-700 rounded px-2 py-0.5 border border-slate-200 focus:outline-none"
-            >
-              <option value="2026-08">2026-08 (当期)</option>
-              <option value="2026-07">2026-07 (已归档)</option>
-              <option value="2026-06">2026-06 (已归档)</option>
-            </select>
+            {/* Evaluation Period Selector */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 shadow-sm">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="text-slate-500">考核期 (自然月):</span>
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  className="bg-slate-50 font-bold text-blue-700 rounded px-2 py-0.5 border border-slate-200 focus:outline-none"
+                >
+                  <option value="2026-08">2026-08 (当期)</option>
+                  <option value="2026-07">2026-07 (已归档)</option>
+                  <option value="2026-06">2026-06 (已归档)</option>
+                </select>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
       {/* 1. Core Network Availability Statistical Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -389,7 +391,7 @@ export const AvailabilityMonitorView: React.FC = () => {
                   <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
                     {s.lastImportTime}
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right space-x-1">
                     <button
                       onClick={e => {
                         e.stopPropagation();
@@ -399,8 +401,20 @@ export const AvailabilityMonitorView: React.FC = () => {
                       title="查看详情"
                       aria-label="查看详情"
                     >
-                      <Eye className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                      <span className="hidden sm:inline font-medium text-slate-700 group-hover:text-blue-700">查看详情</span>
+                      <Eye className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <span className="hidden sm:inline font-medium text-slate-700 group-hover:text-blue-700">详情</span>
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        navigateToAvailabilityDrilldown(s.id, 3);
+                      }}
+                      className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs group cursor-pointer"
+                      title="下钻查看该站专属报告中心"
+                      aria-label="报告中心"
+                    >
+                      <FolderKanban className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <span className="hidden sm:inline font-medium text-blue-700">报告中心</span>
                     </button>
                   </td>
                 </tr>

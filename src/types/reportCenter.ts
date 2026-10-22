@@ -4,6 +4,7 @@ export type ReportCategory =
   | 'FLEXIBLE_WARRANTY' // 灵活质保SOH评估报告
   | 'PERFORMANCE_CONDITION' // 性能工况月度体检报告
   | 'AVAILABILITY_SLA' // 可用度监控与SLA履约结算报告
+  | 'SITE_LEDGER' // 站点台账与设备资产全生命周期档案报告
   | 'FAULT_DIAGNOSIS' // 核心设备异常与AI根因诊断报告
   | 'PRE_CONTRACT_EVAL'; // 售前可用度签约前风控评估报告
 

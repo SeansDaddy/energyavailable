@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { WarrantyConditionTab } from '../performance/WarrantyConditionTab';
+import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 import {
   ArrowLeft,
   ChevronRight,
@@ -44,6 +45,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
   } = useApp();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [detailSubTab, setDetailSubTab] = useState<'eval' | 'reports'>('eval');
 
   const currentSite = sites.find(s => s.id === siteId) || sites[0] || {
     id: siteId,
@@ -205,11 +207,15 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
 
           {/* 站点报告中心直达按钮 */}
           <button
-            onClick={() => navigateToReportsCenter(currentSite.id, 'FLEXIBLE_WARRANTY')}
-            className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-            title="前往报告中心按站点维度查看和管理历史评估报告"
+            onClick={() => setDetailSubTab(prev => prev === 'reports' ? 'eval' : 'reports')}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer border ${
+              detailSubTab === 'reports'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+            }`}
+            title="在此页面直接查看和管理该站点的历史质保评估报告"
           >
-            <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
+            <FolderKanban className="w-3.5 h-3.5" />
             <span>报告中心 ({siteReportsCount} 份)</span>
           </button>
 
@@ -243,8 +249,52 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         </div>
       </div>
 
-      {/* 3. The Comprehensive 5-Sub-Capability Flexible Warranty Workbench */}
-      <WarrantyConditionTab site={currentSite as any} />
+      {/* 3. Sub-Tab Switcher within Site Flexible Warranty Drill-Down */}
+      <div className="border-b border-slate-200 bg-white rounded-t-xl px-2 pt-2 shadow-xs">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
+          <button
+            onClick={() => setDetailSubTab('eval')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              detailSubTab === 'eval'
+                ? 'bg-emerald-50 text-emerald-800 shadow-2xs border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <ShieldCheck className={`w-4 h-4 ${detailSubTab === 'eval' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>灵活质保工况评估工作台</span>
+          </button>
+
+          <button
+            onClick={() => setDetailSubTab('reports')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              detailSubTab === 'reports'
+                ? 'bg-emerald-50 text-emerald-800 shadow-2xs border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <FolderKanban className={`w-4 h-4 ${detailSubTab === 'reports' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>站点质保报告中心</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                detailSubTab === 'reports' ? 'bg-emerald-200/80 text-emerald-900 font-bold' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {siteReportsCount} 份
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Sub-Tab Content Rendering */}
+      {detailSubTab === 'eval' ? (
+        <WarrantyConditionTab site={currentSite as any} />
+      ) : (
+        <SiteScopedReportCenter
+          moduleScope="FLEXIBLE_WARRANTY"
+          initialSiteId={currentSite.id}
+          lockSite={true}
+        />
+      )}
     </div>
   );
 };

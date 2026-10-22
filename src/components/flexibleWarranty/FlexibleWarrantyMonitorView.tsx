@@ -40,10 +40,12 @@ import {
 
 interface FlexibleWarrantyMonitorViewProps {
   onSelectSite: (siteId: string) => void;
+  onOpenReports?: (siteId?: string) => void;
 }
 
 export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewProps> = ({
-  onSelectSite
+  onSelectSite,
+  onOpenReports
 }) => {
   const {
     sites,
@@ -240,12 +242,12 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
             </button>
 
             <button
-              onClick={() => navigateToReportsCenter(undefined, 'FLEXIBLE_WARRANTY')}
-              className="px-3.5 py-2 rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/40 text-xs font-semibold text-white transition-all flex items-center gap-1.5 shadow-sm"
-              title="前往统一报告中心按站点维度查看所有历史评估报告"
+              onClick={() => onOpenReports ? onOpenReports() : navigateToReportsCenter(undefined, 'FLEXIBLE_WARRANTY')}
+              className="px-3.5 py-2 rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/40 text-xs font-semibold text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="前往灵活质保报告中心按站点维度查看所有历史评估报告"
             >
               <FolderKanban className="w-3.5 h-3.5 text-blue-200" />
-              <span>报告中心 ({reportCenterItems.length} 份)</span>
+              <span>质保报告中心 ({reportCenterItems.filter(r => r.category === 'FLEXIBLE_WARRANTY').length} 份)</span>
             </button>
 
             <div className="h-6 w-px bg-white/20 hidden sm:block mx-1" />
@@ -673,7 +675,11 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            navigateToReportsCenter(item.siteId, 'FLEXIBLE_WARRANTY');
+                            if (onOpenReports) {
+                              onOpenReports(item.siteId);
+                            } else {
+                              navigateToReportsCenter(item.siteId, 'FLEXIBLE_WARRANTY');
+                            }
                           }}
                           className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs transition-colors cursor-pointer"
                           title="前往报告中心查看该站点的所有历史评估报告"

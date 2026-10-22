@@ -28,8 +28,7 @@ export const Sidebar: React.FC = () => {
     navigateToPerformanceMonitor,
     navigateToFlexibleWarranty,
     alerts,
-    workOrders,
-    reportCenterItems
+    workOrders
   } = useApp();
 
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length;
@@ -136,13 +135,6 @@ export const Sidebar: React.FC = () => {
           icon: Sparkles,
           badge: 'AI推理',
           badgeColor: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-xs'
-        },
-        {
-          id: 'reports',
-          label: '报告中心',
-          icon: FileSpreadsheet,
-          badge: `${reportCenterItems.length}份`,
-          badgeColor: 'bg-blue-600 text-white shadow-xs'
         }
       ]
     },

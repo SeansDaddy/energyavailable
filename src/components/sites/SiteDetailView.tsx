@@ -25,6 +25,8 @@ import { SitePanoramaTab } from './SitePanoramaTab';
 import { CoreDevicesTab } from './CoreDevicesTab';
 import { ContractFulfillmentTab } from './ContractFulfillmentTab';
 import { LogBatchesTab } from './LogBatchesTab';
+import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
+import { FolderKanban } from 'lucide-react';
 
 export const SiteDetailView: React.FC = () => {
   const {
@@ -42,6 +44,7 @@ export const SiteDetailView: React.FC = () => {
     batches,
     workOrders,
     contracts,
+    reportCenterItems,
     openAiDrawer
   } = useApp();
 
@@ -61,15 +64,20 @@ export const SiteDetailView: React.FC = () => {
       (Boolean(site?.siteName && w?.siteName && site.siteName.length >= 2 && w.siteName.includes(site.siteName.slice(0, 4))))
   );
 
+  const siteLedgerReportsCount = reportCenterItems.filter(
+    r => r.siteId === site.id && (r.category === 'SITE_LEDGER' || !r.category)
+  ).length;
+
   const isBreached = site.currentAvailability < site.slaThreshold;
   const gap = Number((site.currentAvailability - site.slaThreshold).toFixed(2));
 
-  // Site Ledger tabs: Site Panorama, Core Devices, Contract & SLA Fulfillment, Offline Log Batches
+  // Site Ledger tabs: Site Panorama, Core Devices, Contract & SLA Fulfillment, Offline Log Batches, Site Ledger Reports
   const tabs = [
     { id: 0, label: '1. 站点全景态势', icon: Activity },
     { id: 1, label: '2. 核心设备拓扑 (R2)', icon: Cpu, count: site.coreDevices?.length || 0 },
     { id: 2, label: '3. 合同与 SLA 履约 (R10)', icon: FileText },
-    { id: 3, label: '4. 离线日志批次查看 (R3)', icon: Database, count: siteBatches.length }
+    { id: 3, label: '4. 离线日志批次查看 (R3)', icon: Database, count: siteBatches.length },
+    { id: 4, label: '5. 站点台账与设备档案报告', icon: FolderKanban, count: siteLedgerReportsCount }
   ];
 
   const handleSiteSwitch = (newSiteId: string) => {
@@ -362,6 +370,15 @@ export const SiteDetailView: React.FC = () => {
           site={site}
           batches={batches}
           onNavigateTab={idx => setSiteDetailTab(idx)}
+        />
+      )}
+
+      {/* Layer 4: 站点资产台账与设备档案专属报告中心 */}
+      {siteDetailTab === 4 && (
+        <SiteScopedReportCenter
+          moduleScope="SITE_LEDGER"
+          initialSiteId={site.id}
+          lockSite={true}
         />
       )}
 

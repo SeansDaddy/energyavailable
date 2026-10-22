@@ -44,15 +44,29 @@ export const PerformanceEvaluationView: React.FC = () => {
     setPerformanceDetailSiteId(siteId);
   };
 
-  if (viewMode === 'detail') {
-    return (
-      <SitePerformanceDetailView
-        siteId={currentSiteId}
-        onBackToList={handleBackToList}
-        onSwitchSite={handleSwitchSiteInDetail}
-      />
-    );
-  }
+  const handleOpenReportCenterForSite = (siteId?: string) => {
+    if (siteId) {
+      setCurrentSiteId(siteId);
+      setSelectedSiteId(siteId);
+      setPerformanceDetailSiteId(siteId);
+    }
+    setViewMode('detail');
+  };
 
-  return <PerformanceMonitorView onSelectSite={handleSelectSiteFromList} />;
+  return (
+    <div className="p-6 space-y-5 max-w-[1700px] mx-auto animate-in fade-in duration-200">
+      {viewMode === 'detail' ? (
+        <SitePerformanceDetailView
+          siteId={currentSiteId}
+          onBackToList={handleBackToList}
+          onSwitchSite={handleSwitchSiteInDetail}
+        />
+      ) : (
+        <PerformanceMonitorView
+          onSelectSite={handleSelectSiteFromList}
+          onOpenReports={handleOpenReportCenterForSite}
+        />
+      )}
+    </div>
+  );
 };
