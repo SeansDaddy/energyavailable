@@ -24,7 +24,6 @@ import {
   Cpu,
   FolderKanban
 } from 'lucide-react';
-import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 
 export const SitesView: React.FC = () => {
   const {
@@ -39,8 +38,6 @@ export const SitesView: React.FC = () => {
     setSelectedSiteId
   } = useApp();
 
-  const [subTab, setSubTab] = useState<'ledger' | 'reports'>('ledger');
-  const [reportSiteId, setReportSiteId] = useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [redundancyFilter, setRedundancyFilter] = useState<string>('ALL');
   const [keyword, setKeyword] = useState<string>('');
@@ -129,44 +126,8 @@ export const SitesView: React.FC = () => {
 
   return (
     <div className="p-6 space-y-5 max-w-[1700px] mx-auto animate-in fade-in duration-200">
-      {/* Module Top Navigation Switcher */}
-      <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-        <div className="flex items-center bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
-          <button
-            onClick={() => setSubTab('ledger')}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
-              subTab === 'ledger'
-                ? 'bg-white text-blue-700 shadow-sm font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Radio className="w-4 h-4 text-blue-600" />
-            <span>站点台账与设备档案</span>
-          </button>
-          <button
-            onClick={() => setSubTab('reports')}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
-              subTab === 'reports'
-                ? 'bg-white text-blue-700 shadow-sm font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FolderKanban className="w-4 h-4 text-blue-600" />
-            <span>站点台账报告中心</span>
-          </button>
-        </div>
-      </div>
-
-      {subTab === 'reports' ? (
-        <SiteScopedReportCenter
-          moduleScope="SITE_LEDGER"
-          initialSiteId={reportSiteId}
-          onBackToOverview={() => setSubTab('ledger')}
-        />
-      ) : (
-        <>
-          {/* Header Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-5 rounded-lg shadow-sm">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-5 rounded-lg shadow-sm">
             <div>
               <div className="flex items-center gap-2.5">
                 <Radio className="w-5 h-5 text-blue-600" />
@@ -442,15 +403,14 @@ export const SitesView: React.FC = () => {
                                 <Upload className="w-3.5 h-3.5" />
                               </button>
 
-                              {/* 5. 站点台账报告中心 */}
+                              {/* 5. 站点台账报告中心 (下钻直达) */}
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
-                                  setReportSiteId(site.id);
-                                  setSubTab('reports');
+                                  navigateToSiteDetail(site.id, 4);
                                 }}
-                                className="p-1.5 rounded-lg text-blue-700 hover:text-blue-900 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs group/btn"
-                                title="查看/生成该站点台账档案报告"
+                                className="p-1.5 rounded-lg text-blue-700 hover:text-blue-900 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs group/btn cursor-pointer"
+                                title="下钻查看该站台账档案报告中心"
                                 aria-label="报告中心"
                               >
                                 <FolderKanban className="w-3.5 h-3.5" />
@@ -467,8 +427,6 @@ export const SitesView: React.FC = () => {
           </div>
         </div>
       </div>
-        </>
-      )}
 
       {/* Modal 1: Add New Site */}
       {showAddModal && (
