@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { SohComprehensiveData } from '../../types/performanceEvaluation';
+import {
+  SohComprehensiveData,
+  OverConditionSohFactor
+} from '../../types/performanceEvaluation';
+import {
+  getSiteOverConditionSohFactors,
+  getSiteSohDegradationTrend
+} from '../../mock/sitePerformanceConditionData';
 import {
   Activity,
   Scale,
@@ -15,7 +22,11 @@ import {
   TrendingDown,
   Filter,
   Flame,
-  ArrowRight
+  ArrowRight,
+  Info,
+  Calendar,
+  Sparkles,
+  FileSpreadsheet
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,6 +39,7 @@ import {
   Tooltip,
   CartesianGrid,
   Legend,
+  ReferenceLine,
   Cell
 } from 'recharts';
 
@@ -41,15 +53,28 @@ export const SohPerformanceTab: React.FC<SohPerformanceTabProps> = ({
   siteName
 }) => {
   const {
+    siteId,
     socConsistency,
     electricalEnergy,
     sohConsistency,
     operatingCondition
   } = sohData;
 
-  const [activeSection, setActiveSection] = useState<
-    'all' | 'soc' | 'energy' | 'soh' | 'condition'
-  >('all');
+  const [activeSubTab, setActiveSubTab] = useState<
+    'degradation' | 'factors' | 'packs' | 'energy' | 'soc'
+  >('degradation');
+
+  // Load degradation curves and over-condition impact factors
+  const degradationData = getSiteSohDegradationTrend(siteId);
+  const overConditionFactors: OverConditionSohFactor[] = getSiteOverConditionSohFactors(siteId);
+
+  // Current values
+  const currentSoh = sohConsistency.avgSohPct;
+  const contractBaselineNow = 94.8;
+  const overConditionSohNow = 92.4;
+  const totalOverConditionLoss = overConditionFactors
+    .reduce((acc, f) => acc + f.sohExtraLossPct, 0)
+    .toFixed(2);
 
   return (
     <div className="space-y-6">
@@ -60,275 +85,365 @@ export const SohPerformanceTab: React.FC<SohPerformanceTabProps> = ({
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-indigo-600" />
               <h2 className="text-base font-bold text-slate-900">
-                SOH 综合性能指标评估 (SOC一致性 · 电能量 · SOH一致性 · 运行工况)
+                站点 SOH 综合健康度与全生命周期衰减曲线对比 (含黄色超工况折算曲线)
               </h2>
               <span className="px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                四维协同评估
+                三线协同研判
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-              结合实时 SOC 离散极差、充放电能量吞吐台账、PACK/簇级 SOH 分布一致性及 FEC 等效循环工况，全方位研判电芯健康退化与寿命损耗。
+              结合合同约定衰减基准线、现场实测拟合曲线与<strong>黄色超工况折算曲线</strong>（计入电芯超温、大倍率调频、深度放电等加速老化应力），并通过工况因素列表精准界定责任归属。
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="bg-indigo-50 border border-indigo-200 px-3 py-2 rounded-lg text-center min-w-[105px]">
-              <div className="text-[11px] text-indigo-600 font-medium">全站平均 SOH</div>
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-50 border border-indigo-200 px-3 py-2 rounded-lg text-center min-w-[110px]">
+              <div className="text-[11px] text-indigo-600 font-medium">当前实测加权 SOH</div>
               <div className="text-2xl font-black text-indigo-700 font-mono mt-0.5">
-                {sohConsistency.avgSohPct}%
+                {currentSoh}%
               </div>
-              <div className="text-[9px] text-indigo-500">达标线 ≥90%</div>
+              <div className="text-[9px] text-indigo-500">
+                合同基准: {contractBaselineNow}%
+              </div>
             </div>
 
-            <div className="bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg text-center min-w-[105px]">
-              <div className="text-[11px] text-emerald-600 font-medium">累计 FEC 循环</div>
-              <div className="text-xl font-black text-emerald-700 font-mono mt-0.5">
-                {operatingCondition.cumulativeFecCycles}
+            <div className="bg-amber-50 border border-amber-300 px-3 py-2 rounded-lg text-center min-w-[110px]">
+              <div className="text-[11px] text-amber-800 font-medium flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>黄色超工况折算</span>
               </div>
-              <div className="text-[9px] text-emerald-600">消耗 {operatingCondition.cycleConsumptionPct}%</div>
+              <div className="text-xl font-black text-amber-700 font-mono mt-0.5">
+                {overConditionSohNow}%
+              </div>
+              <div className="text-[9px] text-amber-800 font-semibold">
+                超工况额外衰减 -{totalOverConditionLoss}%
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Top Summary Metrics across the 4 Dimensions */}
+      {/* 2. Top Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* SOC Consistency */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span>SOC 一致性极差 ΔSOC</span>
-            <Scale className="w-3.5 h-3.5 text-indigo-500" />
+            <span>PACK 最低短板 SOH</span>
+            <Activity className="w-3.5 h-3.5 text-rose-500" />
           </div>
           <div className="mt-1 flex items-baseline gap-1">
             <span
               className={`text-2xl font-black font-mono ${
-                socConsistency.maxDeltaSocPct > 4.5 ? 'text-rose-600' : 'text-slate-900'
+                sohConsistency.minSohPct < 90 ? 'text-rose-600' : 'text-slate-900'
               }`}
             >
-              {socConsistency.maxDeltaSocPct}
+              {sohConsistency.minSohPct}
             </span>
             <span className="text-xs text-slate-500">%</span>
           </div>
           <div className="mt-1 text-[10px] text-slate-500">
-            标准差 σ: {socConsistency.standardDeviationPct}%
+            SOH 极差: {sohConsistency.deltaSohPct}% · 标准差 {sohConsistency.standardDeviation}
           </div>
         </div>
 
-        {/* Electrical Energy */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span>累计充放电吞吐量</span>
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>累计等效全循环 (FEC)</span>
+            <Clock className="w-3.5 h-3.5 text-indigo-500" />
           </div>
           <div className="mt-1 flex items-baseline gap-1">
             <span className="text-2xl font-black text-slate-900 font-mono">
-              {electricalEnergy.cumulativeThroughputMwh.toLocaleString()}
+              {operatingCondition.cumulativeFecCycles}
             </span>
-            <span className="text-xs text-slate-500">MWh</span>
+            <span className="text-xs text-slate-500">/ 6000 次</span>
           </div>
           <div className="mt-1 text-[10px] text-slate-500">
-            放电: {electricalEnergy.cumulativeDischargedMwh.toLocaleString()} MWh
+            循环寿命消耗: {operatingCondition.cycleConsumptionPct}%
           </div>
         </div>
 
-        {/* SOH Consistency */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span>SOH 极差与短板</span>
-            <Activity className="w-3.5 h-3.5 text-rose-500" />
+            <span>超工况命中影响因素</span>
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
           </div>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-slate-900 font-mono">
-              {sohConsistency.deltaSohPct}
+            <span className="text-2xl font-black text-amber-600 font-mono">
+              {overConditionFactors.length}
             </span>
-            <span className="text-xs text-slate-500">% ΔSOH</span>
+            <span className="text-xs text-slate-500">项影响源</span>
           </div>
           <div className="mt-1 text-[10px] text-slate-500">
-            最低: <strong className="text-rose-600">{sohConsistency.minSohPct}%</strong> ({sohConsistency.substandardCount > 0 ? `${sohConsistency.substandardCount}组超标` : '全部达标'})
+            电芯超温占比最高 (36.2%)
           </div>
         </div>
 
-        {/* Operating Conditions */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span>运行工况高应力停留</span>
-            <Flame className="w-3.5 h-3.5 text-rose-500" />
+            <span>SOH 履约判定与免责状态</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
           </div>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-slate-900 font-mono">
-              {operatingCondition.highSocRestRatioPct}
+            <span className="text-lg font-bold text-emerald-700">在保达标</span>
+            <span className="text-xs bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded font-medium border border-amber-200">
+              超工况免责已存证
             </span>
-            <span className="text-xs text-slate-500">%</span>
           </div>
           <div className="mt-1 text-[10px] text-slate-500">
-            高 SOC (&gt;90%) 持续静置占比
+            实测优于黄色超工况折算线
           </div>
         </div>
       </div>
 
-      {/* 3. Dimension 1: SOC 一致性 */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Scale className="w-4 h-4 text-indigo-600" />
-              <span>维度一：各储能簇 SOC 一致性分布与充放电截止离散度</span>
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              监控全站 8 组储能簇在实时工况、满充末期 (SOC 100%) 及满放末期 (SOC 0%) 的离散度
-            </p>
-          </div>
-          <span className="text-xs text-slate-500 font-medium">
-            全站平均 SOC: <strong className="text-indigo-600 font-mono font-bold">{socConsistency.avgSocPct}%</strong>
-          </span>
-        </div>
-
-        <div className="h-56 w-full pt-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={socConsistency.clusterSocList}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="clusterCode" tick={{ fontSize: 10 }} />
-              <YAxis domain={[0, 105]} tick={{ fontSize: 10 }} unit="%" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '11px'
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
-              <Bar
-                dataKey="currentSoc"
-                name="当前实时 SOC (%)"
-                fill="#4f46e5"
-                barSize={18}
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="chargeEndSoc"
-                name="满充末期截止 SOC (%)"
-                fill="#10b981"
-                barSize={18}
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="dischargeEndSoc"
-                name="满放末期截止 SOC (%)"
-                fill="#f59e0b"
-                barSize={18}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-slate-700">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{socConsistency.evaluationNote}</span>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-slate-500 shrink-0">
-            <span>满充离散度: <strong className="text-slate-800">{socConsistency.chargeEndDispersionPct}%</strong></span>
-            <span>满放离散度: <strong className="text-slate-800">{socConsistency.dischargeEndDispersionPct}%</strong></span>
-          </div>
-        </div>
+      {/* 3. Sub-Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+        <button
+          onClick={() => setActiveSubTab('degradation')}
+          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === 'degradation'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <TrendingDown className="w-4 h-4" />
+          <span>SOH 衰减曲线与合同/超工况黄色曲线对比</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('factors')}
+          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === 'factors'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Flame className="w-4 h-4 text-amber-500" />
+          <span>影响 SOH 的超工况因素数据列表 ({overConditionFactors.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('packs')}
+          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === 'packs'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>PACK 级 SOH 一致性分布</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('energy')}
+          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === 'energy'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Zap className="w-4 h-4" />
+          <span>充放电能量吞吐分析</span>
+        </button>
       </div>
 
-      {/* 4. Dimension 2: 电能量数据 */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-500" />
-              <span>维度二：电能量台账与单日充放吞吐量历史趋势 (近 14 日)</span>
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              精准计量每日充电量、放电量及充放吞吐量，评估系统日充放利用率与 RTE 稳定性
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-xs font-mono">
-            <span className="text-slate-500">累计充: <strong className="text-slate-800">{electricalEnergy.cumulativeChargedMwh} MWh</strong></span>
-            <span className="text-slate-500">累计放: <strong className="text-emerald-600">{electricalEnergy.cumulativeDischargedMwh} MWh</strong></span>
-          </div>
-        </div>
+      {/* 4. Tab 1: SOH Degradation Curve with Contract & Yellow Over-Condition Curve */}
+      {activeSubTab === 'degradation' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-indigo-600" />
+                  <span>全生命周期 SOH 衰减趋势对比分析 (合同约定线 · 实测拟合线 · 黄色超工况折算线)</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  黄色曲线是根据现场超温时长、极限深放频次与高倍率冲击等真实超工况数据建立的多应力阿伦尼乌斯老化模型折算的衰减轨迹。
+                </p>
+              </div>
 
-        <div className="h-56 w-full pt-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={electricalEnergy.dailyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} unit=" MWh" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '11px'
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
-              <Bar
-                dataKey="chargedMwh"
-                name="单日充电量 (MWh)"
-                fill="#93c5fd"
-                barSize={14}
-                radius={[3, 3, 0, 0]}
-              />
-              <Bar
-                dataKey="dischargedMwh"
-                name="单日放电量 (MWh)"
-                fill="#3b82f6"
-                barSize={14}
-                radius={[3, 3, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Cluster Throughput Balance */}
-        <div className="pt-2 border-t border-slate-100">
-          <div className="text-xs font-bold text-slate-800 mb-2">
-            各储能簇累计电能量吞吐均衡性对比 (MWh)
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-            {electricalEnergy.clusterThroughput.map(c => (
-              <div
-                key={c.clusterCode}
-                className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-center"
-              >
-                <div className="text-[10px] text-slate-500 font-mono">{c.clusterCode}</div>
-                <div className="text-xs font-bold font-mono text-slate-800 mt-0.5">
-                  {c.throughputMwh}
+              {/* Legend Badges */}
+              <div className="flex items-center gap-3 text-xs flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-0.5 bg-blue-600"></span>
+                  <span className="text-slate-700 font-medium">合同约定基准线</span>
                 </div>
-                <div
-                  className={`text-[9px] mt-0.5 font-mono ${
-                    Math.abs(c.deviationPct) > 1 ? 'text-amber-600' : 'text-slate-400'
-                  }`}
-                >
-                  偏离: {c.deviationPct > 0 ? `+${c.deviationPct}%` : `${c.deviationPct}%`}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-1 bg-emerald-500 rounded-full"></span>
+                  <span className="text-emerald-700 font-bold">实际测量 SOH</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
+                  <span className="w-3.5 h-1 bg-amber-500 rounded-full"></span>
+                  <span className="text-amber-900 font-bold">黄色超工况折算曲线</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Line Chart */}
+            <div className="h-72 w-full pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={degradationData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis domain={[70, 102]} tick={{ fontSize: 10 }} unit="%" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '11px'
+                    }}
+                    formatter={(value: any, name: any) => {
+                      if (name === '合同约定衰减基准') return [`${value}%`, name];
+                      if (name === '实测测量SOH') return [`${value}%`, name];
+                      if (name === '黄色超工况折算曲线') return [`${value}%`, name];
+                      return [value, name];
+                    }}
+                  />
+                  <ReferenceLine
+                    y={90.0}
+                    stroke="#f43f5e"
+                    strokeDasharray="4 4"
+                    label={{ value: '首检保证底线 90%', fill: '#f43f5e', fontSize: 10, position: 'right' }}
+                  />
+                  <ReferenceLine
+                    y={80.0}
+                    stroke="#dc2626"
+                    strokeDasharray="4 4"
+                    label={{ value: '10年终期保证底线 80%', fill: '#dc2626', fontSize: 10, position: 'right' }}
+                  />
+                  {/* Contract Baseline */}
+                  <Line
+                    type="monotone"
+                    dataKey="contractCurve"
+                    name="合同约定衰减基准"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                  {/* Actual Curve */}
+                  <Line
+                    type="monotone"
+                    dataKey="actualCurve"
+                    name="实测测量SOH"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: '#10b981' }}
+                    connectNulls={false}
+                  />
+                  {/* Yellow Over-Condition Curve */}
+                  <Line
+                    type="monotone"
+                    dataKey="overConditionCurve"
+                    name="黄色超工况折算曲线"
+                    stroke="#f59e0b"
+                    strokeWidth={3}
+                    strokeDasharray="5 3"
+                    dot={{ r: 4, fill: '#f59e0b' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Insight Note */}
+            <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <strong>超工况曲线分析结论: </strong>
+                当前实际测量 SOH 为 <strong>{currentSoh}%</strong>，略低于合同标称基准 94.8%（偏差 -0.9%）。但根据实际采集到的超工况运行日志，<strong>黄色超工况折算曲线已下探至 {overConditionSohNow}%</strong>。说明实测衰减中约有 <strong>{totalOverConditionLoss}%</strong> 是由于高温环境、大倍率调频脉冲与高 SOC 待机搁置等外部工况应力造成的加速老化，符合合同免责条件。
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Tab 2: Operating Condition Factors Affecting SOH */}
+      {activeSubTab === 'factors' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-600" />
+              <h3 className="text-xs font-bold text-slate-900">
+                影响当前站点 SOH 衰减的超工况因素数据列表与责任归属
+              </h3>
+            </div>
+            <span className="text-xs text-slate-500">
+              累计额外衰减贡献: <strong className="text-amber-700 font-mono">-{totalOverConditionLoss}% SOH</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {overConditionFactors.map(factor => (
+              <div
+                key={factor.id}
+                className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs hover:border-slate-300 transition-all space-y-3"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                      {factor.factorName}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        factor.responsibleParty === 'GRID_DISPATCH'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : factor.responsibleParty === 'OWNER_OPERATION'
+                          ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      责任归属: {factor.responsibleParty === 'GRID_DISPATCH' ? '电网调度工况' : factor.responsibleParty === 'OWNER_OPERATION' ? '业主使用习惯' : '设备运维与环境'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs font-mono">
+                    <span className="text-slate-500">影响权重: <strong className="text-slate-800">{factor.weightPct}%</strong></span>
+                    <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                      额外衰减: -{factor.sohExtraLossPct}% SOH
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
+                    <div className="text-[10px] text-slate-400 font-medium">工况阈值 vs 现场实测</div>
+                    <div className="text-slate-600">正常基线: <strong className="text-slate-800">{factor.baselineLimit}</strong></div>
+                    <div className="text-amber-700 font-bold">实际监测: {factor.actualExceedValue}</div>
+                  </div>
+
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
+                    <div className="text-[10px] text-slate-400 font-medium">累计超标统计与受影响设备</div>
+                    <div className="text-slate-700 font-semibold">{factor.accumulatedHoursOrTimes}</div>
+                    <div className="text-slate-500 text-[11px]">涉及: {factor.affectedUnits}</div>
+                  </div>
+
+                  <div className="bg-indigo-50/60 p-2.5 rounded-lg border border-indigo-200 space-y-1">
+                    <div className="text-[10px] text-indigo-700 font-medium">建议改善与规避措施</div>
+                    <div className="text-indigo-900 text-[11px] leading-relaxed">
+                      {factor.mitigationAdvice}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-600 bg-slate-50/60 p-2 rounded leading-relaxed">
+                  <strong>老化机理说明: </strong>
+                  {factor.description}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 5. Dimension 3 & 4: SOH 值一致性 与 运行工况 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Dimension 3: SOH 值一致性 */}
+      {/* 6. Tab 3: PACK Level SOH Consistency */}
+      {activeSubTab === 'packs' && (
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <Activity className="w-4 h-4 text-indigo-600" />
-              <span>维度三：PACK 级 SOH 值一致性分布与短板偏离</span>
+              <span>PACK 级 SOH 值一致性分布与短板偏离</span>
             </h3>
             <span className="text-[11px] text-slate-500">
               标准差: <strong className="text-slate-800">{sohConsistency.standardDeviation}</strong>
             </span>
           </div>
 
-          {/* Distribution Stats */}
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             {sohConsistency.distribution.map((d, idx) => (
               <div
@@ -348,7 +463,6 @@ export const SohPerformanceTab: React.FC<SohPerformanceTabProps> = ({
             ))}
           </div>
 
-          {/* Detailed Packs Table */}
           <div className="overflow-x-auto border border-slate-200 rounded-lg max-h-64 overflow-y-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 font-medium sticky top-0">
@@ -411,74 +525,60 @@ export const SohPerformanceTab: React.FC<SohPerformanceTabProps> = ({
             </table>
           </div>
         </div>
+      )}
 
-        {/* Dimension 4: 运行工况应力分析 */}
+      {/* 7. Tab 4: Energy Throughput */}
+      {activeSubTab === 'energy' && (
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-indigo-600" />
-              <span>维度四：系统运行工况、DOD 深浅充放与倍率应力</span>
+              <Zap className="w-4 h-4 text-indigo-600" />
+              <span>全生命周期充放电电能量吞吐趋势 (MWh)</span>
             </h3>
-            <span className="text-[11px] text-slate-500">
-              平均工况温度: <strong className="text-slate-800">{operatingCondition.avgOperatingTemp}℃</strong>
-            </span>
-          </div>
-
-          {/* DOD Distribution */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
-              <span>充放电深度 (DOD) 区间分布</span>
-              <span className="text-[11px] text-slate-400 font-normal">基于历史吞吐等效</span>
-            </div>
-            <div className="space-y-1.5">
-              {operatingCondition.dodDistribution.map((dod, idx) => (
-                <div key={idx} className="space-y-0.5">
-                  <div className="flex items-center justify-between text-xs text-slate-700">
-                    <span>{dod.range}</span>
-                    <span className="font-mono font-bold text-slate-900">
-                      {dod.percentage}% ({dod.cycleEquivalent} FEC)
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${dod.percentage}%` }}
-                      className={`h-full rounded-full ${
-                        idx === 2 ? 'bg-amber-500' : idx === 1 ? 'bg-blue-500' : 'bg-emerald-500'
-                      }`}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center gap-3 text-xs font-mono">
+              <span className="text-slate-500">
+                累计充: <strong className="text-slate-800">{electricalEnergy.cumulativeChargedMwh} MWh</strong>
+              </span>
+              <span className="text-slate-500">
+                累计放: <strong className="text-emerald-600">{electricalEnergy.cumulativeDischargedMwh} MWh</strong>
+              </span>
             </div>
           </div>
 
-          {/* C-Rate Stress Range */}
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <div className="text-xs font-bold text-slate-800">充放电倍率 (C-Rate) 运行区间应力分布</div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {operatingCondition.cRateDistribution.map((c, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between"
-                >
-                  <div>
-                    <span className="font-medium text-slate-800 block text-[11px]">{c.rateRange}</span>
-                    <span className="text-[10px] text-slate-400">运行工时占比</span>
-                  </div>
-                  <span className="font-mono font-black text-indigo-700 text-sm">
-                    {c.hoursPct}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs text-indigo-900">
-            <strong>工况寿命研判: </strong>
-            当前站点深充深放 (DOD &gt; 80%) 占比 50%，高 SOC (&gt;90%) 静置时间占比为 <strong>{operatingCondition.highSocRestRatioPct}%</strong>。根据阿伦尼乌斯老化模型，建议在光伏平价时段将静置 SOC 控制在 70% 附近以抑制日历衰减。
+          <div className="h-56 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={electricalEnergy.dailyTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} unit=" MWh" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '11px'
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }} />
+                <Bar
+                  dataKey="chargedMwh"
+                  name="单日充电量 (MWh)"
+                  fill="#93c5fd"
+                  barSize={14}
+                  radius={[3, 3, 0, 0]}
+                />
+                <Bar
+                  dataKey="dischargedMwh"
+                  name="单日放电量 (MWh)"
+                  fill="#3b82f6"
+                  barSize={14}
+                  radius={[3, 3, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

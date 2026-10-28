@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Filter,
-  FolderKanban
+  FolderKanban,
+  BarChart3
 } from 'lucide-react';
 
 interface PerformanceMonitorViewProps {
@@ -37,7 +38,7 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
   onSelectSite,
   onOpenReports
 }) => {
-  const { sites, navigateToFlexibleWarranty } = useApp();
+  const { sites, navigateToFlexibleWarranty, setActiveTab } = useApp();
 
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [regionFilter, setRegionFilter] = useState('ALL');
@@ -206,6 +207,15 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
               <option value="2026-06">2026-06 (基线评估)</option>
             </select>
           </div>
+
+          <button
+            onClick={() => setActiveTab('performance_stats')}
+            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+            title="查看全国数万级电站全网性能工况统计看板"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>全网性能工况统计</span>
+          </button>
 
           <button
             onClick={() => navigateToFlexibleWarranty()}

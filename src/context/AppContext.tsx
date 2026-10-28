@@ -58,6 +58,7 @@ export type NavigationTab =
   | 'alerts'
   | 'analytics'
   | 'performance_evaluation'
+  | 'performance_stats'
   | 'flexible_warranty'
   | 'fault_diagnosis'
   | 'reports'
@@ -94,6 +95,7 @@ interface AppContextType {
   setPerformanceDetailSiteId: (siteId: string | null) => void;
   navigateToPerformanceDetail: (siteId: string) => void;
   navigateToPerformanceMonitor: () => void;
+  navigateToPerformanceStats: () => void;
 
   // Flexible warranty state & drilldown
   flexibleWarrantyDetailSiteId: string | null;
@@ -311,6 +313,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const navigateToPerformanceMonitor = () => {
     setPerformanceDetailSiteId(null);
     setActiveTab('performance_evaluation');
+  };
+
+  const navigateToPerformanceStats = () => {
+    setActiveTab('performance_stats');
   };
 
   const navigateToFlexibleWarranty = (siteId?: string) => {
@@ -1099,6 +1105,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setPerformanceDetailSiteId,
         navigateToPerformanceDetail,
         navigateToPerformanceMonitor,
+        navigateToPerformanceStats,
         flexibleWarrantyDetailSiteId,
         setFlexibleWarrantyDetailSiteId,
         navigateToFlexibleWarranty,

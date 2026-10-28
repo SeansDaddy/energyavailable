@@ -26,7 +26,12 @@ import {
   SocConsistencyData,
   ElectricalEnergyData,
   SohConsistencyData,
-  OperatingConditionData
+  OperatingConditionData,
+  GridMeterRecord,
+  SiteContractGuarantee,
+  PerformanceCommitmentMetrics,
+  TopologyNodeData,
+  OverConditionSohFactor
 } from '../types/performanceEvaluation';
 import {
   INITIAL_PERFORMANCE_FACTORS,
@@ -1106,3 +1111,601 @@ export function getSiteSohComprehensiveData(siteId: string): SohComprehensiveDat
     operatingCondition
   };
 }
+
+// 5. 并网点电表数据获取
+export function getSiteGridMeterRecords(siteId: string): GridMeterRecord[] {
+  const summary = INITIAL_SITE_PERFORMANCE_SUMMARIES.find(s => s.siteId === siteId) || INITIAL_SITE_PERFORMANCE_SUMMARIES[0];
+  const cap = summary.capacityMw || 10;
+  
+  return [
+    {
+      id: `mtr-rec-${siteId}-01`,
+      siteId,
+      meterCode: `MTR-35KV-${summary.siteCode.slice(-4)}-01`,
+      meterName: '35kV并网关口双向主电度表 (1#主变)',
+      readingDate: '2026-08-31 23:59',
+      readingType: 'SETTLEMENT',
+      forwardActiveEnergyKwh: Math.round(cap * 215000), // 上网/放电电量
+      reverseActiveEnergyKwh: Math.round(cap * 242000), // 下网/充电电量
+      forwardReactiveEnergyKvarh: Math.round(cap * 28000),
+      reverseReactiveEnergyKvarh: Math.round(cap * 31000),
+      activePowerKw: Math.round(cap * 960),
+      powerFactor: 0.994,
+      voltageKv: 35.18,
+      currentA: Math.round((cap * 960) / (1.732 * 35.18 * 0.994)),
+      ctRatio: '600/5',
+      ptRatio: '35000/100',
+      multiplier: 42000,
+      operator: '张伟 (持证计量工程师)',
+      auditStatus: 'VERIFIED',
+      verifiedBy: '李建国 (调度专责)',
+      notes: '2026年8月月度电费关口双向计量结算底数，与电网营销系统核对无偏差，线损率 1.28% 达标。'
+    },
+    {
+      id: `mtr-rec-${siteId}-02`,
+      siteId,
+      meterCode: `MTR-35KV-${summary.siteCode.slice(-4)}-02`,
+      meterName: '35kV并网关口副电度表 (备用比对表)',
+      readingDate: '2026-08-31 23:59',
+      readingType: 'ROUTINE',
+      forwardActiveEnergyKwh: Math.round(cap * 214940),
+      reverseActiveEnergyKwh: Math.round(cap * 241910),
+      forwardReactiveEnergyKvarh: Math.round(cap * 27950),
+      reverseReactiveEnergyKvarh: Math.round(cap * 30920),
+      activePowerKw: Math.round(cap * 958),
+      powerFactor: 0.993,
+      voltageKv: 35.18,
+      currentA: Math.round((cap * 958) / (1.732 * 35.18 * 0.993)),
+      ctRatio: '600/5',
+      ptRatio: '35000/100',
+      multiplier: 42000,
+      operator: '陈志远 (现场运检员)',
+      auditStatus: 'VERIFIED',
+      verifiedBy: '张伟',
+      notes: '副表与主表正向有功误差为 0.028%，在规程 0.2 级允许范围内。'
+    },
+    {
+      id: `mtr-rec-${siteId}-03`,
+      siteId,
+      meterCode: `MTR-35KV-${summary.siteCode.slice(-4)}-01`,
+      meterName: '35kV并网关口双向主电度表 (1#主变)',
+      readingDate: '2026-08-15 12:00',
+      readingType: 'CALIBRATION',
+      forwardActiveEnergyKwh: Math.round(cap * 106200),
+      reverseActiveEnergyKwh: Math.round(cap * 119500),
+      forwardReactiveEnergyKvarh: Math.round(cap * 13800),
+      reverseReactiveEnergyKvarh: Math.round(cap * 15300),
+      activePowerKw: Math.round(cap * 920),
+      powerFactor: 0.995,
+      voltageKv: 35.22,
+      currentA: Math.round((cap * 920) / (1.732 * 35.22 * 0.995)),
+      ctRatio: '600/5',
+      ptRatio: '35000/100',
+      multiplier: 42000,
+      operator: '黄敏 (第三方电检院试验员)',
+      auditStatus: 'VERIFIED',
+      verifiedBy: '省计量测试所',
+      notes: '年中电能表现场比对校验，0.2S 级精度合规，施加铅封完整。'
+    },
+    {
+      id: `mtr-rec-${siteId}-04`,
+      siteId,
+      meterCode: `MTR-35KV-${summary.siteCode.slice(-4)}-01`,
+      meterName: '35kV并网关口双向主电度表 (1#主变)',
+      readingDate: '2026-07-31 23:59',
+      readingType: 'SETTLEMENT',
+      forwardActiveEnergyKwh: Math.round(cap * 211000),
+      reverseActiveEnergyKwh: Math.round(cap * 238000),
+      forwardReactiveEnergyKvarh: Math.round(cap * 27500),
+      reverseReactiveEnergyKvarh: Math.round(cap * 30500),
+      activePowerKw: Math.round(cap * 945),
+      powerFactor: 0.992,
+      voltageKv: 35.15,
+      currentA: Math.round((cap * 945) / (1.732 * 35.15 * 0.992)),
+      ctRatio: '600/5',
+      ptRatio: '35000/100',
+      multiplier: 42000,
+      operator: '张伟 (持证计量工程师)',
+      auditStatus: 'VERIFIED',
+      verifiedBy: '李建国 (调度专责)',
+      notes: '2026年7月结算电表数据，全量结算结清。'
+    }
+  ];
+}
+
+// 6. 站点性能保障合同条款获取
+export function getSiteContractGuarantee(siteId: string): SiteContractGuarantee {
+  const summary = INITIAL_SITE_PERFORMANCE_SUMMARIES.find(s => s.siteId === siteId) || INITIAL_SITE_PERFORMANCE_SUMMARIES[0];
+  const isRisky = summary.grade === 'RISKY' || summary.grade === 'MEDIUM';
+
+  return {
+    siteId,
+    contractNo: `HT-ESS-${summary.siteCode.slice(-4)}-PERF-2024`,
+    contractName: `${summary.siteName} 储能系统全生命周期性能保障与运维协议`,
+    clientName: summary.customer || '电网及业主联合体',
+    effectiveDate: '2024-06-15',
+    warrantyPeriodYears: 10,
+    currentYearOfOperation: 2.2,
+    guaranteeDepositAmount: '¥ 3,600,000 (保函生效中)',
+    contractSignDate: '2024-05-28',
+    clauses: [
+      {
+        clauseNo: '第 4.1 条',
+        title: '交流往返能效 (RTE) 全生命周期阶梯保证',
+        category: 'RTE',
+        guaranteedTarget: '商业运营第1~3年交流RTE ≥ 87.50%；第4~6年 ≥ 86.00%；第7~10年 ≥ 84.50%',
+        currentActualValue: `${summary.rtePct}% (当前第2年)`,
+        complianceStatus: summary.rtePct >= 87.5 ? 'COMPLIANT' : 'WARNING',
+        clauseText: '乙方承诺系统在并网点 35kV 关口计量处的交流侧往返综合能效（AC-AC RTE）在额定充放电工况下满足阶梯保证指标。若月度考核 RTE 低于保证值，乙方应按电费差价补偿损失。',
+        penaltyMechanism: '低于保证基线每 0.5%，当月度运维服务费扣减 2.5%，并按实测电量差额补偿峰谷套利损失。',
+        riskAssessment: summary.rtePct >= 87.5 ? '当前能效 87.8% 优于合同保证线，履约安全裕度 +0.3%' : '当前能效偏低，受液冷辅助功耗及局部配电线损影响，存在临界考核风险。',
+        exemptionConditions: '若因电网调度强制要求低负荷率 (<0.2C) 或频繁超频短脉冲调频工况运行导致的能效下降，经双方复核数据后予以免责豁免。'
+      },
+      {
+        clauseNo: '第 4.2 条',
+        title: 'SOH 与容量衰减率保证及终期底线保证',
+        category: 'SOH_DEGRADATION',
+        guaranteedTarget: '首年容量衰减率 ≤ 3.00%；后续年均衰减率 ≤ 1.80%；10年期末可用容量保证率 SOH ≥ 80.00%',
+        currentActualValue: `${(summary.minPackSoh + 6.2).toFixed(1)}% (基准线 94.8%)`,
+        complianceStatus: isRisky ? 'WARNING' : 'COMPLIANT',
+        clauseText: '在标准充放电工况（0.5C/0.5C，电芯温度 15℃~35℃，DOD ≤ 90%）下，电池系统实际可用容量衰减不得超出合同年均衰减限值。',
+        penaltyMechanism: '年终容量标定试验若实测 SOH 低于合同保证曲线，乙方应在 30 日内免费补充电池簇或更换短板模组，直至恢复至合同基准线。',
+        riskAssessment: '当前全站加权 SOH 达标，但受个别簇超工况高温与深充深放影响，黄色超工况预测曲线呈加速下探趋势。',
+        exemptionConditions: '因电网调度要求深度过放 (DOD > 95%)、长期高 SOC (>90%) 在高环温下搁置或超出 6000 次等效循环的，按超工况免责算法折减赔付责任。'
+      },
+      {
+        clauseNo: '第 4.3 条',
+        title: '储能系统综合等效可用系数 (EAF) 保证',
+        category: 'AVAILABILITY',
+        guaranteedTarget: '商业运营期年度等效可用系数 EAF ≥ 99.00%，单次非计划停运时长不超过 24 小时',
+        currentActualValue: `${summary.eaf || 99.28}%`,
+        complianceStatus: (summary.eaf || 99.28) >= 99.0 ? 'COMPLIANT' : 'WARNING',
+        clauseText: '系统可充放状态小时数在考核周期内需维持高可用性，计划检修需提前 7 天报备且避开迎峰度夏保供期。',
+        penaltyMechanism: 'EAF 每下降 0.1%，扣除季度质保考核分 2 分，跌破 98.0% 扣罚履约保证金 5%。',
+        riskAssessment: '全年累计非计划停机时长 63.2 小时，远低于上限 87.6 小时，可用度履约情况优良。',
+        exemptionConditions: '电网侧故障失压、雷击等不可抗力及甲方原因引起的非计划停运计入免责可用时间。'
+      },
+      {
+        clauseNo: '第 4.4 条',
+        title: '实测可用电能量 (AUC) 履约交付保证',
+        category: 'AUC_CAPACITY',
+        guaranteedTarget: `额定工况下保证实测放电可用容量 AUC ≥ ${(summary.capacityMw * 1.94).toFixed(2)} MWh (额定 ${(summary.capacityMw * 2).toFixed(1)} MWh)`,
+        currentActualValue: `${(summary.capacityMw * 1.96).toFixed(2)} MWh`,
+        complianceStatus: 'COMPLIANT',
+        clauseText: '每年定期开展充放电容量标定试验，放电末期切断前单次放电有效积分容量须达到保证阈值。',
+        penaltyMechanism: '单次标定若不达标，限期 14 日内开展主动均衡消缺，并重新标定，复测费用由责任方承担。',
+        riskAssessment: '当前可用容量保持率 98.0%，余量充足。',
+        exemptionConditions: '试验时环境温度低于 5℃ 或高于 40℃ 且未达到额定恒温条件的测试数据不作为判定违约依据。'
+      },
+      {
+        clauseNo: '第 4.5 条',
+        title: '电网调度指令响应速度与 AGC 调节精度',
+        category: 'GRID_DISPATCH',
+        guaranteedTarget: '有功/无功调度响应时间 ≤ 200ms；稳态调节精度误差 ≤ ±1.00%；AGC达标率 ≥ 98.00%',
+        currentActualValue: '142ms / 精度 ±0.68% / 达标率 99.4%',
+        complianceStatus: 'COMPLIANT',
+        clauseText: 'PCS 及站控系统需完全兼容电网 AGC/AVC 快速调度指令，满足电力现货市场及辅助服务考核细则。',
+        penaltyMechanism: '因系统响应迟滞导致的电网双细则考核罚款，全额由设备及运维责任方承担。',
+        riskAssessment: 'BMS 与 PCS 毫秒级通信闭环稳定，考核达标率处于区域前 5%。',
+        exemptionConditions: '电网通讯通道光纤中断或调度主站指令格式异常导致的拒动免除考核。'
+      },
+      {
+        clauseNo: '第 4.6 条',
+        title: '热管理与电芯温差边界控制要求',
+        category: 'THERMAL_BOUNDARY',
+        guaranteedTarget: '全站电池电芯工作温区 15℃ ~ 35℃，全工况运行最大电芯温差 ΔT ≤ 4.00℃',
+        currentActualValue: `最高 ${summary.maxCmuTemp}℃ / ΔT ${summary.maxCmuDeltaT}℃`,
+        complianceStatus: summary.maxCmuDeltaT <= 4.0 ? 'COMPLIANT' : 'WARNING',
+        clauseText: '液冷温控机组需确保电池簇内各层模组冷却均匀，抑制热失控及局部加速日历老化。',
+        penaltyMechanism: '连续 3 日电芯温差超过 5.0℃ 触发严重质量缺陷通报，须在 48 小时内完成阀门及管路排障。',
+        riskAssessment: summary.maxCmuDeltaT > 4.0 ? '局部高压簇顶层由于管路流量衰减温差达 4.8℃，需平衡水力管阻。' : '全站液冷热平衡正常。',
+        exemptionConditions: '极端外部气象灾害导致环境温度突破 45℃ 设计上限时，系统自动降载运行不计入缺陷。'
+      },
+      {
+        clauseNo: '第 4.7 条',
+        title: '超工况运行免责认定与数据存证机制',
+        category: 'PENALTY_COMPENSATION',
+        guaranteedTarget: '超温 (>35℃)、超倍率 (>0.8C)、超深度放电 (DOD>90%) 产生的数据由系统自动打标存证',
+        currentActualValue: '自动化打标规则已加载运行',
+        complianceStatus: 'COMPLIANT',
+        clauseText: '双方确认：数字化专业服务运营平台自动记录的超工况因子数据作为免责与扣罚划分的唯一数据源。',
+        penaltyMechanism: '非合同工况造成的 SOH 额外衰减，在年度终期考核中依据黄色超工况折算曲线扣减。',
+        riskAssessment: '存证算法规则清晰，具备不可篡改日志链条。',
+        exemptionConditions: '任何非计划人为断电导致的数据断链需由现场双方工作票确认。'
+      }
+    ]
+  };
+}
+
+// 7. 站点性能承诺指标录入与配置数据获取
+export function getSiteCommitmentMetrics(siteId: string): PerformanceCommitmentMetrics {
+  const summary = INITIAL_SITE_PERFORMANCE_SUMMARIES.find(s => s.siteId === siteId) || INITIAL_SITE_PERFORMANCE_SUMMARIES[0];
+  const cap = summary.capacityMw || 10;
+
+  return {
+    siteId,
+    version: 'V2.2',
+    updatedAt: '2026-08-20 16:30',
+    updatedBy: '赵峰 (专业服务运营总监)',
+    reviewStatus: 'APPROVED',
+    rteGuaranteePct: 87.50,
+    sohFloorPct: 90.00,
+    availabilityGuaranteePct: 99.20,
+    aucMinMwh: Number((cap * 1.94).toFixed(2)),
+    maxAnnualDegradationPct: 1.80,
+    maxCellDeltaTCelsius: 4.00,
+    maxAllowedDeltaSocPct: 5.00,
+    lifecycleCommitmentCycles: 6000,
+    maxGridMeterLossPct: 1.50,
+    benchmarkTempCelsius: 25.0,
+    amendmentBasis: '依据2026年半年度容量标定试验结论及三方技术补充协议（第02号）核准承诺基线。',
+    auditLog: [
+      {
+        version: 'V2.2',
+        modifiedAt: '2026-08-20 16:30',
+        modifier: '赵峰 (专业服务运营总监)',
+        changeSummary: '将标定可用容量底线从 19.20 MWh 微调至 19.40 MWh；固化关口线损率控制上限 ≤ 1.50%。'
+      },
+      {
+        version: 'V2.1',
+        modifiedAt: '2026-03-12 10:15',
+        modifier: '张建国 (资深系统工程师)',
+        changeSummary: '根据迎峰度夏保供要求，明确最大电芯温差允许阈值为 4.0℃，加入高压配电盒线损考核条款。'
+      },
+      {
+        version: 'V1.0',
+        modifiedAt: '2024-06-15 09:00',
+        modifier: '系统初始化 (合同投运录入)',
+        changeSummary: '按照主采购合同性能质量保证条款初始化承诺指标库。'
+      }
+    ]
+  };
+}
+
+// 8. 站点拓扑结构数据获取 (含SLA异常节点与链路高亮)
+export function getSiteTopologyData(siteId: string): TopologyNodeData[] {
+  const summary = INITIAL_SITE_PERFORMANCE_SUMMARIES.find(s => s.siteId === siteId) || INITIAL_SITE_PERFORMANCE_SUMMARIES[0];
+  const isRisky = summary.grade === 'RISKY' || summary.grade === 'MEDIUM';
+
+  return [
+    {
+      id: 'node-grid-01',
+      code: 'GRID-35KV',
+      name: '35kV 电网并网点 (关口计量)',
+      level: 'GRID_TIE',
+      levelLabel: '并网关口层',
+      parentIds: [],
+      metrics: {
+        voltage: '35.18 kV',
+        power: '9.62 MW',
+        efficiency: '99.85%',
+        slaScore: 99.8,
+        slaTarget: 99.5
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-trans-01',
+      code: 'TR-35/0.69',
+      name: '1# 升压箱变 (35kV / 0.69kV)',
+      level: 'TRANSFORMER',
+      levelLabel: '升压变电层',
+      parentIds: ['node-grid-01'],
+      metrics: {
+        voltage: '0.69 kV',
+        current: '8040 A',
+        power: '9.51 MW',
+        temperature: '58.4 ℃',
+        efficiency: '98.85%',
+        slaScore: 99.4,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-hv-01',
+      code: 'SW-HV-01',
+      name: '交流进线高压开关柜与母线',
+      level: 'HV_SWITCH',
+      levelLabel: '交流配电层',
+      parentIds: ['node-trans-01'],
+      metrics: {
+        voltage: '690 V',
+        current: '8010 A',
+        power: '9.48 MW',
+        efficiency: '99.70%',
+        slaScore: 99.2,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-pcs-01',
+      code: 'PCS-UNIT-01',
+      name: '1# 储能双向变流器 PCS (2.5MW)',
+      level: 'PCS',
+      levelLabel: '变流PCS层',
+      parentIds: ['node-hv-01'],
+      metrics: {
+        voltage: '690V / 1250V',
+        power: '2.42 MW',
+        temperature: '62.5 ℃',
+        efficiency: '98.40%',
+        slaScore: 99.5,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-pcs-02',
+      code: 'PCS-UNIT-02',
+      name: '2# 储能双向变流器 PCS (2.5MW)',
+      level: 'PCS',
+      levelLabel: '变流PCS层',
+      parentIds: ['node-hv-01'],
+      metrics: {
+        voltage: '690V / 1242V',
+        power: '2.31 MW',
+        temperature: '74.8 ℃',
+        efficiency: isRisky ? '96.20%' : '98.15%',
+        slaScore: isRisky ? 97.4 : 99.1,
+        slaTarget: 99.0
+      },
+      isSlaBreached: isRisky,
+      slaBreachReason: isRisky ? 'IGBT模块结温过高导致限功率降载，转换效率 96.2% 低于保证值 98.0%' : undefined,
+      status: isRisky ? 'CRITICAL' : 'NORMAL',
+      linkToParentSlaBreached: isRisky,
+      alarmCount: isRisky ? 3 : 0
+    },
+    {
+      id: 'node-dc-box-01',
+      code: 'DC-BOX-01',
+      name: '1# 直流高压汇流箱与配电柜',
+      level: 'DC_COMBINER',
+      levelLabel: '直流汇流层',
+      parentIds: ['node-pcs-01'],
+      metrics: {
+        voltage: '1250 V',
+        current: '1940 A',
+        efficiency: '99.10%',
+        temperature: '34.2 ℃',
+        slaScore: 99.3,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-dc-box-02',
+      code: 'DC-BOX-02',
+      name: '2# 直流高压汇流箱 (线缆损耗偏大)',
+      level: 'DC_COMBINER',
+      levelLabel: '直流汇流层',
+      parentIds: ['node-pcs-02'],
+      metrics: {
+        voltage: '1242 V',
+        current: '1860 A',
+        efficiency: isRisky ? '97.40%' : '99.05%',
+        temperature: isRisky ? '48.6 ℃' : '36.5 ℃',
+        slaScore: isRisky ? 98.1 : 99.2,
+        slaTarget: 99.0
+      },
+      isSlaBreached: isRisky,
+      slaBreachReason: isRisky ? '主正极电缆端子接触电阻超标发热，线缆压降与发热损耗超出 1.5% 阈值' : undefined,
+      status: isRisky ? 'WARNING' : 'NORMAL',
+      linkToParentSlaBreached: isRisky,
+      alarmCount: isRisky ? 2 : 0
+    },
+    {
+      id: 'node-cluster-c01',
+      code: 'CLUSTER-C01',
+      name: '1# 电池簇 (500kWh)',
+      level: 'BATTERY_CLUSTER',
+      levelLabel: '电池储能簇',
+      parentIds: ['node-dc-box-01'],
+      metrics: {
+        voltage: '1252 V',
+        soc: '68.5%',
+        soh: '96.8%',
+        temperature: '26.4 ℃',
+        slaScore: 99.6,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-cluster-c02',
+      code: 'CLUSTER-C02',
+      name: '2# 电池簇 (500kWh)',
+      level: 'BATTERY_CLUSTER',
+      levelLabel: '电池储能簇',
+      parentIds: ['node-dc-box-01'],
+      metrics: {
+        voltage: '1250 V',
+        soc: '67.8%',
+        soh: '96.2%',
+        temperature: '27.1 ℃',
+        slaScore: 99.4,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-cluster-c03',
+      code: 'CLUSTER-C03',
+      name: '3# 电池簇 (SOH短板簇)',
+      level: 'BATTERY_CLUSTER',
+      levelLabel: '电池储能簇',
+      parentIds: ['node-dc-box-02'],
+      metrics: {
+        voltage: '1238 V',
+        soc: '62.4%',
+        soh: `${summary.minPackSoh}%`,
+        temperature: `${summary.maxCmuTemp} ℃`,
+        slaScore: isRisky ? 96.8 : 99.0,
+        slaTarget: 99.0
+      },
+      isSlaBreached: isRisky,
+      slaBreachReason: isRisky ? `簇内 PACK-03 发生 SOH 衰减短板 (${summary.minPackSoh}%)，单体最大温差 ${summary.maxCmuDeltaT}℃ 突破限值` : undefined,
+      status: isRisky ? 'CRITICAL' : 'NORMAL',
+      linkToParentSlaBreached: isRisky,
+      alarmCount: isRisky ? 4 : 0
+    },
+    {
+      id: 'node-cluster-c04',
+      code: 'CLUSTER-C04',
+      name: '4# 电池簇 (500kWh)',
+      level: 'BATTERY_CLUSTER',
+      levelLabel: '电池储能簇',
+      parentIds: ['node-dc-box-02'],
+      metrics: {
+        voltage: '1246 V',
+        soc: '66.9%',
+        soh: '95.8%',
+        temperature: '28.5 ℃',
+        slaScore: 99.1,
+        slaTarget: 99.0
+      },
+      isSlaBreached: false,
+      status: 'NORMAL',
+      alarmCount: 0
+    },
+    {
+      id: 'node-aux-chiller',
+      code: 'CHILLER-LQ-01',
+      name: '智能变频液冷温控机组与循环泵',
+      level: 'AUX_COOLING',
+      levelLabel: '辅机液冷层',
+      parentIds: ['node-hv-01'],
+      metrics: {
+        power: '42.8 kW',
+        temperature: '供水 18.2℃ / 回水 22.8℃',
+        efficiency: 'COP 3.42',
+        slaScore: isRisky ? 98.4 : 99.5,
+        slaTarget: 99.0
+      },
+      isSlaBreached: isRisky,
+      slaBreachReason: isRisky ? '循环水泵2#变频器告警，导致末端 3# 簇流量不足，辅电能耗上升 8.4%' : undefined,
+      status: isRisky ? 'WARNING' : 'NORMAL',
+      linkToParentSlaBreached: isRisky,
+      alarmCount: isRisky ? 1 : 0
+    }
+  ];
+}
+
+// 9. 超工况影响 SOH 衰减因子列表获取
+export function getSiteOverConditionSohFactors(siteId: string): OverConditionSohFactor[] {
+  return [
+    {
+      id: 'factor-overtemp',
+      factorName: '电芯超温运行 (>35℃ 持续高温工况)',
+      description: '电芯在高于 35℃ 高温区间充放电，会剧烈加速 SEI 膜分解与二次生长，消耗活性锂离子，导致日历老化与容量不可逆衰退加剧 2.5~3 倍。',
+      baselineLimit: '≤ 35.0 ℃',
+      actualExceedValue: '最高实测 38.6 ℃ (平均 36.8 ℃)',
+      accumulatedHoursOrTimes: '累计超温时长 148 小时',
+      sohExtraLossPct: 0.58,
+      weightPct: 36.2,
+      affectedUnits: '3# 电池簇、PACK-03-01、M02-04 模组',
+      mitigationAdvice: '将液冷机组启动阈值从 30℃ 下调至 27℃；平衡 3# 簇冷却水路分流调节阀开度，消除局部死角。',
+      responsibleParty: 'EQUIPMENT_MAINTENANCE'
+    },
+    {
+      id: 'factor-crate',
+      factorName: '高倍率瞬态脉冲调频 (>0.8C 大电流充放)',
+      description: '受电网二次调频频繁快速爬坡调度影响，电芯长期承受瞬间 >0.8C 大倍率冲击，加剧浓差极化与颗粒微裂纹扩展。',
+      baselineLimit: '额定工况 ≤ 0.50 C',
+      actualExceedValue: '最大脉冲倍率 0.94 C',
+      accumulatedHoursOrTimes: '累计高倍率调频 382 次 (工时 36.5h)',
+      sohExtraLossPct: 0.42,
+      weightPct: 26.3,
+      affectedUnits: '全站所有电池簇及变流器 PCS-02',
+      mitigationAdvice: '在站控能量管理系统 (EMS) 中配置限功率平滑滤波算法，削平 0.8C 以上持续时间超过 30s 的刚性脉冲。',
+      responsibleParty: 'GRID_DISPATCH'
+    },
+    {
+      id: 'factor-deep-dod',
+      factorName: '极限深度放电 (DOD > 90% 甚至触及 95%)',
+      description: '低 SOC 深度过放使正极晶格结构产生应力坍塌，负极电位过高造成集流体铜箔微溶解风险。',
+      baselineLimit: '推荐 DOD ≤ 85.0 % (截止 SOC ≥ 10%)',
+      actualExceedValue: '放电截止 SOC 最低达到 3.8% (DOD 96.2%)',
+      accumulatedHoursOrTimes: '累计极深充放 52 次循环',
+      sohExtraLossPct: 0.35,
+      weightPct: 21.9,
+      affectedUnits: 'CLUSTER-#02, CLUSTER-#03',
+      mitigationAdvice: '在 EMS 调度策略中提高放电截止 SOC 底线至 6.0%，避免末期低压区被动强行放空。',
+      responsibleParty: 'OWNER_OPERATION'
+    },
+    {
+      id: 'factor-high-soc-rest',
+      factorName: '高 SOC 高温长期静置 (>90% SOC 持续48h+)',
+      description: '电池在满电或高压态搁置，电解液在高电位下持续发生氧化分解副反应，加速活性物质脱落。',
+      baselineLimit: '非调峰待机静置 SOC ≤ 75.0 %',
+      actualExceedValue: '多次在 98% SOC 待机静置超过 72 小时',
+      accumulatedHoursOrTimes: '高 SOC 搁置累计 210 小时',
+      sohExtraLossPct: 0.26,
+      weightPct: 16.3,
+      affectedUnits: '全站电池簇',
+      mitigationAdvice: '在光伏无消纳或电网无放电调度的平水期，指令储能站自动调回 65%~70% 的最佳日历寿命搁置区间。',
+      responsibleParty: 'OWNER_OPERATION'
+    },
+    {
+      id: 'factor-cell-delta-v',
+      factorName: '模组单体压差过大诱发局部过充过放',
+      description: '部分木桶短板电芯容量偏小，充放电末端提前达到电压保护截断线，被动承受更深度的相对循环工况。',
+      baselineLimit: '模组末期压差 ΔV ≤ 30 mV',
+      actualExceedValue: '末期最大压差 68 mV',
+      accumulatedHoursOrTimes: '近 30 天每日触发末期木桶截断',
+      sohExtraLossPct: 0.18,
+      weightPct: 11.2,
+      affectedUnits: 'M02-04 模组及周边单体',
+      mitigationAdvice: '立即在低谷平价时段启用主动均衡仪或下发 BMS 补电均衡工单，消除 68mV 离散度。',
+      responsibleParty: 'EQUIPMENT_MAINTENANCE'
+    },
+    {
+      id: 'factor-low-temp-charge',
+      factorName: '低温环境强充极化与微析锂应力',
+      description: '冬季清晨低气温工况下未充分预热即快速大电流充电，负极表面石墨层锂离子嵌入受阻诱发锂枝晶析出。',
+      baselineLimit: '充电允许最低电芯温度 ≥ 15.0 ℃',
+      actualExceedValue: '曾在 8.5 ℃ 强制启动 0.45C 充电',
+      accumulatedHoursOrTimes: '累计低温充电 14 次',
+      sohExtraLossPct: 0.15,
+      weightPct: 9.4,
+      affectedUnits: '靠外侧风向舱室模组',
+      mitigationAdvice: '严密联动液冷辅热循环系统，确保电芯均匀预热至 15℃ 以上再下发闭合直流断路器指令。',
+      responsibleParty: 'EQUIPMENT_MAINTENANCE'
+    }
+  ];
+}
+
+// 10. 全生命周期 SOH 衰减曲线数据 (包含合同曲线、实测曲线、黄色超工况折算曲线)
+export function getSiteSohDegradationTrend(siteId: string) {
+  const summary = INITIAL_SITE_PERFORMANCE_SUMMARIES.find(s => s.siteId === siteId) || INITIAL_SITE_PERFORMANCE_SUMMARIES[0];
+  const isRisky = summary.grade === 'RISKY' || summary.grade === 'MEDIUM';
+
+  return [
+    { year: '投运初', month: '2024-06 (Y0)', contractCurve: 100.0, actualCurve: 100.0, overConditionCurve: 100.0, note: '初始商业投运' },
+    { year: '半周年', month: '2024-12 (Y0.5)', contractCurve: 98.5, actualCurve: 98.7, overConditionCurve: 98.3, note: '初期首检正常' },
+    { year: '第1年', month: '2025-06 (Y1.0)', contractCurve: 97.0, actualCurve: 97.2, overConditionCurve: 96.6, note: '年度容量标定试验' },
+    { year: '第1.5年', month: '2025-12 (Y1.5)', contractCurve: 96.1, actualCurve: 95.8, overConditionCurve: 94.8, note: '迎峰度冬高负荷' },
+    { year: '第2年', month: '2026-06 (Y2.0)', contractCurve: 95.2, actualCurve: isRisky ? 94.2 : 94.9, overConditionCurve: isRisky ? 92.8 : 93.9, note: '当前评估节点' },
+    { year: '第2.2年', month: '2026-08 (当前)', contractCurve: 94.8, actualCurve: isRisky ? 93.9 : 94.6, overConditionCurve: isRisky ? 92.4 : 93.6, note: '最新月度体检' },
+    { year: '第3年(预测)', month: '2027-06 (Y3.0)', contractCurve: 93.4, actualCurve: null, overConditionCurve: isRisky ? 90.5 : 92.2, note: '若维持超工况预测加速下探' },
+    { year: '第4年(预测)', month: '2028-06 (Y4.0)', contractCurve: 91.6, actualCurve: null, overConditionCurve: isRisky ? 88.2 : 90.3, note: '模型加速老化折算' },
+    { year: '第5年(预测)', month: '2029-06 (Y5.0)', contractCurve: 89.8, actualCurve: null, overConditionCurve: isRisky ? 85.8 : 88.4, note: '超工况影响累积' },
+    { year: '第10年(终期)', month: '2034-06 (Y10)', contractCurve: 80.0, actualCurve: null, overConditionCurve: isRisky ? 74.5 : 78.2, note: '期末保证底线 80%' }
+  ];
+}
+

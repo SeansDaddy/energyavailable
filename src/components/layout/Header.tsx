@@ -50,13 +50,13 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveTab('workbench')}>
           <div>
             <div className="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              能源站点可用度管理系统
+              专业服务运营平台
               <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
                 SYSTEM PROD
               </span>
             </div>
             <div className="text-[11px] text-slate-500 font-medium">
-              Energy Site Availability Lifecycle (数万级站点规模)
+              Professional Service Operations Platform (数万级站点规模)
             </div>
           </div>
         </div>

@@ -66,9 +66,9 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 2. 性能与质保 (性能工况 & 灵活质保平级展示)
+    // 2. 性能工况管理 (性能工况 & 全网性能工况统计)
     {
-      section: '性能工况与质保',
+      section: '性能工况管理',
       items: [
         {
           id: 'performance_evaluation',
@@ -77,6 +77,20 @@ export const Sidebar: React.FC = () => {
           badge: '体检分析',
           badgeColor: 'bg-indigo-600 text-white'
         },
+        {
+          id: 'performance_stats',
+          label: '全网性能工况统计',
+          icon: BarChart3,
+          badge: '全网看板',
+          badgeColor: 'bg-blue-600 text-white'
+        }
+      ]
+    },
+
+    // 3. 灵活质保管理 (独立分组)
+    {
+      section: '灵活质保管理',
+      items: [
         {
           id: 'flexible_warranty',
           label: '灵活质保',
@@ -87,7 +101,7 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 3. 数据管理 (新增菜单类：站点台账、PCare工单管理、离线数据导入、合同与履约视图)
+    // 4. 数据管理 (新增菜单类：站点台账、PCare工单管理、离线数据导入、合同与履约视图)
     {
       section: '数据管理',
       items: [
@@ -118,7 +132,7 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 4. 运维与诊断
+    // 5. 运维与诊断
     {
       section: '运维与诊断',
       items: [
@@ -139,7 +153,7 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 5. 系统管理
+    // 6. 系统管理
     {
       section: '系统管理',
       items: [
@@ -161,8 +175,8 @@ export const Sidebar: React.FC = () => {
             <Radio className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white tracking-tight">能源站点可用度平台</div>
-            <div className="text-[9px] text-blue-400 font-mono tracking-wider uppercase">TECH DATA GRID v1.0</div>
+            <div className="text-xs font-bold text-white tracking-tight">专业服务运营平台</div>
+            <div className="text-[9px] text-blue-400 font-mono tracking-wider uppercase">PROFESSIONAL OPERATIONS v1.0</div>
           </div>
         </div>
 

@@ -468,3 +468,123 @@ export interface SohComprehensiveData {
   sohConsistency: SohConsistencyData;
   operatingCondition: OperatingConditionData;
 }
+
+// 5. 并网点电表数据手动录入类型
+export interface GridMeterRecord {
+  id: string;
+  siteId: string;
+  meterCode: string; // 计量表计编号，如 "MTR-35KV-MAIN-01"
+  meterName: string; // 关口表名称，如 "35kV关口双向电能主表"
+  readingDate: string; // 抄表日期时间，如 "2026-08-31 23:59"
+  readingType: 'SETTLEMENT' | 'ROUTINE' | 'CALIBRATION' | 'MANUAL_AUDIT'; // 结算抄表 / 日常巡检 / 标定校验 / 人工抽核
+  forwardActiveEnergyKwh: number; // 正向有功总电量 kWh (上网/放电)
+  reverseActiveEnergyKwh: number; // 反向有功总电量 kWh (下网/充电)
+  forwardReactiveEnergyKvarh: number; // 正向无功总电量 kvarh
+  reverseReactiveEnergyKvarh: number; // 反向无功总电量 kvarh
+  activePowerKw: number; // 实时有功功率 kW
+  powerFactor: number; // 功率因数 Cosφ
+  voltageKv: number; // 线电压 kV
+  currentA: number; // 电流 A
+  ctRatio: string; // 电流互感器 CT 变比 "600/5"
+  ptRatio: string; // 电压互感器 PT 变比 "35000/100"
+  multiplier: number; // 综合倍率 = 120 * 350 = 42000
+  operator: string; // 录入人员
+  auditStatus: 'VERIFIED' | 'PENDING' | 'DISCREPANCY'; // 已核验 / 待复核 / 数据存疑
+  verifiedBy?: string; // 审核人
+  notes?: string; // 备注说明
+}
+
+// 6. 站点性能保障合同条款类型
+export interface ContractClauseItem {
+  clauseNo: string; // 条款编号，如 "第 4.2 条"
+  title: string; // 条款名称
+  category: 'RTE' | 'SOH_DEGRADATION' | 'AVAILABILITY' | 'AUC_CAPACITY' | 'GRID_DISPATCH' | 'THERMAL_BOUNDARY' | 'PENALTY_COMPENSATION';
+  guaranteedTarget: string; // 保证指标标准
+  currentActualValue: string; // 当前实测达成值
+  complianceStatus: 'COMPLIANT' | 'WARNING' | 'BREACHED'; // 达标 / 临界预警 / 违约
+  clauseText: string; // 条款合同原文
+  penaltyMechanism: string; // 考核扣罚/补齐赔偿机制
+  riskAssessment: string; // 履约风险与研判
+  exemptionConditions: string; // 免责条款（如电网超工况调度造成的免除）
+}
+
+export interface SiteContractGuarantee {
+  siteId: string;
+  contractNo: string; // 合同编号
+  contractName: string; // 合同名称
+  clientName: string; // 业主/客户
+  effectiveDate: string; // 生效日期
+  warrantyPeriodYears: number; // 质保保证年限
+  currentYearOfOperation: number; // 已投运年数
+  guaranteeDepositAmount: string; // 履约质保金金额
+  contractSignDate: string; // 签订日期
+  clauses: ContractClauseItem[];
+}
+
+// 7. 站点性能承诺指标录入与配置类型
+export interface PerformanceCommitmentMetrics {
+  siteId: string;
+  version: string; // "V2.2"
+  updatedAt: string;
+  updatedBy: string;
+  reviewStatus: 'APPROVED' | 'IN_REVIEW' | 'DRAFT';
+  rteGuaranteePct: number; // RTE 承诺保证值 % (e.g. 87.50%)
+  sohFloorPct: number; // SOH 最低保证线 % (e.g. 90.00%)
+  availabilityGuaranteePct: number; // 系统等效可用率保证 % (e.g. 99.20%)
+  aucMinMwh: number; // 额定可用容量底线 MWh (e.g. 19.40 MWh)
+  maxAnnualDegradationPct: number; // 最大年化衰减容许率 %/年 (e.g. 1.80%)
+  maxCellDeltaTCelsius: number; // 最大允许电芯温差 ℃ (e.g. 4.0℃)
+  maxAllowedDeltaSocPct: number; // 最大允许 SOC 极差 % (e.g. 5.0%)
+  lifecycleCommitmentCycles: number; // 全生命周期设计循环次数 (e.g. 6000 次)
+  maxGridMeterLossPct: number; // 关口计量线损率考核上限 % (e.g. 1.50%)
+  benchmarkTempCelsius: number; // 标准测试基准温度 ℃ (e.g. 25.0℃)
+  amendmentBasis: string; // 修订依据
+  auditLog: {
+    version: string;
+    modifiedAt: string;
+    modifier: string;
+    changeSummary: string;
+  }[];
+}
+
+// 8. 站点拓扑结构与SLA监控节点类型
+export interface TopologyNodeData {
+  id: string;
+  code: string;
+  name: string;
+  level: 'GRID_TIE' | 'TRANSFORMER' | 'HV_SWITCH' | 'PCS' | 'DC_COMBINER' | 'BATTERY_CLUSTER' | 'AUX_COOLING';
+  levelLabel: string;
+  parentIds: string[];
+  metrics: {
+    voltage?: string;
+    current?: string;
+    power?: string;
+    efficiency?: string;
+    temperature?: string;
+    soc?: string;
+    soh?: string;
+    slaScore: number; // e.g. 98.2
+    slaTarget: number; // e.g. 99.0
+  };
+  isSlaBreached: boolean; // 是否低于 SLA
+  slaBreachReason?: string; // 低于 SLA 的归因分析
+  status: 'NORMAL' | 'WARNING' | 'CRITICAL';
+  linkToParentSlaBreached?: boolean;
+  alarmCount: number;
+}
+
+// 9. 超工况影响 SOH 衰减因子列表项类型
+export interface OverConditionSohFactor {
+  id: string;
+  factorName: string; // 影响因素名称
+  description: string; // 机理解释
+  baselineLimit: string; // 合同/正常工况限值
+  actualExceedValue: string; // 现场实际超标监测值
+  accumulatedHoursOrTimes: string; // 累计超工况时长/频次
+  sohExtraLossPct: number; // 折算导致 SOH 额外衰减贡献 %
+  weightPct: number; // 综合衰减影响占比权重 %
+  affectedUnits: string; // 关联受影响设备/簇
+  mitigationAdvice: string; // 运维改善与规避建议
+  responsibleParty: 'GRID_DISPATCH' | 'OWNER_OPERATION' | 'EQUIPMENT_MAINTENANCE' | 'ENVIRONMENT';
+}
+

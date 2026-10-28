@@ -15,6 +15,7 @@ import { ContractsView } from './components/contracts/ContractsView';
 import { WorkOrdersView } from './components/workOrders/WorkOrdersView';
 import { ReportsView } from './components/reports/ReportsView';
 import { PerformanceEvaluationView } from './components/performance/PerformanceEvaluationView';
+import { GlobalPerformanceStatsView } from './components/performance/GlobalPerformanceStatsView';
 import { FlexibleWarrantyView } from './components/flexibleWarranty/FlexibleWarrantyView';
 import { DiagnosisCenterView } from './components/diagnosis/DiagnosisCenterView';
 import { AiAssistantDrawer } from './components/ai/AiAssistantDrawer';
@@ -42,6 +43,7 @@ const MainLayout: React.FC = () => {
           {activeTab === 'alerts' && <AlertsView />}
           {activeTab === 'analytics' && <MultiDimStatsView />}
           {activeTab === 'performance_evaluation' && <PerformanceEvaluationView />}
+          {activeTab === 'performance_stats' && <GlobalPerformanceStatsView />}
           {activeTab === 'flexible_warranty' && <FlexibleWarrantyView />}
           {activeTab === 'fault_diagnosis' && <DiagnosisCenterView />}
           {activeTab === 'contracts' && <ContractsView />}

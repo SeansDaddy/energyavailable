@@ -13,14 +13,22 @@ import {
   AvailabilityMetricData,
   RtePerformanceData,
   UsableCapacityData,
-  SohComprehensiveData
+  SohComprehensiveData,
+  GridMeterRecord,
+  SiteContractGuarantee,
+  PerformanceCommitmentMetrics,
+  TopologyNodeData
 } from '../../types/performanceEvaluation';
 import {
   getSitePerformanceDetailData,
   getSiteAvailabilityMetricData,
   getSiteRtePerformanceData,
   getSiteUsableCapacityData,
-  getSiteSohComprehensiveData
+  getSiteSohComprehensiveData,
+  getSiteGridMeterRecords,
+  getSiteContractGuarantee,
+  getSiteCommitmentMetrics,
+  getSiteTopologyData
 } from '../../mock/sitePerformanceConditionData';
 import { FactorLibraryConfigTab } from './FactorLibraryConfigTab';
 import { ModuleWorkloadTab } from './ModuleWorkloadTab';
@@ -35,6 +43,10 @@ import { AvailabilityMetricTab } from './AvailabilityMetricTab';
 import { RtePerformanceTab } from './RtePerformanceTab';
 import { UsableCapacityTab } from './UsableCapacityTab';
 import { SohPerformanceTab } from './SohPerformanceTab';
+import { GridMeterDataEntryTab } from './GridMeterDataEntryTab';
+import { SiteContractClausesTab } from './SiteContractClausesTab';
+import { SiteCommitmentMetricsEntryTab } from './SiteCommitmentMetricsEntryTab';
+import { SiteTopologyMonitoringTab } from './SiteTopologyMonitoringTab';
 import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 import {
   HeartPulse,
@@ -58,7 +70,9 @@ import {
   ShieldCheck,
   Zap,
   BatteryCharging,
-  FolderKanban
+  FolderKanban,
+  GitFork,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface SitePerformanceDetailViewProps {
@@ -72,7 +86,7 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   onBackToList,
   onSwitchSite
 }) => {
-  const { sites, addReportItem, navigateToFlexibleWarranty, reportCenterItems } = useApp();
+  const { sites, addReportItem, reportCenterItems } = useApp();
 
   const currentSite = sites.find(s => s.id === siteId) || sites[0];
 
@@ -97,7 +111,7 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   const [defectRecords, setDefectRecords] = useState<DefectActionRecord[]>(siteData.defectRecords);
   const [lastEvaluatedTime, setLastEvaluatedTime] = useState<string>(siteData.summary.lastEvaluatedTime);
 
-  // 四项新增核心性能指标数据
+  // 四项原有核心指标数据
   const [availabilityData, setAvailabilityData] = useState<AvailabilityMetricData>(() =>
     getSiteAvailabilityMetricData(siteId)
   );
@@ -109,6 +123,20 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
   );
   const [sohComprehensiveData, setSohComprehensiveData] = useState<SohComprehensiveData>(() =>
     getSiteSohComprehensiveData(siteId)
+  );
+
+  // 新增特性数据：并网电表、合同条款、承诺指标、拓扑监控
+  const [gridMeterRecords, setGridMeterRecords] = useState<GridMeterRecord[]>(() =>
+    getSiteGridMeterRecords(siteId)
+  );
+  const [contractData, setContractData] = useState<SiteContractGuarantee>(() =>
+    getSiteContractGuarantee(siteId)
+  );
+  const [commitmentMetrics, setCommitmentMetrics] = useState<PerformanceCommitmentMetrics>(() =>
+    getSiteCommitmentMetrics(siteId)
+  );
+  const [topologyNodes, setTopologyNodes] = useState<TopologyNodeData[]>(() =>
+    getSiteTopologyData(siteId)
   );
 
   // Sync state when siteId changes
@@ -128,6 +156,11 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
     setRteData(getSiteRtePerformanceData(siteId));
     setUsableCapacityData(getSiteUsableCapacityData(siteId));
     setSohComprehensiveData(getSiteSohComprehensiveData(siteId));
+
+    setGridMeterRecords(getSiteGridMeterRecords(siteId));
+    setContractData(getSiteContractGuarantee(siteId));
+    setCommitmentMetrics(getSiteCommitmentMetrics(siteId));
+    setTopologyNodes(getSiteTopologyData(siteId));
   }, [siteId]);
 
   // Evaluating animation state
@@ -177,20 +210,30 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
     setFactors(fresh.factors);
   };
 
+  // Handle Add Grid Meter Record
+  const handleAddGridMeterRecord = (newRec: GridMeterRecord) => {
+    setGridMeterRecords(prev => [newRec, ...prev]);
+  };
+
+  // Handle Save Commitment Metrics
+  const handleSaveCommitmentMetrics = (updated: PerformanceCommitmentMetrics) => {
+    setCommitmentMetrics(updated);
+  };
+
   // Export report to AppContext report center
   const handleExportToReportCenter = () => {
     if (addReportItem) {
       addReportItem({
         id: `rep-perf-${Date.now()}`,
         reportNo: `REP-PERF-${Math.floor(1000 + Math.random() * 9000)}`,
-        name: `${currentSite?.siteName || '储能站点'} 系统级性能体检与评估报告`,
+        name: `${currentSite?.siteName || '储能站点'} 系统级性能工况与SLA体检评估报告`,
         type: 'SITE_REPORT',
         scopeName: currentSite?.siteName || '储能站点',
         period: '2026-08',
         formats: ['PDF', 'EXCEL'],
         generatedAt: lastEvaluatedTime,
-        generator: '储能性能评估引擎',
-        fileSize: '3.4 MB',
+        generator: '专业服务性能工况评估引擎',
+        fileSize: '3.6 MB',
         downloadCount: 0
       });
     }
@@ -217,19 +260,50 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
     r => r.siteId === currentSite.id && (r.category === 'PERFORMANCE_CONDITION' || !r.category)
   ).length;
 
+  const breachedTopologyCount = topologyNodes.filter(n => n.isSlaBreached).length;
+
   const navSubTabs = [
-    { id: 0, label: '评估结论与报告', icon: FileCheck2, badge: `${hitFactorsList.length} 因子命中` },
-    { id: 1, label: '可用度与故障告警关联', icon: ShieldCheck, badge: `${availabilityData.availabilityRate}% 可用度` },
-    { id: 2, label: 'RTE 综合能效分析', icon: Zap, badge: `${rteData.overallRtePct}% RTE` },
-    { id: 3, label: '可用容量标定', icon: BatteryCharging, badge: `${usableCapacityData.actualUsableCapacityMwh} MWh` },
-    { id: 4, label: 'SOH 综合性能指标', icon: Activity, badge: `SOH ${sohComprehensiveData.sohConsistency.avgSohPct}%` },
-    { id: 5, label: '模组工况评估', icon: Layers, badge: `${siteData.summary.bottleneckModuleCode} 短板` },
-    { id: 6, label: 'CMU 温度分析', icon: Thermometer, badge: `ΔT ${siteData.summary.maxCmuDeltaT}℃` },
-    { id: 7, label: 'SOC 均衡支持', icon: Scale, badge: `ΔSOC ${siteData.summary.deltaSocPct}%` },
-    { id: 8, label: '影响因子库维护', icon: Sliders, badge: '13类因子' },
-    { id: 9, label: '故障消缺复盘', icon: Wrench, badge: `${siteData.summary.pendingActionsCount} 项建议` },
-    { id: 10, label: '日志上传与历史记录', icon: UploadCloud, badge: `${historyRecords.length} 轮评估` },
-    { id: 11, label: '站点报告中心', icon: FolderKanban, badge: `${sitePerfReportsCount} 份归档` }
+    { id: 0, label: '概览', icon: FileCheck2, badge: `${hitFactorsList.length} 因子命中` },
+    { id: 1, label: '性能保障合同条款', icon: FileText, badge: `${contractData.clauses.length} 条款` },
+    { id: 2, label: '性能承诺指标录入', icon: Sliders, badge: `${commitmentMetrics.version}` },
+    {
+      id: 3,
+      label: '系统拓扑与链路SLA',
+      icon: GitFork,
+      badge: breachedTopologyCount > 0 ? `${breachedTopologyCount} 个低于SLA` : '全链路达标'
+    },
+    { id: 4, label: '并网点电表录入', icon: FileSpreadsheet, badge: `${gridMeterRecords.length} 条抄表` },
+    {
+      id: 5,
+      label: 'SOH 衰减与超工况',
+      icon: Activity,
+      badge: `SOH ${sohComprehensiveData.sohConsistency.avgSohPct}% · 黄色曲线`
+    },
+    {
+      id: 6,
+      label: '可用容量 AUC',
+      icon: BatteryCharging,
+      badge: `${usableCapacityData.actualUsableCapacityMwh} MWh · 6要素`
+    },
+    {
+      id: 7,
+      label: 'RTE 综合能效分析',
+      icon: Zap,
+      badge: `${rteData.overallRtePct}% RTE · 7要素`
+    },
+    {
+      id: 8,
+      label: '可用度与故障告警关联',
+      icon: ShieldCheck,
+      badge: `${availabilityData.availabilityRate}% 可用度`
+    },
+    { id: 9, label: '模组工况评估', icon: Layers, badge: `${siteData.summary.bottleneckModuleCode} 短板` },
+    { id: 10, label: 'CMU 温度分析', icon: Thermometer, badge: `ΔT ${siteData.summary.maxCmuDeltaT}℃` },
+    { id: 11, label: 'SOC 均衡支持', icon: Scale, badge: `ΔSOC ${siteData.summary.deltaSocPct}%` },
+    { id: 12, label: '影响因子库维护', icon: Sliders, badge: '13类因子' },
+    { id: 13, label: '故障消缺复盘', icon: Wrench, badge: `${siteData.summary.pendingActionsCount} 项建议` },
+    { id: 14, label: '日志上传与历史记录', icon: UploadCloud, badge: `${historyRecords.length} 轮评估` },
+    { id: 15, label: '站点报告中心', icon: FolderKanban, badge: `${sitePerfReportsCount} 份归档` }
   ];
 
   return (
@@ -278,194 +352,55 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
               <h1 className="text-lg font-black text-slate-900 tracking-tight">
                 {currentSite.siteName}
               </h1>
-              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
+              <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium border border-slate-200">
                 {currentSite.siteCode}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200">
-                评估版本: {activeRecord?.versionNo || 'REV-最新'}
+              <span
+                className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                  summaryScore >= 90
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : summaryScore >= 80
+                    ? 'bg-blue-100 text-blue-800'
+                    : summaryScore >= 70
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-rose-100 text-rose-800'
+                }`}
+              >
+                {siteData.summary.gradeLabel}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              所属区域: <strong className="text-slate-700">{currentSite.region} / {currentSite.representativeOffice}</strong> · 装机容量: <strong className="text-slate-700">{currentSite.capacityMw} MW</strong> · 客户单位: <strong className="text-slate-700">{currentSite.customer}</strong>
-            </p>
+            <div className="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+              <span>客户: <strong className="text-slate-700">{currentSite.customer || '电网及业主联合体'}</strong></span>
+              <span>·</span>
+              <span>额定规模: <strong className="text-slate-700">{currentSite.capacityMw || 10} MW / 20 MWh</strong></span>
+              <span>·</span>
+              <span>最新评估时间: <strong className="text-slate-700 font-mono">{lastEvaluatedTime}</strong></span>
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 self-end md:self-center flex-wrap">
-          <button
-            onClick={() => navigateToFlexibleWarranty(currentSite.id)}
-            className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
-            title="跳转至平级的灵活质保独立模块，查看该站点的基准工况、双衰减曲线及超工况统计"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>灵活质保独立工作台</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab(10)}
-            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
-            <span>上传运行日志</span>
-          </button>
-
+        <div className="flex items-center gap-2.5 self-end md:self-center">
           <button
             onClick={handleRunEvaluation}
             disabled={isEvaluating}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isEvaluating ? 'animate-spin' : ''}`} />
-            <span>{isEvaluating ? 'AI体检计算中...' : '重新运行体检'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isEvaluating ? 'animate-spin text-indigo-600' : ''}`} />
+            <span>{isEvaluating ? '体检重算中...' : '一键重新评估'}</span>
           </button>
-
-          <button
-            onClick={() => setActiveSubTab(11)}
-            className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="查看该站点历史沉淀的性能工况报告"
-          >
-            <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
-            <span>报告中心 ({sitePerfReportsCount})</span>
-          </button>
-
           <button
             onClick={handleExportToReportCenter}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20"
           >
-            <FileText className="w-3.5 h-3.5 text-indigo-300" />
-            <span>导出体检报告</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>导出并归档报告</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Summary Status Bar: Highlighting Availability, RTE, Usable Capacity, SOH */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* Score & Grade */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">综合体检得分</div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span
-              className={`text-2xl font-black font-mono tracking-tight ${
-                siteData.summary.grade === 'RISKY'
-                  ? 'text-red-600'
-                  : siteData.summary.grade === 'MEDIUM'
-                  ? 'text-amber-600'
-                  : 'text-emerald-600'
-              }`}
-            >
-              {siteData.summary.overallScore}
-            </span>
-            <span className="text-xs text-slate-500">分</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500 truncate">
-            {siteData.summary.gradeLabel}
-          </div>
-        </div>
-
-        {/* 1. 可用度指标 */}
-        <div
-          onClick={() => setActiveSubTab(1)}
-          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
-        >
-          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span className="group-hover:text-indigo-600 transition-colors">系统可用度指标</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-          </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-indigo-600 font-mono tracking-tight">
-              {availabilityData.availabilityRate}
-            </span>
-            <span className="text-xs text-slate-500">%</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500 flex items-center justify-between">
-            <span>EAF: <strong>{availabilityData.eaf}%</strong></span>
-            <span className="text-rose-600 font-medium">关联失效: {availabilityData.failureCount}起</span>
-          </div>
-        </div>
-
-        {/* 2. RTE 性能指标 */}
-        <div
-          onClick={() => setActiveSubTab(2)}
-          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
-        >
-          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span className="group-hover:text-indigo-600 transition-colors">综合 RTE 性能</span>
-            <Zap className="w-3.5 h-3.5 text-indigo-500" />
-          </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-indigo-600 font-mono tracking-tight">
-              {rteData.overallRtePct}
-            </span>
-            <span className="text-xs text-slate-500">%</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500 truncate">
-            PCS: <strong>{rteData.pcsEfficiency.actualEfficiency}%</strong> · 箱变: <strong>{rteData.transformerEfficiency.actualEfficiency}%</strong>
-          </div>
-        </div>
-
-        {/* 3. 可用容量指标 */}
-        <div
-          onClick={() => setActiveSubTab(3)}
-          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
-        >
-          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span className="group-hover:text-indigo-600 transition-colors">实测可用容量</span>
-            <BatteryCharging className="w-3.5 h-3.5 text-indigo-500" />
-          </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
-              {usableCapacityData.actualUsableCapacityMwh}
-            </span>
-            <span className="text-xs text-slate-500">MWh</span>
-          </div>
-          <div className="mt-1 text-[10px] text-emerald-600 font-medium truncate">
-            保持率: {usableCapacityData.capacityRetentionPct}% (裕度 +{usableCapacityData.capacityMarginMwh}MWh)
-          </div>
-        </div>
-
-        {/* 4. SOH 性能指标 */}
-        <div
-          onClick={() => setActiveSubTab(4)}
-          className="bg-white border border-slate-200 hover:border-indigo-400 cursor-pointer rounded-xl p-3 shadow-2xs transition-colors group"
-        >
-          <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-            <span className="group-hover:text-indigo-600 transition-colors">SOH 性能指标</span>
-            <Activity className="w-3.5 h-3.5 text-rose-500" />
-          </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span
-              className={`text-2xl font-black font-mono tracking-tight ${
-                sohComprehensiveData.sohConsistency.minSohPct < 90 ? 'text-red-600' : 'text-emerald-600'
-              }`}
-            >
-              {sohComprehensiveData.sohConsistency.avgSohPct}
-            </span>
-            <span className="text-xs text-slate-500">% 均值</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500 flex items-center justify-between">
-            <span>ΔSOC: <strong>{sohComprehensiveData.socConsistency.maxDeltaSocPct}%</strong></span>
-            <span>FEC: <strong>{sohComprehensiveData.operatingCondition.cumulativeFecCycles}次</strong></span>
-          </div>
-        </div>
-
-        {/* 模组与CMU温差 */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-          <div className="text-[11px] text-slate-500 font-medium">模组极差与CMU温差</div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
-              {siteData.summary.maxVoltageDeltaMv}
-            </span>
-            <span className="text-xs text-slate-500">mV</span>
-          </div>
-          <div className="mt-1 text-[10px] text-slate-500 truncate">
-            CMU ΔT: <strong className="text-indigo-600">{siteData.summary.maxCmuDeltaT}℃</strong> (短板 {siteData.summary.bottleneckModuleCode})
-          </div>
-        </div>
-      </div>
-
-      {/* Sub-Tab Navigation Header */}
-      <div className="border-b border-slate-200 bg-white rounded-t-xl px-2 pt-2 shadow-xs">
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
+      {/* Navigation Sub-Tabs Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-1.5 shadow-2xs overflow-x-auto">
+        <div className="flex items-center gap-1 min-w-max">
           {navSubTabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -508,51 +443,89 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           />
         )}
 
+        {/* 2. 站点性能保障合同条款展示 (调整到第2个) */}
         {activeSubTab === 1 && (
-          <AvailabilityMetricTab
-            availabilityData={availabilityData}
+          <SiteContractClausesTab
+            contractData={contractData}
             siteName={currentSite.siteName}
           />
         )}
 
+        {/* 3. 性能承诺指标录入与配置 (调整到第3个) */}
         {activeSubTab === 2 && (
-          <RtePerformanceTab
-            rteData={rteData}
+          <SiteCommitmentMetricsEntryTab
+            initialMetrics={commitmentMetrics}
             siteName={currentSite.siteName}
+            onSaveMetrics={handleSaveCommitmentMetrics}
           />
         )}
 
+        {/* 4. 拓扑结构与节点关键数据及低于SLA异常高亮 */}
         {activeSubTab === 3 && (
-          <UsableCapacityTab
-            capacityData={usableCapacityData}
+          <SiteTopologyMonitoringTab
+            topologyNodes={topologyNodes}
             siteName={currentSite.siteName}
           />
         )}
 
+        {/* 1. 并网点电表数据手动录入 */}
         {activeSubTab === 4 && (
+          <GridMeterDataEntryTab
+            records={gridMeterRecords}
+            siteName={currentSite.siteName}
+            onAddRecord={handleAddGridMeterRecord}
+          />
+        )}
+
+        {/* 5. SOH 衰减曲线、合同曲线、黄色超工况折算曲线与工况因素数据列表 */}
+        {activeSubTab === 5 && (
           <SohPerformanceTab
             sohData={sohComprehensiveData}
             siteName={currentSite.siteName}
           />
         )}
 
-        {activeSubTab === 5 && (
+        {/* 6. 可用容量 AUC (含SOC充放电范围、充放电效率、SOC一致性、电能量统计、SOC值、历史运行工况) */}
+        {activeSubTab === 6 && (
+          <UsableCapacityTab
+            capacityData={usableCapacityData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {/* 7. RTE 综合能效 (含充放电策略、室外环温、系统运行模式、电芯温度、各部件效率、容量一致性、高压配电盒线缆损耗) */}
+        {activeSubTab === 7 && (
+          <RtePerformanceTab
+            rteData={rteData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {/* 可用度指标与故障关联 */}
+        {activeSubTab === 8 && (
+          <AvailabilityMetricTab
+            availabilityData={availabilityData}
+            siteName={currentSite.siteName}
+          />
+        )}
+
+        {activeSubTab === 9 && (
           <ModuleWorkloadTab
             moduleMetrics={moduleMetrics}
             modules={moduleMetrics}
           />
         )}
 
-        {activeSubTab === 6 && <CmuThermalTab cmuRecords={cmuRecords} />}
+        {activeSubTab === 10 && <CmuThermalTab cmuRecords={cmuRecords} />}
 
-        {activeSubTab === 7 && (
+        {activeSubTab === 11 && (
           <SocBalanceTab
             socRecords={socRecords}
             records={socRecords}
           />
         )}
 
-        {activeSubTab === 8 && (
+        {activeSubTab === 12 && (
           <FactorLibraryConfigTab
             factors={factors}
             onUpdateFactors={handleUpdateFactors}
@@ -560,14 +533,14 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           />
         )}
 
-        {activeSubTab === 9 && (
+        {activeSubTab === 13 && (
           <DefectEliminationTab
             defectRecords={defectRecords}
             records={defectRecords}
           />
         )}
 
-        {activeSubTab === 10 && (
+        {activeSubTab === 14 && (
           <LogUploadAndHistoryTab
             historyRecords={historyRecords}
             activeVersionId={activeVersionId}
@@ -576,7 +549,8 @@ export const SitePerformanceDetailView: React.FC<SitePerformanceDetailViewProps>
           />
         )}
 
-        {activeSubTab === 11 && (
+        {/* 站点报告中心 (锁定在当前站点) */}
+        {activeSubTab === 15 && (
           <div className="p-1">
             <SiteScopedReportCenter
               moduleScope="PERFORMANCE"
