@@ -18,7 +18,8 @@ import {
   HeartPulse,
   FileCheck2,
   Sliders,
-  ShieldCheck
+  ShieldCheck,
+  Target
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -97,6 +98,20 @@ export const Sidebar: React.FC = () => {
           icon: ShieldCheck,
           badge: 'SOH衰减',
           badgeColor: 'bg-emerald-600 text-white'
+        }
+      ]
+    },
+
+    // 4. 商业化运营与机会点挖掘
+    {
+      section: '商业化运营',
+      items: [
+        {
+          id: 'opportunity_mining',
+          label: '机会点挖掘',
+          icon: Target,
+          badge: '14项能力',
+          badgeColor: 'bg-amber-600 text-white'
         }
       ]
     },

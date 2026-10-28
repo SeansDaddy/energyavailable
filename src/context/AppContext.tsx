@@ -61,6 +61,7 @@ export type NavigationTab =
   | 'performance_stats'
   | 'flexible_warranty'
   | 'fault_diagnosis'
+  | 'opportunity_mining'
   | 'reports'
   | 'work_orders'
   | 'contracts';
@@ -101,6 +102,9 @@ interface AppContextType {
   flexibleWarrantyDetailSiteId: string | null;
   setFlexibleWarrantyDetailSiteId: (siteId: string | null) => void;
   navigateToFlexibleWarranty: (siteId?: string) => void;
+
+  // Opportunity mining navigation
+  navigateToOpportunityMining: () => void;
   
   // AI Drawer state
   isAiDrawerOpen: boolean;
@@ -327,6 +331,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setFlexibleWarrantyDetailSiteId(null);
     }
     setActiveTab('flexible_warranty');
+  };
+
+  const navigateToOpportunityMining = () => {
+    setActiveTab('opportunity_mining');
   };
 
   const navigateToAlertsWithFilter = (typeFilter?: string) => {
@@ -1109,6 +1117,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         flexibleWarrantyDetailSiteId,
         setFlexibleWarrantyDetailSiteId,
         navigateToFlexibleWarranty,
+        navigateToOpportunityMining,
         navigateToSiteDetail,
         navigateToAvailabilityDrilldown,
         navigateToAlertsWithFilter,

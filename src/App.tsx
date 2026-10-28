@@ -18,6 +18,7 @@ import { PerformanceEvaluationView } from './components/performance/PerformanceE
 import { GlobalPerformanceStatsView } from './components/performance/GlobalPerformanceStatsView';
 import { FlexibleWarrantyView } from './components/flexibleWarranty/FlexibleWarrantyView';
 import { DiagnosisCenterView } from './components/diagnosis/DiagnosisCenterView';
+import { OpportunityMiningView } from './components/opportunities/OpportunityMiningView';
 import { AiAssistantDrawer } from './components/ai/AiAssistantDrawer';
 
 const MainLayout: React.FC = () => {
@@ -46,6 +47,7 @@ const MainLayout: React.FC = () => {
           {activeTab === 'performance_stats' && <GlobalPerformanceStatsView />}
           {activeTab === 'flexible_warranty' && <FlexibleWarrantyView />}
           {activeTab === 'fault_diagnosis' && <DiagnosisCenterView />}
+          {activeTab === 'opportunity_mining' && <OpportunityMiningView />}
           {activeTab === 'contracts' && <ContractsView />}
           {activeTab === 'work_orders' && <WorkOrdersView />}
           {activeTab === 'reports' && <ReportsView />}
