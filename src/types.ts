@@ -215,6 +215,13 @@ export interface WorkOrder {
   importedAt?: string; // 导入时间
   source?: 'PCARE_IMPORT' | 'AI_DIAGNOSIS_DISPATCH' | 'MANUAL'; // 来源说明
   rawPcareStatus?: string; // PCare 原始工单状态字段
+  isEcoExempt?: boolean; // 是否配置 ECO 外因免责
+  ecoExemptMins?: number; // ECO 免责核减工时 (分钟)
+  ecoExemptReason?: string; // 免责原因与依据
+  ecoExemptCategory?: string; // 免责原因分类 (如 电网调度限电 / 不可抗力天气 / 客户停电检修 / 第三方外力破坏)
+  ecoExemptOperator?: string; // 核准人
+  ecoExemptDocNo?: string; // 证明函件编号
+  ecoApprovalStatus?: 'APPROVED' | 'PENDING' | 'ARCHIVED'; // 审核状态
 }
 
 export interface PcareImportRecord {

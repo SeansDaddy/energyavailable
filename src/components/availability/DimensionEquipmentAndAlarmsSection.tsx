@@ -113,11 +113,14 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
     setExpandedDeviceId(prev => (prev === devId ? null : devId));
   };
 
-  // Jump to Fault Causal Chain tab with target device
+  // Jump to Fault Causal Chain tab with target device and preserved custom time range
   const handleDrilldownToCausalChain = (devCode?: string) => {
     onNavigateTab?.(1, {
       deviceCode: devCode,
-      activeSubView: 'alarms'
+      activeSubView: 'alarms',
+      startDate: startDate,
+      endDate: endDate,
+      timeRangeLabel: timeRangeLabel
     });
   };
 
@@ -640,23 +643,12 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
 
                         {/* Actions */}
                         <td className="py-3 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => toggleExpandDevice(dev.id)}
-                              className="text-slate-600 hover:text-slate-900 font-medium text-[11px] px-2 py-1 rounded hover:bg-slate-100 transition-colors"
-                            >
-                              {isExpanded ? '收起' : '详情'}
-                            </button>
-
-                            <button
-                              onClick={() => handleDrilldownToCausalChain(dev.deviceCode)}
-                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold text-[11px] px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                              title="下钻至【中断告警】查看告警与时序链"
-                            >
-                              <span>下钻告警</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => toggleExpandDevice(dev.id)}
+                            className="text-slate-600 hover:text-slate-900 font-medium text-[11px] px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                          >
+                            {isExpanded ? '收起' : '详情'}
+                          </button>
                         </td>
                       </tr>
 

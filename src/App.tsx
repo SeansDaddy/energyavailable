@@ -17,6 +17,8 @@ import { ReportsView } from './components/reports/ReportsView';
 import { PerformanceEvaluationView } from './components/performance/PerformanceEvaluationView';
 import { GlobalPerformanceStatsView } from './components/performance/GlobalPerformanceStatsView';
 import { FlexibleWarrantyView } from './components/flexibleWarranty/FlexibleWarrantyView';
+import { GlobalFlexibleWarrantyStatsView } from './components/flexibleWarranty/GlobalFlexibleWarrantyStatsView';
+import { BaselineConditionEvaluationView } from './components/baselineCondition/BaselineConditionEvaluationView';
 import { DiagnosisCenterView } from './components/diagnosis/DiagnosisCenterView';
 import { OpportunityMiningView } from './components/opportunities/OpportunityMiningView';
 import { AiAssistantDrawer } from './components/ai/AiAssistantDrawer';
@@ -45,7 +47,9 @@ const MainLayout: React.FC = () => {
           {activeTab === 'analytics' && <MultiDimStatsView />}
           {activeTab === 'performance_evaluation' && <PerformanceEvaluationView />}
           {activeTab === 'performance_stats' && <GlobalPerformanceStatsView />}
+          {activeTab === 'baseline_condition_eval' && <BaselineConditionEvaluationView />}
           {activeTab === 'flexible_warranty' && <FlexibleWarrantyView />}
+          {activeTab === 'flexible_warranty_stats' && <GlobalFlexibleWarrantyStatsView />}
           {activeTab === 'fault_diagnosis' && <DiagnosisCenterView />}
           {activeTab === 'opportunity_mining' && <OpportunityMiningView />}
           {activeTab === 'contracts' && <ContractsView />}

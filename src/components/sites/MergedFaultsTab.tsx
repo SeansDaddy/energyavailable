@@ -34,7 +34,9 @@ import {
   Check,
   SlidersHorizontal,
   Zap,
-  Activity
+  Activity,
+  Calendar,
+  Edit3
 } from 'lucide-react';
 
 interface MergedFaultsTabProps {
@@ -46,6 +48,9 @@ interface MergedFaultsTabProps {
     deviceCode?: string;
     activeSubView?: 'merged' | 'alarms';
     alarmId?: string;
+    startDate?: string;
+    endDate?: string;
+    timeRangeLabel?: string;
   } | null;
   onClearTarget?: () => void;
 }
@@ -55,7 +60,66 @@ interface EcoExemptModalData {
   reason: string;
   customReason: string;
   operator: string;
+  // 告警原始起止时间 (只读展示，基准对照)
+  alarmStartTime: string;
+  alarmEndTime: string;
+  alarmDurationMinutes: number;
+  // 标注ECO的外因免责生效时间 (默认当前告警时间，支持修改为自定义ECO时间)
+  ecoStartTime: string;
+  ecoEndTime: string;
+  ecoDurationMinutes: number;
+  isCustomEcoTime: boolean;
 }
+
+// 格式化时间辅助函数
+const formatDateTime = (date: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+// 获取告警默认结束时间
+const getAlarmDefaultEndTime = (alarm: AvailabilityAlarmItem): string => {
+  if (alarm.clearTime && alarm.clearTime.trim().length > 0) {
+    return alarm.clearTime;
+  }
+  try {
+    const parsed = new Date(alarm.triggerTime.replace(' ', 'T')).getTime();
+    if (!isNaN(parsed)) {
+      const durationMs = (alarm.durationMinutes || 45) * 60 * 1000;
+      return formatDateTime(new Date(parsed + durationMs));
+    }
+  } catch {
+    // fallback
+  }
+  return alarm.triggerTime;
+};
+
+// 计算时间差 (分钟)
+const calculateTimeDifferenceMinutes = (startStr: string, endStr: string): number => {
+  try {
+    const s = new Date(startStr.replace(' ', 'T')).getTime();
+    const e = new Date(endStr.replace(' ', 'T')).getTime();
+    if (!isNaN(s) && !isNaN(e) && e >= s) {
+      return Math.max(1, Math.round((e - s) / (60 * 1000)));
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+};
+
+// 调整时间分钟数
+const adjustTimeStringByMinutes = (timeStr: string, offsetMinutes: number): string => {
+  try {
+    const d = new Date(timeStr.replace(' ', 'T')).getTime();
+    if (!isNaN(d)) {
+      return formatDateTime(new Date(d + offsetMinutes * 60 * 1000));
+    }
+  } catch {
+    // ignore
+  }
+  return timeStr;
+};
 
 export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
   site,
@@ -77,6 +141,22 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
     initialTarget?.deviceCode || null
   );
 
+  // Custom Time Range Filter States
+  const [periodStartDate, setPeriodStartDate] = useState<string>(() => {
+    if (initialTarget?.startDate) return initialTarget.startDate;
+    return '2026-08-01 00:00:00';
+  });
+  const [periodEndDate, setPeriodEndDate] = useState<string>(() => {
+    if (initialTarget?.endDate) return initialTarget.endDate;
+    return '2026-08-30 23:59:59';
+  });
+  const [drilldownSourceLabel, setDrilldownSourceLabel] = useState<string | null>(
+    initialTarget?.timeRangeLabel || null
+  );
+  const [isTimeRangeFromDrilldown, setIsTimeRangeFromDrilldown] = useState<boolean>(
+    Boolean(initialTarget?.startDate && initialTarget?.endDate)
+  );
+
   // Update when initialTarget changes
   useEffect(() => {
     if (initialTarget) {
@@ -86,8 +166,95 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
       if (initialTarget.deviceCode !== undefined) {
         setSelectedDeviceCode(initialTarget.deviceCode || null);
       }
+      if (initialTarget.startDate && initialTarget.endDate) {
+        setPeriodStartDate(initialTarget.startDate);
+        setPeriodEndDate(initialTarget.endDate);
+        setDrilldownSourceLabel(
+          initialTarget.timeRangeLabel || `${initialTarget.startDate} ~ ${initialTarget.endDate}`
+        );
+        setIsTimeRangeFromDrilldown(true);
+      }
     }
   }, [initialTarget]);
+
+  // Helper to normalize datetime string
+  const normalizeDateTimeLocal = (dtStr: string, isEnd = false): string => {
+    if (!dtStr) return isEnd ? '9999-12-31 23:59:59' : '0000-01-01 00:00:00';
+    const trimmed = dtStr.trim();
+    if (trimmed.length === 10) {
+      return isEnd ? `${trimmed} 23:59:59` : `${trimmed} 00:00:00`;
+    }
+    if (trimmed.length === 16) {
+      return isEnd ? `${trimmed}:59` : `${trimmed}:00`;
+    }
+    return trimmed;
+  };
+
+  // Date and Time parsing helpers for custom inputs
+  const parseDatePart = (str: string) => {
+    if (!str) return '2026-08-15';
+    const clean = str.trim().replace('T', ' ');
+    return clean.split(' ')[0] || '2026-08-15';
+  };
+
+  const parseTimePart = (str: string, defaultTime: string) => {
+    if (!str) return defaultTime;
+    const clean = str.trim().replace('T', ' ');
+    const parts = clean.split(' ');
+    if (parts.length > 1 && parts[1]) {
+      return parts[1].slice(0, 5);
+    }
+    return defaultTime;
+  };
+
+  const handleStartDateChange = (newDate: string) => {
+    const t = parseTimePart(periodStartDate, '00:00');
+    setPeriodStartDate(`${newDate} ${t}:00`);
+    setIsTimeRangeFromDrilldown(false);
+  };
+
+  const handleStartTimeChange = (newTime: string) => {
+    const d = parseDatePart(periodStartDate);
+    setPeriodStartDate(`${d} ${newTime}:00`);
+    setIsTimeRangeFromDrilldown(false);
+  };
+
+  const handleEndDateChange = (newDate: string) => {
+    const t = parseTimePart(periodEndDate, '23:59');
+    setPeriodEndDate(`${newDate} ${t}:59`);
+    setIsTimeRangeFromDrilldown(false);
+  };
+
+  const handleEndTimeChange = (newTime: string) => {
+    const d = parseDatePart(periodEndDate);
+    setPeriodEndDate(`${d} ${newTime}:59`);
+    setIsTimeRangeFromDrilldown(false);
+  };
+
+  const handleResetToMonth = () => {
+    setPeriodStartDate('2026-08-01 00:00:00');
+    setPeriodEndDate('2026-08-30 23:59:59');
+    setIsTimeRangeFromDrilldown(false);
+    setDrilldownSourceLabel(null);
+  };
+
+  const handleApplyPreset = (preset: 'today' | '7days' | '15days' | 'month') => {
+    setIsTimeRangeFromDrilldown(false);
+    setDrilldownSourceLabel(null);
+    if (preset === 'today') {
+      setPeriodStartDate('2026-08-15 00:00:00');
+      setPeriodEndDate('2026-08-15 23:59:59');
+    } else if (preset === '7days') {
+      setPeriodStartDate('2026-08-24 00:00:00');
+      setPeriodEndDate('2026-08-30 23:59:59');
+    } else if (preset === '15days') {
+      setPeriodStartDate('2026-08-16 00:00:00');
+      setPeriodEndDate('2026-08-30 23:59:59');
+    } else if (preset === 'month') {
+      setPeriodStartDate('2026-08-01 00:00:00');
+      setPeriodEndDate('2026-08-30 23:59:59');
+    }
+  };
 
   // Merged fault expanded items
   const [expandedFaults, setExpandedFaults] = useState<Record<string, boolean>>({
@@ -116,16 +283,18 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
         reason: string;
         operator: string;
         timestamp: string;
+        ecoStartTime?: string;
+        ecoEndTime?: string;
+        ecoDurationMinutes?: number;
+        isCustomEcoTime?: boolean;
       }
     >
   >({});
 
-  // Compute period alarms & devices for this site and date
+  // Compute period alarms & devices for this site and custom period
   const { devices, alarms: rawAlarms } = useMemo(() => {
-    const startDate = currentDate.slice(0, 7) + '-01';
-    const endDate = currentDate.slice(0, 7) + '-31';
-    return getEquipmentAndAlarmsForPeriod(site, startDate, endDate, workOrders);
-  }, [site, currentDate, workOrders]);
+    return getEquipmentAndAlarmsForPeriod(site, periodStartDate, periodEndDate, workOrders);
+  }, [site, periodStartDate, periodEndDate, workOrders]);
 
   // Merge ecoOverrides into alarms
   const alarms: AvailabilityAlarmItem[] = useMemo(() => {
@@ -138,6 +307,10 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
           ecoExemptReason: override.reason,
           ecoExemptOperator: override.operator,
           ecoExemptTime: override.timestamp,
+          ecoStartTime: override.ecoStartTime || a.triggerTime,
+          ecoEndTime: override.ecoEndTime || a.clearTime,
+          ecoDurationMinutes: override.ecoDurationMinutes !== undefined ? override.ecoDurationMinutes : a.durationMinutes,
+          isCustomEcoTime: override.isCustomEcoTime,
           slaCounted: override.isEcoExempt ? false : a.slaCounted,
           equivalentInterruptionMinutes: override.isEcoExempt ? 0 : a.equivalentInterruptionMinutes,
           availabilityImpactPercent: override.isEcoExempt ? 0 : a.availabilityImpactPercent
@@ -192,22 +365,33 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
     };
   }, [alarms]);
 
-  // Merged faults filtered
+  // Merged faults filtered by both device code and custom time period overlap
   const filteredMergedFaults = useMemo(() => {
-    if (!selectedDeviceCode) return site.mergedFaults || [];
-    return (site.mergedFaults || []).filter(f => {
-      // Check if fault title, code or raw events match the selected device
-      const codeMatch = f.faultCode.toLowerCase().includes(selectedDeviceCode.toLowerCase());
-      const titleMatch = f.title.toLowerCase().includes(selectedDeviceCode.toLowerCase());
-      const rawMatch = f.rawEvents.some(
+    const list = site.mergedFaults || [];
+    const pStart = normalizeDateTimeLocal(periodStartDate, false);
+    const pEnd = normalizeDateTimeLocal(periodEndDate, true);
+
+    return list.filter(f => {
+      // Time overlap check
+      const fStart = normalizeDateTimeLocal(f.startTime, false);
+      const fEnd = f.endTime ? normalizeDateTimeLocal(f.endTime, true) : fStart;
+      const isOverlap = fStart <= pEnd && fEnd >= pStart;
+      if (!isOverlap) return false;
+
+      // Device filter check
+      if (!selectedDeviceCode) return true;
+      const devLower = selectedDeviceCode.toLowerCase();
+      const codeMatch = f.faultCode.toLowerCase().includes(devLower);
+      const titleMatch = f.title.toLowerCase().includes(devLower);
+      const rawMatch = f.rawEvents?.some(
         e =>
-          e.code?.toLowerCase().includes(selectedDeviceCode.toLowerCase()) ||
-          e.title?.toLowerCase().includes(selectedDeviceCode.toLowerCase()) ||
-          e.description?.toLowerCase().includes(selectedDeviceCode.toLowerCase())
+          e.code?.toLowerCase().includes(devLower) ||
+          e.title?.toLowerCase().includes(devLower) ||
+          e.description?.toLowerCase().includes(devLower)
       );
       return codeMatch || titleMatch || rawMatch;
     });
-  }, [site.mergedFaults, selectedDeviceCode]);
+  }, [site.mergedFaults, selectedDeviceCode, periodStartDate, periodEndDate]);
 
   const totalInterruptionMinutes = (site.mergedFaults || []).reduce(
     (acc, f) => acc + f.equivalentInterruptionMinutes,
@@ -223,11 +407,29 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
 
   // Handle open ECO exemption modal
   const handleOpenEcoModal = (alarm: AvailabilityAlarmItem) => {
+    const alarmStart = alarm.triggerTime || '2026-08-15 08:30:00';
+    const alarmEnd = getAlarmDefaultEndTime(alarm);
+    const initialEcoStart = alarm.ecoStartTime || alarmStart;
+    const initialEcoEnd = alarm.ecoEndTime || alarmEnd;
+    const isCustom = Boolean(
+      alarm.isCustomEcoTime ||
+      (alarm.ecoStartTime && alarm.ecoStartTime !== alarmStart) ||
+      (alarm.ecoEndTime && alarm.ecoEndTime !== alarmEnd)
+    );
+    const duration = calculateTimeDifferenceMinutes(initialEcoStart, initialEcoEnd) || alarm.durationMinutes || 45;
+
     setEcoModalData({
       alarm,
       reason: alarm.ecoExemptReason || '电网调度指令性限电 / 负荷低谷备用停机 (ECO电网调度免责条款)',
       customReason: '',
-      operator: alarm.ecoExemptOperator || '现场运维调度·李维'
+      operator: alarm.ecoExemptOperator || '现场运维调度·李维',
+      alarmStartTime: alarmStart,
+      alarmEndTime: alarmEnd,
+      alarmDurationMinutes: alarm.durationMinutes || duration,
+      ecoStartTime: initialEcoStart,
+      ecoEndTime: initialEcoEnd,
+      ecoDurationMinutes: duration,
+      isCustomEcoTime: isCustom
     });
   };
 
@@ -247,12 +449,17 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
         isEcoExempt: true,
         reason: finalReason,
         operator: ecoModalData.operator || '调度运维专工',
-        timestamp: nowStr
+        timestamp: nowStr,
+        ecoStartTime: ecoModalData.ecoStartTime,
+        ecoEndTime: ecoModalData.ecoEndTime,
+        ecoDurationMinutes: ecoModalData.ecoDurationMinutes,
+        isCustomEcoTime: ecoModalData.isCustomEcoTime
       }
     }));
 
+    const timeModeDesc = ecoModalData.isCustomEcoTime ? '自定义ECO时段' : '告警默认时段';
     setToastMessage(
-      `已成功为告警【${ecoModalData.alarm.code}】标注 ECO 外因停机免责，SLA 考核停机时长已核免！`
+      `已成功为告警【${ecoModalData.alarm.code}】标注 ECO 外因停机免责！生效时段: ${ecoModalData.ecoStartTime} ~ ${ecoModalData.ecoEndTime} (${timeModeDesc}，核免 ${ecoModalData.ecoDurationMinutes} 分钟)，SLA 考核停机时长已全额核免！`
     );
     setEcoModalData(null);
     setTimeout(() => setToastMessage(null), 5000);
@@ -266,7 +473,11 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
         isEcoExempt: false,
         reason: '',
         operator: '',
-        timestamp: ''
+        timestamp: '',
+        ecoStartTime: undefined,
+        ecoEndTime: undefined,
+        ecoDurationMinutes: undefined,
+        isCustomEcoTime: false
       }
     }));
     setToastMessage(`已取消告警【${alarmCode}】的 ECO 外因停机免责标注，恢复纳入 SLA 考核。`);
@@ -359,6 +570,176 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* Time Range Drilldown Linkage Banner (When jumped from Availability Details) */}
+      {isTimeRangeFromDrilldown && (
+        <div className="bg-gradient-to-r from-blue-50 via-cyan-50/70 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-start md:items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-600 text-white shrink-0 shadow-2xs">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-blue-800 font-bold">
+                  已保持单站可用度监控所选时段
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full font-mono text-xs font-black bg-blue-600 text-white shadow-2xs">
+                  {drilldownSourceLabel || `${periodStartDate} ~ ${periodEndDate}`}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                  <span>时段联动锁定中</span>
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">
+                当前中断告警与因果时序已精准同步该自定义时段（{periodStartDate} 至 {periodEndDate}）。
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleResetToMonth}
+              className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+              title="解除时段锁定，恢复查看全月"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>解除时段锁定 (重置全月)</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab(0)}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>返回可用度详情</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Time Range Toolbar (支持自定义时段与快捷切换) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-2.5 border-b border-slate-100 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="p-1 rounded bg-indigo-50 text-indigo-600">
+              <Calendar className="w-4 h-4" />
+            </span>
+            <span className="font-bold text-slate-900 text-sm">
+              中断告警时段筛选与统计区间
+            </span>
+            <span className="font-mono text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded shadow-2xs">
+              {periodStartDate} 至 {periodEndDate}
+            </span>
+            {isTimeRangeFromDrilldown && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                来自单站可用度下钻
+              </span>
+            )}
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-slate-400 font-medium mr-1">快捷时段:</span>
+            <button
+              onClick={() => handleApplyPreset('today')}
+              className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                parseDatePart(periodStartDate) === '2026-08-15' && parseDatePart(periodEndDate) === '2026-08-15'
+                  ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              本日 (08-15)
+            </button>
+            <button
+              onClick={() => handleApplyPreset('7days')}
+              className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                parseDatePart(periodStartDate) === '2026-08-24' && parseDatePart(periodEndDate) === '2026-08-30'
+                  ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              近7天
+            </button>
+            <button
+              onClick={() => handleApplyPreset('15days')}
+              className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                parseDatePart(periodStartDate) === '2026-08-16' && parseDatePart(periodEndDate) === '2026-08-30'
+                  ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              近15天
+            </button>
+            <button
+              onClick={() => handleApplyPreset('month')}
+              className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                parseDatePart(periodStartDate) === '2026-08-01' && parseDatePart(periodEndDate) === '2026-08-30' && !isTimeRangeFromDrilldown
+                  ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              全月 (08-01~08-30)
+            </button>
+            <button
+              onClick={handleResetToMonth}
+              title="重置为全月"
+              className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors ml-1"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Date and Time custom inputs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-slate-600 font-semibold whitespace-nowrap">自定义起止时段:</span>
+            
+            {/* Start Date & Time */}
+            <div className="flex items-center gap-1 bg-white border border-slate-300 rounded px-2 py-1 shadow-2xs">
+              <span className="text-slate-400 font-medium">起:</span>
+              <input
+                type="date"
+                value={parseDatePart(periodStartDate)}
+                onChange={e => handleStartDateChange(e.target.value)}
+                className="font-mono font-bold text-slate-800 text-xs focus:outline-none bg-transparent"
+              />
+              <input
+                type="time"
+                value={parseTimePart(periodStartDate, '00:00')}
+                onChange={e => handleStartTimeChange(e.target.value)}
+                className="font-mono font-bold text-slate-700 text-xs focus:outline-none bg-transparent border-l border-slate-200 pl-1"
+              />
+            </div>
+
+            <span className="text-slate-400 font-bold">至</span>
+
+            {/* End Date & Time */}
+            <div className="flex items-center gap-1 bg-white border border-slate-300 rounded px-2 py-1 shadow-2xs">
+              <span className="text-slate-400 font-medium">止:</span>
+              <input
+                type="date"
+                value={parseDatePart(periodEndDate)}
+                onChange={e => handleEndDateChange(e.target.value)}
+                className="font-mono font-bold text-slate-800 text-xs focus:outline-none bg-transparent"
+              />
+              <input
+                type="time"
+                value={parseTimePart(periodEndDate, '23:59')}
+                onChange={e => handleEndTimeChange(e.target.value)}
+                className="font-mono font-bold text-slate-700 text-xs focus:outline-none bg-transparent border-l border-slate-200 pl-1"
+              />
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 self-end sm:self-auto">
+            <span>当前时段内包含:</span>
+            <span className="font-mono font-bold text-indigo-700">{filteredMergedFaults.length} 项中断归并</span>
+            <span>·</span>
+            <span className="font-mono font-bold text-amber-700">{filteredAlarms.length} 条可用度告警</span>
+          </div>
+        </div>
+      </div>
 
       {/* Main Tab Banner & Sub-View Switcher */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
@@ -934,14 +1315,31 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
 
                             {/* ECO Rationale if exempt */}
                             {alarm.isEcoExempt && alarm.ecoExemptReason && (
-                              <div className="mt-2 text-[11px] bg-cyan-50/90 text-cyan-950 p-2 rounded-lg border border-cyan-200 flex items-start gap-1.5">
-                                <ZapOff className="w-3.5 h-3.5 text-cyan-700 shrink-0 mt-0.5" />
-                                <div>
-                                  <strong>ECO 外因停机免责依据:</strong> {alarm.ecoExemptReason}
-                                  {alarm.ecoExemptOperator && (
-                                    <span className="text-cyan-800 ml-2">
-                                      (核准人: {alarm.ecoExemptOperator} · 生效时间:{' '}
-                                      {alarm.ecoExemptTime || '即时生效'})
+                              <div className="mt-2 text-[11px] bg-cyan-50/90 text-cyan-950 p-2.5 rounded-lg border border-cyan-200 space-y-1.5">
+                                <div className="flex items-start gap-1.5">
+                                  <ZapOff className="w-3.5 h-3.5 text-cyan-700 shrink-0 mt-0.5" />
+                                  <div className="flex-1">
+                                    <strong>ECO 外因停机免责依据:</strong> {alarm.ecoExemptReason}
+                                    {alarm.ecoExemptOperator && (
+                                      <span className="text-cyan-800 ml-2">
+                                        (核准人: {alarm.ecoExemptOperator} · 生效时间:{' '}
+                                        {alarm.ecoExemptTime || '即时生效'})
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-cyan-200/60 font-mono text-[10px] text-cyan-900">
+                                  <Clock className="w-3 h-3 text-cyan-700" />
+                                  <span>
+                                    ECO 免责时段: <strong className="text-cyan-950">{alarm.ecoStartTime || alarm.triggerTime}</strong> 至{' '}
+                                    <strong className="text-cyan-950">{alarm.ecoEndTime || alarm.clearTime || '已自动复归'}</strong>
+                                  </span>
+                                  <span>
+                                    (核免时长: <strong className="text-cyan-950 font-bold">{alarm.ecoDurationMinutes || alarm.durationMinutes} 分钟</strong>)
+                                  </span>
+                                  {alarm.isCustomEcoTime && (
+                                    <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold">
+                                      自定义ECO时段
                                     </span>
                                   )}
                                 </div>
@@ -952,20 +1350,30 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                          {/* ECO Exemption Toggle Button */}
+                          {/* ECO Exemption Buttons */}
                           {alarm.isEcoExempt ? (
-                            <button
-                              onClick={() => handleCancelEcoExempt(alarm.id, alarm.code)}
-                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                              title="撤销该告警的 ECO 外因停机免责标注，重新纳入 SLA 考核"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                              <span>取消ECO免责</span>
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenEcoModal(alarm)}
+                                className="px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                title="查看并修改当前告警的 ECO 外因起止时间或依据条款"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-cyan-600" />
+                                <span>修改ECO时间/依据</span>
+                              </button>
+                              <button
+                                onClick={() => handleCancelEcoExempt(alarm.id, alarm.code)}
+                                className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                                title="撤销该告警的 ECO 外因停机免责标注，恢复纳入 SLA 考核"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                                <span>取消免责</span>
+                              </button>
+                            </div>
                           ) : (
                             <button
                               onClick={() => handleOpenEcoModal(alarm)}
-                              className="px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border border-cyan-300 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                              className="px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border border-cyan-300 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
                               title="标注外部电网限电或线路检修等 ECO 外因停机免责"
                             >
                               <ZapOff className="w-3.5 h-3.5 text-cyan-700" />
@@ -1084,44 +1492,239 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
       {/* MODAL 1: ECO Exemption Tagging Modal */}
       {ecoModalData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl animate-in zoom-in-95 space-y-4 max-h-[92vh] flex flex-col">
+            {/* 弹框顶部 */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-cyan-50 text-cyan-700 border border-cyan-200">
                   <ZapOff className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">标注 ECO 外因停机免责</h3>
+                  <h3 className="text-base font-bold text-slate-900">标注 ECO 外因停机免责确认</h3>
                   <p className="text-xs text-slate-500 font-mono">
-                    告警: {ecoModalData.alarm.code} · 设备: {ecoModalData.alarm.deviceCode}
+                    站点: {site.siteName} · 告警: {ecoModalData.alarm.code} · 设备: {ecoModalData.alarm.deviceCode}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setEcoModalData(null)}
-                className="text-slate-400 hover:text-slate-700 p-1"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-cyan-50/50 rounded-lg border border-cyan-200 space-y-1">
-                <div className="font-bold text-slate-900">{ecoModalData.alarm.title}</div>
+            <div className="overflow-y-auto flex-1 space-y-3.5 text-xs pr-1">
+              {/* 1. 当前告警基础信息与 SLA 影响 */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 text-xs">{ecoModalData.alarm.title}</span>
+                  <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                    {ecoModalData.alarm.deviceName}
+                  </span>
+                </div>
                 <div className="text-slate-600 text-[11px] leading-relaxed">
                   {ecoModalData.alarm.rootCause}
                 </div>
-                <div className="text-[11px] text-cyan-800 font-mono font-medium pt-1">
-                  当前计入 SLA 考核停机: {ecoModalData.alarm.equivalentInterruptionMinutes} 分钟
-                  (标注为外因停机后将全额核减为 0 分钟)
+                <div className="text-[11px] text-red-600 font-medium pt-1.5 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-1">
+                  <span>当前计入 SLA 考核停运: <strong className="font-mono text-red-700">{ecoModalData.alarm.equivalentInterruptionMinutes} 分钟</strong></span>
+                  <span className="text-cyan-800 font-bold bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+                    标注为外因停机后将全额核减为 0 分钟
+                  </span>
                 </div>
               </div>
 
+              {/* 2. 当前告警原始起止时间展示 (基准参照区) */}
+              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-200/90 space-y-2">
+                <div className="flex items-center justify-between text-blue-950 font-bold text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    <span>当前告警原始起止时间 (基准参照)</span>
+                  </span>
+                  <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono font-medium">
+                    原始持续: {ecoModalData.alarmDurationMinutes} 分钟
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
+                  <div className="bg-white p-2.5 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-slate-400 block text-[10px]">告警开始时间 (Trigger Time)</span>
+                    <span className="font-mono font-bold text-slate-800 text-xs mt-0.5 block">
+                      {ecoModalData.alarmStartTime}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-slate-400 block text-[10px]">告警结束时间 (Clear Time)</span>
+                    <span className="font-mono font-bold text-slate-800 text-xs mt-0.5 block">
+                      {ecoModalData.alarmEndTime}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. ECO 外因免责时间配置区 (默认这段时间，并支持修改为自定义ECO时间) */}
+              <div className="p-3.5 bg-cyan-50/70 rounded-xl border border-cyan-200/90 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-cyan-200/80">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-cyan-950 text-xs flex items-center gap-1.5">
+                        <ZapOff className="w-3.5 h-3.5 text-cyan-700" />
+                        <span>ECO 外因免责生效时段</span>
+                      </span>
+                      {ecoModalData.isCustomEcoTime ? (
+                        <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                          <Edit3 className="w-3 h-3 text-amber-700" />
+                          已修改为自定义 ECO 时间
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          默认匹配告警时间
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-cyan-800/90 mt-0.5">
+                      默认采用当前告警的起止时间。如外部电网调度限电或线路检修时段与告警不同，可直接修改为实际的 ECO 时间。
+                    </p>
+                  </div>
+
+                  {/* 一键恢复默认告警时间按钮 */}
+                  {ecoModalData.isCustomEcoTime && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEcoModalData({
+                          ...ecoModalData,
+                          ecoStartTime: ecoModalData.alarmStartTime,
+                          ecoEndTime: ecoModalData.alarmEndTime,
+                          ecoDurationMinutes: ecoModalData.alarmDurationMinutes,
+                          isCustomEcoTime: false
+                        });
+                      }}
+                      className="self-start sm:self-auto px-2.5 py-1 bg-white hover:bg-cyan-100 text-cyan-800 border border-cyan-300 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors shadow-2xs shrink-0 cursor-pointer"
+                      title="重置为告警原始开始与结束时间"
+                    >
+                      <RotateCcw className="w-3 h-3 text-cyan-600" />
+                      <span>恢复默认告警时间</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* 开始与结束时间输入框 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-cyan-700" />
+                        <span>ECO 开始时间 (自定义):</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">YYYY-MM-DD HH:mm:ss</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={ecoModalData.ecoStartTime}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        const isCustom = newStart !== ecoModalData.alarmStartTime || ecoModalData.ecoEndTime !== ecoModalData.alarmEndTime;
+                        const diff = calculateTimeDifferenceMinutes(newStart, ecoModalData.ecoEndTime);
+                        setEcoModalData({
+                          ...ecoModalData,
+                          ecoStartTime: newStart,
+                          ecoDurationMinutes: diff,
+                          isCustomEcoTime: isCustom
+                        });
+                      }}
+                      placeholder="YYYY-MM-DD HH:mm:ss"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-cyan-500 rounded-lg text-xs font-mono text-slate-900 shadow-2xs focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-cyan-700" />
+                        <span>ECO 结束时间 (自定义):</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">YYYY-MM-DD HH:mm:ss</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={ecoModalData.ecoEndTime}
+                      onChange={(e) => {
+                        const newEnd = e.target.value;
+                        const isCustom = ecoModalData.ecoStartTime !== ecoModalData.alarmStartTime || newEnd !== ecoModalData.alarmEndTime;
+                        const diff = calculateTimeDifferenceMinutes(ecoModalData.ecoStartTime, newEnd);
+                        setEcoModalData({
+                          ...ecoModalData,
+                          ecoEndTime: newEnd,
+                          ecoDurationMinutes: diff,
+                          isCustomEcoTime: isCustom
+                        });
+                      }}
+                      placeholder="YYYY-MM-DD HH:mm:ss"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-cyan-500 rounded-lg text-xs font-mono text-slate-900 shadow-2xs focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 快捷微调结束时间按钮 */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
+                  <span className="text-slate-500 text-[10px]">快捷调整结束时间:</span>
+                  {[
+                    { label: '+15分钟', mins: 15 },
+                    { label: '+30分钟', mins: 30 },
+                    { label: '+1小时', mins: 60 },
+                    { label: '-15分钟', mins: -15 }
+                  ].map(adj => (
+                    <button
+                      key={adj.label}
+                      type="button"
+                      onClick={() => {
+                        const newEnd = adjustTimeStringByMinutes(ecoModalData.ecoEndTime, adj.mins);
+                        const isCustom = ecoModalData.ecoStartTime !== ecoModalData.alarmStartTime || newEnd !== ecoModalData.alarmEndTime;
+                        const diff = calculateTimeDifferenceMinutes(ecoModalData.ecoStartTime, newEnd);
+                        setEcoModalData({
+                          ...ecoModalData,
+                          ecoEndTime: newEnd,
+                          ecoDurationMinutes: diff,
+                          isCustomEcoTime: isCustom
+                        });
+                      }}
+                      className="px-2 py-0.5 bg-white hover:bg-cyan-100 text-cyan-800 border border-cyan-200 rounded text-[10px] font-mono font-medium shadow-2xs cursor-pointer transition-colors"
+                    >
+                      {adj.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 实时核算提示条 */}
+                <div className="p-2.5 bg-white rounded-lg border border-cyan-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-600 text-[11px]">ECO 外因免责核免时长:</span>
+                      <span className="font-mono font-bold text-cyan-700 text-sm">
+                        {ecoModalData.ecoDurationMinutes} 分钟
+                      </span>
+                      {ecoModalData.isCustomEcoTime && (
+                        <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                          (偏差: {ecoModalData.ecoDurationMinutes - ecoModalData.alarmDurationMinutes >= 0 ? `+${ecoModalData.ecoDurationMinutes - ecoModalData.alarmDurationMinutes}` : `${ecoModalData.ecoDurationMinutes - ecoModalData.alarmDurationMinutes}`} 分钟)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      {ecoModalData.isCustomEcoTime
+                        ? `自定义时间已生效，系统将以填写的 ECO 时间区间全额核免 ${ecoModalData.ecoDurationMinutes} 分钟 SLA 考核。`
+                        : `默认时间已生效，系统以告警完整起止时段 (${ecoModalData.alarmDurationMinutes} 分钟) 全额核免 SLA 考核。`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. ECO 免责依据条款选择 */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   选择外因停机(ECO)免责依据条款:
                 </label>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {[
                     {
                       key: '电网调度指令性限电 / 负荷低谷备用停机 (ECO电网调度免责条款)',
@@ -1148,7 +1751,7 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                       key={opt.key}
                       className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
                         ecoModalData.reason === opt.key
-                          ? 'bg-cyan-50/70 border-cyan-400 text-cyan-950 font-semibold'
+                          ? 'bg-cyan-50/70 border-cyan-400 text-cyan-950 font-semibold shadow-2xs'
                           : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
@@ -1179,11 +1782,12 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                       setEcoModalData({ ...ecoModalData, customReason: e.target.value })
                     }
                     placeholder="请输入调度令号或供电局线路检修通知文号..."
-                    className="w-full p-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-cyan-500"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-cyan-500 shadow-2xs"
                   />
                 </div>
               )}
 
+              {/* 5. 核准人 */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   核准人 / 运维调度员:
@@ -1195,24 +1799,25 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                     setEcoModalData({ ...ecoModalData, operator: e.target.value })
                   }
                   placeholder="例如: 现场运维调度·李维"
-                  className="w-full p-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-cyan-500"
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-cyan-500 shadow-2xs"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-200">
+            {/* 弹框底部操作按钮 */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 shrink-0">
               <button
                 onClick={() => setEcoModalData(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmEcoExempt}
-                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs font-bold shadow-2xs flex items-center gap-1.5"
+                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>确认外因停机并核减SLA考核</span>
+                <span>确认标注 ECO 外因免责 ({ecoModalData.ecoDurationMinutes} 分钟已核免)</span>
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
+import { StatusLampBadge } from '../common/StatusBadge';
 import { RedundancyLevel } from '../../types';
 import { EditSiteModal } from './EditSiteModal';
 import {
@@ -146,7 +146,6 @@ export const SiteDetailView: React.FC = () => {
                   {site.siteCode}
                 </span>
                 <StatusLampBadge status={site.statusLamp} size="md" />
-                <RedundancyBadge level={site.redundancy} />
               </div>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 mt-2">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Site, StatusLamp, RedundancyLevel } from '../../types';
 import { DimensionTreeFilter } from '../common/DimensionTreeFilter';
-import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
+import { StatusLampBadge } from '../common/StatusBadge';
 import { EditSiteModal } from './EditSiteModal';
 import {
   Plus,
@@ -39,7 +39,6 @@ export const SitesView: React.FC = () => {
   } = useApp();
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [redundancyFilter, setRedundancyFilter] = useState<string>('ALL');
   const [keyword, setKeyword] = useState<string>('');
   const [editingSite, setEditingSite] = useState<Site | null>(null);
 
@@ -71,7 +70,6 @@ export const SitesView: React.FC = () => {
 
     // Local filters
     if (statusFilter !== 'ALL' && site.statusLamp !== statusFilter) return false;
-    if (redundancyFilter !== 'ALL' && site.redundancy !== redundancyFilter) return false;
 
     // Search
     const searchTarget = drilldownFilter.searchKey || keyword;
@@ -139,7 +137,7 @@ export const SitesView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                全网站点信息的集中维护。初始来源为合同系统同步 + Excel 批量导入，支持核心设备与组网冗余度持续运维。
+                全网站点信息的集中维护。初始来源为合同系统同步 + Excel 批量导入，支持核心设备拓扑与可用度SLA持续运维。
               </p>
             </div>
 
@@ -191,23 +189,6 @@ export const SitesView: React.FC = () => {
                 </select>
               </div>
 
-              {/* Redundancy Filter */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-500 font-medium">组网冗余:</span>
-                <select
-                  value={redundancyFilter}
-                  onChange={e => setRedundancyFilter(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="ALL">全部组网模式</option>
-                  <option value="DUAL_HOT_BACKUP">双机热备</option>
-                  <option value="N_PLUS_1">N+1 单元热备</option>
-                  <option value="RING_TOPOLOGY">光纤环网</option>
-                  <option value="MULTI_ACTIVE">多活分担</option>
-                  <option value="NONE">单机无冗余</option>
-                </select>
-              </div>
-
               {/* Keyword Search */}
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
@@ -232,13 +213,11 @@ export const SitesView: React.FC = () => {
               drilldownFilter.statusLamp ||
               drilldownFilter.searchKey ||
               statusFilter !== 'ALL' ||
-              redundancyFilter !== 'ALL' ||
               keyword !== '') && (
               <button
                 onClick={() => {
                   setDrilldownFilter({});
                   setStatusFilter('ALL');
-                  setRedundancyFilter('ALL');
                   setKeyword('');
                 }}
                 className="text-xs text-blue-600 hover:text-blue-700 underline cursor-pointer font-medium"
@@ -258,7 +237,6 @@ export const SitesView: React.FC = () => {
                     <th className="py-3 px-4">维度归属</th>
                     <th className="py-3 px-4">客户</th>
                     <th className="py-3 px-3 text-center">核心设备数</th>
-                    <th className="py-3 px-3">组网冗余度</th>
                     <th className="py-3 px-3 font-mono">SLA 阈值</th>
                     <th className="py-3 px-3 font-mono">当期累计可用度</th>
                     <th className="py-3 px-3">状态灯</th>
@@ -269,7 +247,7 @@ export const SitesView: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   {filteredSites.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-12 text-center text-slate-400">
+                      <td colSpan={9} className="py-12 text-center text-slate-400">
                         <Radio className="w-8 h-8 mx-auto mb-2 text-slate-400 animate-pulse" />
                         没有符合筛选条件的站点记录
                       </td>
@@ -306,9 +284,6 @@ export const SitesView: React.FC = () => {
                           </td>
                           <td className="py-3 px-3 text-center font-mono font-semibold text-slate-800">
                             {site.coreDeviceCount}
-                          </td>
-                          <td className="py-3 px-3">
-                            <RedundancyBadge level={site.redundancy} />
                           </td>
                           <td className="py-3 px-3 font-mono font-semibold text-slate-800">
                             {site.slaThreshold}%
@@ -571,41 +546,6 @@ export const SitesView: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 mb-1 font-semibold">组网冗余度</label>
-                <select
-                  value={newSiteForm.redundancy}
-                  onChange={e =>
-                    setNewSiteForm(prev => ({
-                      ...prev,
-                      redundancy: e.target.value as RedundancyLevel
-                    }))
-                  }
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
-                >
-                  <option value="DUAL_HOT_BACKUP">双机热备 (Dual Hot-Backup)</option>
-                  <option value="N_PLUS_1">N+1 单元热备 (N+1 Modular)</option>
-                  <option value="RING_TOPOLOGY">光纤自愈环网 (Ring Topology)</option>
-                  <option value="MULTI_ACTIVE">多活负荷分担 (Multi-Active)</option>
-                  <option value="NONE">单机无冗余 (None)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 mb-1 font-semibold">
-                  冗余度运维备注 (随组网变更记录)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="填写变流器组网拓扑、保护切除逻辑等备注..."
-                  value={newSiteForm.redundancyNotes}
-                  onChange={e =>
-                    setNewSiteForm(prev => ({ ...prev, redundancyNotes: e.target.value }))
-                  }
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
-                />
-              </div>
-
               <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
@@ -645,7 +585,7 @@ export const SitesView: React.FC = () => {
 
             <div className="space-y-4 text-xs">
               <p className="text-slate-500 leading-relaxed">
-                支持批量上传 Excel 格式的站点台账清单（含站点编码、名称、区域、客户、SLA 阈值及组网冗余模式）。系统将自动与合同数据枢纽进行匹配对齐 (R9)。
+                支持批量上传 Excel 格式的站点台账清单（含站点编码、名称、区域、客户及 SLA 阈值）。系统将自动与合同数据枢纽进行匹配对齐 (R9)。
               </p>
 
               <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-lg p-6 text-center bg-slate-50 cursor-pointer transition-colors">

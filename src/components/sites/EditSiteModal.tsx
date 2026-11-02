@@ -148,7 +148,7 @@ export const EditSiteModal: React.FC<EditSiteModalProps> = ({
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>工程容量与冗余组网</span>
+            <span>工程容量与并网接入</span>
           </button>
         </div>
 
@@ -418,36 +418,6 @@ export const EditSiteModal: React.FC<EditSiteModalProps> = ({
                     <option value="0.4kV">0.4kV 低压配电网</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    组网冗余模式 (Rule R2)
-                  </label>
-                  <select
-                    value={formData.redundancy || 'N_PLUS_1'}
-                    onChange={e => setFormData({ ...formData, redundancy: e.target.value as RedundancyLevel })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:border-blue-500 shadow-2xs"
-                  >
-                    <option value="NONE">无冗余 (单机运行)</option>
-                    <option value="N_PLUS_1">N+1 单元冗余</option>
-                    <option value="DUAL_HOT_BACKUP">双机热备 (Dual-Hot)</option>
-                    <option value="RING_TOPOLOGY">环网冗余 (Ring Topology)</option>
-                    <option value="MULTI_ACTIVE">多活集群冗余 (Multi-Active)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  冗余与拓扑工程说明
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.redundancyNotes || ''}
-                  onChange={e => setFormData({ ...formData, redundancyNotes: e.target.value })}
-                  placeholder="如：双母线分段接线，配备自动负荷转移切换，单台PCS故障不影响整站并网运行"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 text-xs focus:bg-white focus:outline-none focus:border-blue-500 shadow-2xs"
-                />
               </div>
             </div>
           )}

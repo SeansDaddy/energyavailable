@@ -8,7 +8,10 @@ import {
   StationMonthlyCondition,
   AnnualFlexibleSohPoint,
   FlexibleWarrantySohResult,
-  WarrantyLogFileSummary
+  WarrantyLogFileSummary,
+  ContractYearOverConditionSummary,
+  InterimYearEndSohAssessment,
+  NextYearConditionPlan
 } from '../types/warrantyCondition';
 
 /**
@@ -48,6 +51,7 @@ export const getDefaultContractBaseline = (siteId: string, ratedMwh = 20.0): Con
   baselineTempMax: 35.0,
   annualEnergyThroughputLimitMwh: ratedMwh * 365,
   baselineRestSocLimitPct: 80.0,
+  plannedAvgSocPct: 50.0,
   finalGuaranteedSoh: 80.0,
   lastModified: '2026-08-20 10:00:00',
   sourceType: 'DEFAULT'
@@ -389,6 +393,19 @@ export const generateStationDailyAndMonthlyData = (
       // 算法折算单日SOH等效额外损耗 %
       const equivalentSohLossPct = +(0.0025 * (1 + overIndex / 100)).toFixed(5);
 
+      // 设备核心工况指标计算
+      const avgDod = +(86.0 + Math.random() * 6).toFixed(1);
+      const dailyCrate = +(maxCrate * 0.88).toFixed(2);
+      const dailyChargeCrate = +(maxCrate * 0.82).toFixed(2);
+      const dailyDischargeCrate = +(maxCrate * 0.95).toFixed(2);
+      const dailyPackAvgSoc = +(50.5 + Math.sin(day * 0.45) * 5.8 + Math.random() * 2.4).toFixed(1);
+      const dailyOperatingHours = +(15.8 + Math.min(6.5, actualEfc * 3.6) + (Math.random() * 1.0 - 0.5)).toFixed(1);
+      const dailyCycles = actualEfc;
+      const dailyDod = avgDod;
+      const dischargeEnergyMwh = actualThroughputMwh;
+      const chargeEnergyMwh = +(actualThroughputMwh * 1.14).toFixed(2); // 综合考虑充放电能效 RTE
+      const totalEnergyMwh = +(dischargeEnergyMwh + chargeEnergyMwh).toFixed(2);
+
       const dayRecord: StationDailyCondition = {
         date: dateStr,
         siteId,
@@ -406,13 +423,25 @@ export const generateStationDailyAndMonthlyData = (
         maxCrate,
         baselineCrate: baseCrate,
         overCrateMwh,
-        avgDod: +(86.0 + Math.random() * 6).toFixed(1),
+        avgDod,
         baselineDod: baseline.maxDodPct,
         deltaSoc: +(3.2 + Math.random() * 3.0).toFixed(1),
         overConditionIndex: Math.min(100, overIndex),
         isOverCondition: isOver,
         complianceStatus: status,
-        equivalentSohLossPct
+        equivalentSohLossPct,
+
+        // 6 项核心设备工况数据
+        dailyCrate,
+        dailyChargeCrate,
+        dailyDischargeCrate,
+        dailyPackAvgSoc,
+        dailyOperatingHours,
+        dailyCycles,
+        dailyDod,
+        chargeEnergyMwh,
+        dischargeEnergyMwh,
+        totalEnergyMwh
       };
 
       monthDaily.push(dayRecord);
@@ -440,6 +469,16 @@ export const generateStationDailyAndMonthlyData = (
     const compliantDays = monthDaily.filter(d => d.complianceStatus === 'COMPLIANT').length;
     const complianceRate = +((compliantDays / daysInMonth) * 100).toFixed(1);
 
+    // 6 项设备工况月度平均与汇总
+    const avgDailyCrate = +(monthDaily.reduce((a, b) => a + b.dailyCrate, 0) / daysInMonth).toFixed(2);
+    const avgDailyPackSoc = +(monthDaily.reduce((a, b) => a + b.dailyPackAvgSoc, 0) / daysInMonth).toFixed(1);
+    const avgDailyOperatingHours = +(monthDaily.reduce((a, b) => a + b.dailyOperatingHours, 0) / daysInMonth).toFixed(1);
+    const totalCycles = +monthDaily.reduce((a, b) => a + b.dailyCycles, 0).toFixed(1);
+    const avgDailyDod = +(monthDaily.reduce((a, b) => a + b.dailyDod, 0) / daysInMonth).toFixed(1);
+    const totalChargeEnergyMwh = +monthDaily.reduce((a, b) => a + b.chargeEnergyMwh, 0).toFixed(1);
+    const totalDischargeEnergyMwh = +monthDaily.reduce((a, b) => a + b.dischargeEnergyMwh, 0).toFixed(1);
+    const totalEnergyMwh = +(totalChargeEnergyMwh + totalDischargeEnergyMwh).toFixed(1);
+
     monthlyList.push({
       month,
       daysCount: daysInMonth,
@@ -458,6 +497,15 @@ export const generateStationDailyAndMonthlyData = (
       overConditionIndex: mOverIndex,
       complianceRate,
       status: complianceRate < 70 ? 'EXCEEDED' : complianceRate < 90 ? 'WARNING' : 'NORMAL',
+      
+      avgDailyCrate,
+      avgDailyPackSoc,
+      avgDailyOperatingHours,
+      totalCycles,
+      avgDailyDod,
+      totalChargeEnergyMwh,
+      totalDischargeEnergyMwh,
+      totalEnergyMwh,
       dailyDetails: monthDaily
     });
   });
@@ -581,6 +629,14 @@ export const exportDailyConditionsToCsv = (
   const headers = [
     '日期',
     '站点标识',
+    '日充放电倍率(C)',
+    '日电池PACK平均SOC(%)',
+    '日系统运行时间(h)',
+    '日循环次数(次)',
+    '日DOD(%)',
+    '日充电电量(MWh)',
+    '日放电电量(MWh)',
+    '充放电电量合计(MWh)',
     '实际放电吞吐量(MWh)',
     '基准吞吐量(MWh)',
     '超额吞吐量(MWh)',
@@ -595,7 +651,6 @@ export const exportDailyConditionsToCsv = (
     '峰值充放倍率(C)',
     '基准倍率(C)',
     '超倍率吞吐量(MWh)',
-    '平均放电深度DOD(%)',
     '簇间最大ΔSOC(%)',
     '综合超工况指数(0-100)',
     '是否超工况',
@@ -606,6 +661,14 @@ export const exportDailyConditionsToCsv = (
   const rows = dailyList.map(d => [
     d.date,
     d.siteId,
+    d.dailyCrate,
+    d.dailyPackAvgSoc,
+    d.dailyOperatingHours,
+    d.dailyCycles,
+    d.dailyDod,
+    d.chargeEnergyMwh,
+    d.dischargeEnergyMwh,
+    d.totalEnergyMwh,
     d.actualThroughputMwh,
     d.baselineThroughputMwh,
     d.overThroughputMwh,
@@ -620,7 +683,6 @@ export const exportDailyConditionsToCsv = (
     d.maxCrate,
     d.baselineCrate,
     d.overCrateMwh,
-    d.avgDod,
     d.deltaSoc,
     d.overConditionIndex,
     d.isOverCondition ? '是' : '否',
@@ -636,3 +698,552 @@ export const exportDailyConditionsToCsv = (
   const filename = `${siteName}_站级日工况与超工况明细_${new Date().toISOString().slice(0, 10)}.csv`;
   triggerDownload(filename, csvContent);
 };
+
+// =========================================================================
+// 8. 当前合同年超工况统计计算引擎
+// =========================================================================
+
+/**
+ * 计算当前合同年的超工况综合统计指标及标红报警状态
+ * 规则: 如果超限次数大于0，或者平均SOC大于合同规划SOC，则标红展示 (isRedAlert: true)
+ */
+export const calculateContractYearOverCondition = (
+  siteId: string,
+  baseline: ContractBaselineCondition,
+  dailyList: StationDailyCondition[],
+  monthlyList: StationMonthlyCondition[]
+): ContractYearOverConditionSummary => {
+  // 1. 确定当前合同年信息
+  const startYear = parseInt(baseline.warrantyStartDate.slice(0, 4), 10) || 2024;
+  const currentSimYear = 2026;
+  const contractYear = currentSimYear - startYear + 1; // e.g. 2026 - 2024 + 1 = 3
+  const contractYearLabel = `第${contractYear}合同年 (${currentSimYear}年度)`;
+  const startDate = `${currentSimYear}-01-01`;
+  const endDate = `${currentSimYear}-12-31`;
+
+  // 筛选属于当前合同年的日数据与月数据
+  const yearDaily = dailyList.filter(d => d.date.startsWith(String(currentSimYear)));
+  const yearMonthly = monthlyList.filter(m => m.month.startsWith(String(currentSimYear)));
+
+  const elapsedDays = yearDaily.length || 243;
+  const totalDays = 365;
+  const progressPct = +((elapsedDays / totalDays) * 100).toFixed(1);
+
+  // 2. 合同规划SOC与实际平均SOC
+  const contractPlannedSoc = baseline.plannedAvgSocPct ?? 50.0;
+  const actualAvgSoc = yearDaily.length > 0
+    ? +(yearDaily.reduce((acc, d) => acc + d.dailyPackAvgSoc, 0) / yearDaily.length).toFixed(1)
+    : 52.8;
+  const isSocExceeded = actualAvgSoc > contractPlannedSoc;
+  const socDiff = +(actualAvgSoc - contractPlannedSoc).toFixed(1);
+
+  // 3. 各细分维度超限天数与次数统计
+  const tempOverLimitDays = yearDaily.filter(d => d.maxTemp > baseline.baselineTempMax).length;
+  const tempMaxRecorded = yearDaily.length > 0 ? +Math.max(...yearDaily.map(d => d.maxTemp)).toFixed(1) : 38.6;
+  const totalOverTempDegreeHours = +yearDaily.reduce((acc, d) => acc + d.overTempDegreeHours, 0).toFixed(1);
+  const totalOverTempHours = +yearDaily.reduce((acc, d) => acc + d.overTempHours, 0).toFixed(1);
+
+  const crateOverLimitDays = yearDaily.filter(d => d.maxCrate > baseline.maxCrate).length;
+  const crateMaxRecorded = yearDaily.length > 0 ? +Math.max(...yearDaily.map(d => d.maxCrate)).toFixed(2) : 0.68;
+  const crateOverMwh = +yearDaily.reduce((acc, d) => acc + d.overCrateMwh, 0).toFixed(1);
+
+  const dodOverLimitDays = yearDaily.filter(d => (d.dailyDod || d.avgDod) > baseline.maxDodPct).length;
+  const dodMaxRecorded = yearDaily.length > 0 ? +Math.max(...yearDaily.map(d => d.dailyDod || d.avgDod)).toFixed(1) : 94.2;
+
+  const cyclesOverLimitDays = yearDaily.filter(d => d.actualEfc > baseline.dailyBaselineEfc).length;
+  const cumulativeActualCycles = +yearDaily.reduce((acc, d) => acc + d.actualEfc, 0).toFixed(1);
+  const plannedAnnualCycles = baseline.annualBaselineEfc;
+
+  const throughputActualMwh = +yearDaily.reduce((acc, d) => acc + d.actualThroughputMwh, 0).toFixed(1);
+  const throughputLimitMwh = baseline.annualEnergyThroughputLimitMwh;
+
+  const socOverLimitDays = yearDaily.filter(d => d.dailyPackAvgSoc > contractPlannedSoc).length;
+
+  // 超限总次数 (包括超温、超倍率、超DOD深度、超循环、平均SOC超规划)
+  const totalOverLimitCount = tempOverLimitDays + crateOverLimitDays + dodOverLimitDays + (cyclesOverLimitDays > 0 ? Math.min(cyclesOverLimitDays, 12) : 0);
+  const isOverLimitExceeded = totalOverLimitCount > 0;
+
+  // 4. 标红规则触发判定: 超限次数 > 0 或者 平均SOC > 合同规划SOC
+  const isRedAlert = isOverLimitExceeded || isSocExceeded;
+
+  let alertMessage = '';
+  if (isRedAlert) {
+    const reasons: string[] = [];
+    if (isOverLimitExceeded) {
+      reasons.push(`累计超限次数达 ${totalOverLimitCount} 次 (包含超温${tempOverLimitDays}天/超倍率${crateOverLimitDays}天/超深DOD${dodOverLimitDays}天)`);
+    }
+    if (isSocExceeded) {
+      reasons.push(`实际平均SOC (${actualAvgSoc}%) 高于合同规划SOC (${contractPlannedSoc}%) +${socDiff}%`);
+    }
+    alertMessage = `当前合同年已触发超工况标红预警：${reasons.join('；')}。已超出合同基准质保边界，需启动工况校准与质保折损评估。`;
+  }
+
+  // 5. 6 项设备核心工况指标年度均值与累计
+  const annualAvgDailyCrate = yearDaily.length > 0
+    ? +(yearDaily.reduce((acc, d) => acc + d.dailyCrate, 0) / yearDaily.length).toFixed(2)
+    : 0.42;
+  const annualAvgPackSoc = actualAvgSoc;
+  const annualAvgOperatingHours = yearDaily.length > 0
+    ? +(yearDaily.reduce((acc, d) => acc + d.dailyOperatingHours, 0) / yearDaily.length).toFixed(1)
+    : 18.6;
+  const annualTotalCycles = yearDaily.length > 0
+    ? +yearDaily.reduce((acc, d) => acc + d.dailyCycles, 0).toFixed(1)
+    : cumulativeActualCycles;
+  const annualAvgDod = yearDaily.length > 0
+    ? +(yearDaily.reduce((acc, d) => acc + d.dailyDod, 0) / yearDaily.length).toFixed(1)
+    : 88.5;
+  const annualTotalChargeMwh = yearDaily.length > 0
+    ? +yearDaily.reduce((acc, d) => acc + d.chargeEnergyMwh, 0).toFixed(1)
+    : +(throughputActualMwh * 1.12).toFixed(1);
+  const annualTotalDischargeMwh = throughputActualMwh;
+  const annualTotalEnergyMwh = +(annualTotalChargeMwh + annualTotalDischargeMwh).toFixed(1);
+
+  // 6. 月度拆解
+  const monthlyBreakdown = yearMonthly.map(m => {
+    const mDaily = yearDaily.filter(d => d.date.startsWith(m.month));
+    const mOverCount = mDaily.filter(d => d.isOverCondition).length;
+    const mAvgSoc = m.avgDailyPackSoc;
+    const mSocExceeded = mAvgSoc > contractPlannedSoc;
+    const mIsOver = mOverCount > 0;
+    const mIsRed = mIsOver || mSocExceeded;
+
+    return {
+      month: m.month,
+      daysCount: m.daysCount,
+      overLimitCount: mOverCount,
+      avgSoc: mAvgSoc,
+      isSocExceeded: mSocExceeded,
+      isOverLimit: mIsOver,
+      isRed: mIsRed,
+      maxTemp: m.maxTemp,
+      maxCrate: m.maxCrate,
+      actualCycles: m.actualEfc,
+      plannedCycles: +(baseline.dailyBaselineEfc * m.daysCount).toFixed(1),
+      throughputMwh: m.actualThroughputMwh
+    };
+  });
+
+  // 7. 生成超限历史事件明细
+  const overLimitEvents: ContractYearOverConditionSummary['overLimitEvents'] = [];
+  let eventIdx = 1;
+
+  yearDaily
+    .filter(d => d.isOverCondition || d.dailyPackAvgSoc > contractPlannedSoc)
+    .slice(-15) // 最近 15 条典型超限记录
+    .reverse()
+    .forEach(d => {
+      if (d.maxTemp > baseline.baselineTempMax) {
+        overLimitEvents.push({
+          id: `EVT-${eventIdx++}`,
+          date: d.date,
+          type: 'TEMP',
+          typeName: '电芯工作温度超限',
+          recordedValue: `${d.maxTemp} ℃`,
+          contractLimit: `≤ ${baseline.baselineTempMax} ℃`,
+          deviation: `+${(d.maxTemp - baseline.baselineTempMax).toFixed(1)} ℃`,
+          impactDescription: `超温时长 ${d.overTempHours}h，超温度时 ${d.overTempDegreeHours}℃·h，增加高温析锂与正极溶解风险`,
+          severity: d.maxTemp > baseline.baselineTempMax + 2.0 ? 'CRITICAL' : 'WARNING'
+        });
+      }
+      if (d.maxCrate > baseline.maxCrate) {
+        overLimitEvents.push({
+          id: `EVT-${eventIdx++}`,
+          date: d.date,
+          type: 'CRATE',
+          typeName: '充放电倍率超限',
+          recordedValue: `${d.maxCrate} C`,
+          contractLimit: `≤ ${baseline.maxCrate} C`,
+          deviation: `+${(d.maxCrate - baseline.maxCrate).toFixed(2)} C`,
+          impactDescription: `超倍率吞吐 ${d.overCrateMwh} MWh，局部极化应力加速SEI膜破裂增厚`,
+          severity: d.maxCrate > baseline.maxCrate + 0.1 ? 'CRITICAL' : 'WARNING'
+        });
+      }
+      if (d.dailyPackAvgSoc > contractPlannedSoc) {
+        overLimitEvents.push({
+          id: `EVT-${eventIdx++}`,
+          date: d.date,
+          type: 'SOC',
+          typeName: '日平均SOC超合同规划',
+          recordedValue: `${d.dailyPackAvgSoc} %`,
+          contractLimit: `规划值 ${contractPlannedSoc} %`,
+          deviation: `+${(d.dailyPackAvgSoc - contractPlannedSoc).toFixed(1)} %`,
+          impactDescription: `电芯长期处于高荷电态高开路电压应力环境，加速日历自放电与活性锂损耗`,
+          severity: d.dailyPackAvgSoc > contractPlannedSoc + 5 ? 'CRITICAL' : 'WARNING'
+        });
+      }
+      if (d.dailyDod > baseline.maxDodPct) {
+        overLimitEvents.push({
+          id: `EVT-${eventIdx++}`,
+          date: d.date,
+          type: 'DOD',
+          typeName: '放电深度DOD超限',
+          recordedValue: `${d.dailyDod} %`,
+          contractLimit: `≤ ${baseline.maxDodPct} %`,
+          deviation: `+${(d.dailyDod - baseline.maxDodPct).toFixed(1)} %`,
+          impactDescription: `深度过放导致相变机械应力增加，影响后期容量保持率`,
+          severity: 'WARNING'
+        });
+      }
+    });
+
+  return {
+    siteId,
+    contractNo: baseline.contractNo,
+    contractYear,
+    contractYearLabel,
+    startDate,
+    endDate,
+    elapsedDays,
+    totalDays,
+    progressPct,
+
+    contractPlannedSoc,
+    actualAvgSoc,
+    isSocExceeded,
+    socDiff,
+
+    totalOverLimitCount,
+    isOverLimitExceeded,
+
+    isRedAlert,
+    alertMessage,
+
+    tempOverLimitCount: tempOverLimitDays,
+    tempMaxRecorded,
+    tempThreshold: baseline.baselineTempMax,
+    totalOverTempDegreeHours,
+    totalOverTempHours,
+
+    crateOverLimitCount: crateOverLimitDays,
+    crateMaxRecorded,
+    crateThreshold: baseline.maxCrate,
+    crateOverMwh,
+
+    dodOverLimitCount: dodOverLimitDays,
+    dodMaxRecorded,
+    dodThreshold: baseline.maxDodPct,
+
+    cyclesOverLimitDays,
+    cumulativeActualCycles,
+    plannedAnnualCycles,
+
+    throughputActualMwh,
+    throughputLimitMwh,
+
+    socOverLimitDays,
+
+    annualAvgDailyCrate,
+    annualAvgPackSoc,
+    annualAvgOperatingHours,
+    annualTotalCycles,
+    annualAvgDod,
+    annualTotalChargeMwh,
+    annualTotalDischargeMwh,
+    annualTotalEnergyMwh,
+
+    monthlyBreakdown,
+    overLimitEvents
+  };
+};
+
+// =========================================================================
+// 9. 年底灵活质保 SOH 临时手动评估算法引擎
+// =========================================================================
+
+/**
+ * 临时手动评估年底灵活质保 SOH
+ * 逻辑: 基于按合同工况的年底预期SOH保证值，结合合同年开始日期(2026-01-01)至今日(2026-08-20)的实际超工况运行情况，
+ * 调用多应力Arrhenius与疲劳模型进行SOH扣减，得出评估值，并给出提前加强质保服务的处置建议。
+ */
+export const performInterimYearEndSohAssessment = (
+  siteId: string,
+  baseline: ContractBaselineCondition,
+  sohBaselineCurve: SohBaselineCurvePoint[],
+  dailyList: StationDailyCondition[],
+  monthlyList: StationMonthlyCondition[],
+  interventionMode: 'CURRENT_INERTIA' | 'CONSERVATIVE_PROTECT' | 'AGGRESSIVE_UTILIZATION' = 'CURRENT_INERTIA'
+): InterimYearEndSohAssessment => {
+  const currentSimYear = 2026;
+  const startYear = parseInt(baseline.warrantyStartDate.slice(0, 4), 10) || 2024;
+  const contractYear = currentSimYear - startYear + 1; // 3
+  const contractYearLabel = `第${contractYear}合同年 (${currentSimYear}年度)`;
+  const startDate = `${currentSimYear}-01-01`;
+  const todayDate = `${currentSimYear}-08-20`;
+  const yearEndDate = `${currentSimYear}-12-31`;
+
+  // 筛选合同年开始至今的数据
+  const yearDaily = dailyList.filter(d => d.date.startsWith(String(currentSimYear)));
+  const elapsedDays = yearDaily.length || 243;
+  const totalDays = 365;
+  const remainingDays = Math.max(0, totalDays - elapsedDays);
+  const progressPct = +((elapsedDays / totalDays) * 100).toFixed(1);
+
+  // 1. 合同工况基准年底预期 SOH (Year 3 基准保证值)
+  const baselineCurvePoint = sohBaselineCurve.find(p => p.year === contractYear) || sohBaselineCurve[3] || {
+    guaranteedSoh: 92.20
+  };
+  const contractBaselineExpectedYearEndSoh = baselineCurvePoint.guaranteedSoh;
+
+  // 2. 合同年开始至今日实际超工况累计运行情况
+  const tempOverLimitDays = yearDaily.filter(d => d.maxTemp > baseline.baselineTempMax).length;
+  const accumulatedTempDegreeHours = +yearDaily.reduce((acc, d) => acc + d.overTempDegreeHours, 0).toFixed(1);
+
+  const crateOverLimitDays = yearDaily.filter(d => d.maxCrate > baseline.maxCrate).length;
+  const accumulatedOverCrateMwh = +yearDaily.reduce((acc, d) => acc + d.overCrateMwh, 0).toFixed(1);
+
+  const excessCycles = +yearDaily.reduce((acc, d) => acc + d.overEfc, 0).toFixed(1);
+  const dodOverLimitDays = yearDaily.filter(d => (d.dailyDod || d.avgDod) > baseline.maxDodPct).length;
+
+  const contractPlannedSoc = baseline.plannedAvgSocPct ?? 50.0;
+  const actualAvgSoc = yearDaily.length > 0
+    ? +(yearDaily.reduce((acc, d) => acc + d.dailyPackAvgSoc, 0) / yearDaily.length).toFixed(1)
+    : 52.8;
+  const socDiff = +(actualAvgSoc - contractPlannedSoc).toFixed(1);
+  const totalOverLimitCount = tempOverLimitDays + crateOverLimitDays + dodOverLimitDays + (excessCycles > 0 ? 5 : 0);
+
+  // 3. 算法多应力 SOH 扣减模型 (基于 Arrhenius 热激活能、极化应力、高SOC日历老化、循环疲劳)
+  // 超温扣减 (温度超出35℃基准线的积分效应)
+  const tempStressDeductionPct = +(Math.min(0.45, (accumulatedTempDegreeHours / 400) * 0.26)).toFixed(3);
+  // 超倍率极化损伤扣减
+  const cratePolarizationDeductionPct = +(Math.min(0.35, (accumulatedOverCrateMwh / 600) * 0.18)).toFixed(3);
+  // 高SOC日历析锂老化扣减 (实际平均SOC每高出1%，日历损耗加速)
+  const highSocCalendarDeductionPct = +(Math.max(0, socDiff * 0.085)).toFixed(3);
+  // 超额循环疲劳扣减
+  const excessCyclesFatigueDeductionPct = +(Math.min(0.40, (excessCycles / 40) * 0.16)).toFixed(3);
+
+  // 剩余天数 (122天) 按照运维干预模式推算预期折损
+  let remainingDaysProjectedDeductionPct = 0.20;
+  if (interventionMode === 'CONSERVATIVE_PROTECT') {
+    remainingDaysProjectedDeductionPct = 0.08; // 降额保全、增强散热
+  } else if (interventionMode === 'AGGRESSIVE_UTILIZATION') {
+    remainingDaysProjectedDeductionPct = 0.42; // 继续高频现货套利
+  } else {
+    // 惯性延续当前趋势
+    remainingDaysProjectedDeductionPct = +((remainingDays / elapsedDays) * (tempStressDeductionPct + cratePolarizationDeductionPct + excessCyclesFatigueDeductionPct)).toFixed(3);
+  }
+
+  // 综合总扣减折损 %
+  const totalDeductionPct = +(
+    tempStressDeductionPct +
+    cratePolarizationDeductionPct +
+    highSocCalendarDeductionPct +
+    excessCyclesFatigueDeductionPct +
+    remainingDaysProjectedDeductionPct
+  ).toFixed(2);
+
+  // 4. 临时评估得出的年底灵活质保 SOH
+  const interimEvaluatedYearEndSoh = +(contractBaselineExpectedYearEndSoh - totalDeductionPct).toFixed(2);
+  const sohMarginVsBaseline = +(interimEvaluatedYearEndSoh - contractBaselineExpectedYearEndSoh).toFixed(2);
+
+  // 健康状态
+  let warrantyHealthStatus: 'HEALTHY' | 'MARGINAL_RISK' | 'CRITICAL_RISK' = 'HEALTHY';
+  let warrantyHealthLabel = '健康受控 (年底SOH满足合同预期)';
+  if (sohMarginVsBaseline < -1.0) {
+    warrantyHealthStatus = 'CRITICAL_RISK';
+    warrantyHealthLabel = '严重透支预警 (需紧急介入运维保全与责任界定)';
+  } else if (sohMarginVsBaseline < 0) {
+    warrantyHealthStatus = 'MARGINAL_RISK';
+    warrantyHealthLabel = '轻度透支边缘 (需提前加强运维调优)';
+  }
+
+  // 5. 提前加强质保服务的具体处置建议
+  const proactiveServiceRecommendations: string[] = [
+    `【提前预判】距第${contractYear}合同年结束尚有 ${remainingDays} 天，按合同工况年底预期SOH保证值为 ${contractBaselineExpectedYearEndSoh}%。结合年初至今实际超工况运行，累计算法扣减折损为 -${totalDeductionPct}%，临时手动评估年底灵活质保SOH为 ${interimEvaluatedYearEndSoh}% (质保裕度: ${sohMarginVsBaseline}%)。`,
+    `【热管理加强】年初至今累计超温时长 ${tempOverLimitDays} 天 (超温度时 ${accumulatedTempDegreeHours} ℃·h，最高温 ${Math.max(...yearDaily.map(d => d.maxTemp), 38.6)}℃)。建议服务工程师提前对该站点液冷管路执行除垢清洗、更换冷媒滤芯，并将夏季制冷启动温差设定下调 2.0℃，消除局部热点。`,
+    `【SOC与浮充控制】当前日电池PACK平均SOC为 ${actualAvgSoc}%，高于合同规划值 ${contractPlannedSoc}% (+${socDiff}%)。电芯长期处于高开路电压状态将加速正极过渡金属溶出；建议优化BMS均衡调度，非充放电待机阶段将静置SOC调降至 45%~50% 浮充窗口。`,
+    `【充放电调度约束】当前超倍率吞吐已达 ${accumulatedOverCrateMwh} MWh，超额循环 ${excessCycles} EFC。建议协调调度中心在秋季负荷高峰期限制单次连续大倍率放电时长，单日等效循环控制在 1.05 EFC 以下。`,
+    `【商务与服务协同】提前组织电站业主召开《第${contractYear}合同年年底质保评估碰头会》，出具本临时手动评估单，就剩余月份充放策略或超工况阶梯保障补充协议达成共识，避免年底结算发生质保违约争议。`
+  ];
+
+  return {
+    assessmentId: `EVA-${siteId}-${currentSimYear}-${Date.now().toString().slice(-4)}`,
+    siteId,
+    contractNo: baseline.contractNo,
+    contractYear,
+    contractYearLabel,
+    startDate,
+    todayDate,
+    yearEndDate,
+    elapsedDays,
+    remainingDays,
+    progressPct,
+
+    contractBaselineExpectedYearEndSoh,
+
+    actualOverConditionSummary: {
+      totalOverLimitCount,
+      tempOverLimitDays,
+      accumulatedTempDegreeHours,
+      crateOverLimitDays,
+      accumulatedOverCrateMwh,
+      excessCycles,
+      dodOverLimitDays,
+      actualAvgSoc,
+      contractPlannedSoc,
+      socDiff
+    },
+
+    deductionBreakdown: {
+      tempStressDeductionPct,
+      cratePolarizationDeductionPct,
+      highSocCalendarDeductionPct,
+      excessCyclesFatigueDeductionPct,
+      remainingDaysProjectedDeductionPct,
+      totalDeductionPct
+    },
+
+    interimEvaluatedYearEndSoh,
+    sohMarginVsBaseline,
+    warrantyHealthStatus,
+    warrantyHealthLabel,
+
+    serviceInterventionMode: interventionMode,
+    proactiveServiceRecommendations,
+
+    evaluatedAt: new Date().toLocaleString(),
+    evaluator: '质量技术部灵活质保专项组'
+  };
+};
+
+// =========================================================================
+// 10. 下一年工况计划模拟与灵活质保服务报价测算引擎
+// =========================================================================
+
+/**
+ * 模拟评估下一年计划工况对应的年底灵活质保 SOH，并联动生成灵活质保服务报价
+ */
+export const simulateNextYearConditionPlan = (
+  baseline: ContractBaselineCondition,
+  sohBaselineCurve: SohBaselineCurvePoint[],
+  planType: 'CONSERVATIVE' | 'BASELINE' | 'AGGRESSIVE' | 'CUSTOM' = 'BASELINE',
+  customOverrides?: Partial<{
+    plannedAnnualCycles: number;
+    plannedMaxCrate: number;
+    plannedMaxTemp: number;
+    plannedMaxDod: number;
+    plannedAvgSoc: number;
+  }>
+): NextYearConditionPlan => {
+  const targetContractYear = 4; // 下一年: 第4合同年 (2027年度)
+  const targetYearLabel = `第${targetContractYear}合同年 (2027年度)`;
+  const ratedMwh = baseline.ratedEnergyMwh;
+
+  // 第4年基准SOH保证值 (例如 90.00%)
+  const baselineYearEndSoh = sohBaselineCurve.find(p => p.year === targetContractYear)?.guaranteedSoh ?? 90.00;
+
+  let planName = '标准基准平衡型 (Baseline)';
+  let plannedAnnualCycles = 365;
+  let plannedMaxCrate = 0.50;
+  let plannedMaxTemp = 35.0;
+  let plannedAvgTemp = 25.0;
+  let plannedMaxDod = 90.0;
+  let plannedAvgSoc = 50.0;
+
+  if (planType === 'CONSERVATIVE') {
+    planName = '温和寿命保全型 (Conservative)';
+    plannedAnnualCycles = 320;
+    plannedMaxCrate = 0.40;
+    plannedMaxTemp = 33.0;
+    plannedAvgTemp = 23.5;
+    plannedMaxDod = 85.0;
+    plannedAvgSoc = 48.0;
+  } else if (planType === 'AGGRESSIVE') {
+    planName = '高收益电力现货调频型 (Aggressive Revenue)';
+    plannedAnnualCycles = 480; // 调频双充双放
+    plannedMaxCrate = 0.65;
+    plannedMaxTemp = 37.5;
+    plannedAvgTemp = 28.0;
+    plannedMaxDod = 93.0;
+    plannedAvgSoc = 54.0;
+  } else if (planType === 'CUSTOM' && customOverrides) {
+    planName = '定制化综合计划工况 (Customized Plan)';
+    if (customOverrides.plannedAnnualCycles !== undefined) plannedAnnualCycles = customOverrides.plannedAnnualCycles;
+    if (customOverrides.plannedMaxCrate !== undefined) plannedMaxCrate = customOverrides.plannedMaxCrate;
+    if (customOverrides.plannedMaxTemp !== undefined) plannedMaxTemp = customOverrides.plannedMaxTemp;
+    if (customOverrides.plannedMaxDod !== undefined) plannedMaxDod = customOverrides.plannedMaxDod;
+    if (customOverrides.plannedAvgSoc !== undefined) plannedAvgSoc = customOverrides.plannedAvgSoc;
+  }
+
+  const plannedDailyCycles = +(plannedAnnualCycles / 365).toFixed(2);
+  const plannedThroughputMwh = +(plannedAnnualCycles * 2 * ratedMwh).toFixed(1);
+
+  // 算法估算下一年年底灵活质保 SOH
+  // 加速老化因子计算
+  const cycleFactor = plannedAnnualCycles / 365; // e.g. 1.0 or 1.315
+  const tempFactor = plannedMaxTemp > 35 ? 1 + ((plannedMaxTemp - 35) / 10) * 0.45 : 1.0;
+  const crateFactor = plannedMaxCrate > 0.5 ? 1 + ((plannedMaxCrate - 0.5) / 0.5) * 0.35 : 1.0;
+  const socFactor = plannedAvgSoc > 50 ? 1 + ((plannedAvgSoc - 50) / 50) * 0.25 : 1.0;
+  const accelerationFactor = +(cycleFactor * tempFactor * crateFactor * socFactor).toFixed(2);
+
+  // 标称第4年自然衰减量 = SOH(Year 3: 92.2) - SOH(Year 4: 90.0) = 2.2%
+  const yearNaturalLoss = 2.20;
+  const projectedLoss = +(yearNaturalLoss * accelerationFactor).toFixed(2);
+  const previousYearEndSoh = sohBaselineCurve.find(p => p.year === 3)?.guaranteedSoh ?? 92.20;
+  const projectedYearEndFlexibleSoh = +(previousYearEndSoh - projectedLoss).toFixed(2);
+  const projectedSohDelta = +(projectedYearEndFlexibleSoh - baselineYearEndSoh).toFixed(2);
+
+  // 综合灵活质保服务报价测算模型 (万元/年)
+  // 1. 基础智能运维与质保服务费: 与装机容量挂钩
+  const baseServiceFeeWan = +(ratedMwh * 1.3).toFixed(1); // 20MWh -> 26.0 万元/年
+  // 2. 超工况风险保障附加费: 若计划工况超过基准(倍率>0.5C或循环>365或温度>35℃)，按阶梯加收风险兜底费
+  const excessCycleRatio = Math.max(0, (plannedAnnualCycles - 365) / 365);
+  const excessCrateRatio = Math.max(0, (plannedMaxCrate - 0.5) / 0.5);
+  const excessTempRatio = Math.max(0, (plannedMaxTemp - 35) / 35);
+  const excessStressSurchargeWan = +(
+    baseServiceFeeWan * (excessCycleRatio * 0.65 + excessCrateRatio * 0.45 + excessTempRatio * 0.3)
+  ).toFixed(1);
+
+  // 3. 衰减容量维护及备件调优储备金 (当预估SOH低于基准时计提)
+  const extendedCapacityReserveWan = projectedSohDelta < 0
+    ? +(Math.abs(projectedSohDelta) * ratedMwh * 0.18).toFixed(1)
+    : 0;
+
+  const totalAnnualServiceFeeWan = +(
+    baseServiceFeeWan + excessStressSurchargeWan + extendedCapacityReserveWan
+  ).toFixed(1);
+
+  // 客户预期电力现货/峰谷套利收益测算 (假设平均峰谷价差 0.70 元/kWh)
+  const arbitrageSpreadYuanPerKwh = 0.68;
+  const customerExpectedRevenueWan = +(
+    (plannedThroughputMwh * 1000 * arbitrageSpreadYuanPerKwh * 0.88) / 10000
+  ).toFixed(1);
+
+  const customerNetGainWan = +(customerExpectedRevenueWan - totalAnnualServiceFeeWan).toFixed(1);
+  const costBenefitRatio = +(customerExpectedRevenueWan / totalAnnualServiceFeeWan).toFixed(2);
+
+  return {
+    planId: `PLAN-Y4-${planType.toLowerCase()}`,
+    planName,
+    planType,
+    targetContractYear,
+    targetYearLabel,
+
+    plannedAnnualCycles,
+    plannedDailyCycles,
+    plannedMaxCrate,
+    plannedMaxTemp,
+    plannedAvgTemp,
+    plannedMaxDod,
+    plannedAvgSoc,
+    plannedThroughputMwh,
+
+    baselineYearEndSoh,
+    projectedYearEndFlexibleSoh,
+    projectedSohDelta,
+    accelerationFactor,
+
+    servicePricing: {
+      baseServiceFeeWan,
+      excessStressSurchargeWan,
+      extendedCapacityReserveWan,
+      totalAnnualServiceFeeWan,
+      customerExpectedRevenueWan,
+      customerNetGainWan,
+      costBenefitRatio
+    },
+
+    isConfirmedAsOfficialPlan: planType === 'BASELINE'
+  };
+};
+
+

@@ -18,6 +18,10 @@ export interface AvailabilityAlarmItem {
   ecoExemptReason?: string; // ECO免责原因说明
   ecoExemptTime?: string; // 标注生效时间
   ecoExemptOperator?: string; // 标注人
+  ecoStartTime?: string; // ECO免责起算时间 (默认告警开始时间，支持自定义修改)
+  ecoEndTime?: string; // ECO免责终止时间 (默认告警结束时间，支持自定义修改)
+  ecoDurationMinutes?: number; // ECO免责核减时长 (分钟)
+  isCustomEcoTime?: boolean; // 是否修改为自定义ECO时间
   slaCounted: boolean; // 是否计入SLA考核
   status: 'ACTIVE' | 'RESOLVED' | 'AUTO_CLEARED';
   rootCause: string;

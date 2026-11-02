@@ -93,11 +93,25 @@ export const Sidebar: React.FC = () => {
       section: '灵活质保管理',
       items: [
         {
+          id: 'baseline_condition_eval',
+          label: '基准工况评估',
+          icon: FileCheck2,
+          badge: '工况推演',
+          badgeColor: 'bg-indigo-600 text-white'
+        },
+        {
           id: 'flexible_warranty',
           label: '灵活质保',
           icon: ShieldCheck,
           badge: 'SOH衰减',
           badgeColor: 'bg-emerald-600 text-white'
+        },
+        {
+          id: 'flexible_warranty_stats',
+          label: '全网灵活质保统计',
+          icon: BarChart3,
+          badge: '全网看板',
+          badgeColor: 'bg-teal-600 text-white'
         }
       ]
     },

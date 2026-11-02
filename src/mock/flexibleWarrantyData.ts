@@ -48,6 +48,23 @@ export interface SiteFlexibleWarrantySummary {
   warrantyStatusLabel: string;
   lastEvaluatedTime: string;
   algorithmVersion: string;
+
+  // 6. 当前合同年超工况与设备运行数据
+  currentContractYear: number; // 当前第几合同年, e.g. 3
+  contractPlannedSoc: number; // 合同规划SOC (%), e.g. 50.0%
+  actualAvgSoc: number; // 实际平均SOC (%), e.g. 52.8%
+  totalOverLimitCount: number; // 当前合同年超限总次数
+  isRedAlert: boolean; // 如果超限次数>0或平均SOC>合同规划SOC，标红展示
+
+  // 6项核心设备运行工况数据
+  dailyCrate: number; // 日充放电倍率 (C)
+  dailyPackAvgSoc: number; // 日电池PACK平均SOC (%)
+  dailyOperatingHours: number; // 日系统运行时间 (h)
+  dailyCycles: number; // 日循环次数 (次/日)
+  dailyDod: number; // 日DOD (%)
+  chargeEnergyMwh: number; // 充电电量 (MWh)
+  dischargeEnergyMwh: number; // 放电电量 (MWh)
+  totalEnergyMwh: number; // 充放电总电量 (MWh)
 }
 
 export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
@@ -87,7 +104,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'SLIGHT_OVER',
     warrantyStatusLabel: '轻度超工况 (温升与超频导致SOH衰减偏快，建议质保补充协议)',
     lastEvaluatedTime: '2026-08-20 16:30',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 52.8,
+    totalOverLimitCount: 14,
+    isRedAlert: true,
+    dailyCrate: 0.44,
+    dailyPackAvgSoc: 52.8,
+    dailyOperatingHours: 19.2,
+    dailyCycles: 1.25,
+    dailyDod: 88.5,
+    chargeEnergyMwh: 28.5,
+    dischargeEnergyMwh: 25.0,
+    totalEnergyMwh: 53.5
   },
   {
     siteId: 'site-002',
@@ -125,7 +155,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'HEALTHY',
     warrantyStatusLabel: '达标受保 (工况温和，SOH保持率高于基准线，可延长质保)',
     lastEvaluatedTime: '2026-08-20 16:15',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 49.2,
+    totalOverLimitCount: 0,
+    isRedAlert: false,
+    dailyCrate: 0.38,
+    dailyPackAvgSoc: 49.2,
+    dailyOperatingHours: 16.5,
+    dailyCycles: 0.95,
+    dailyDod: 82.0,
+    chargeEnergyMwh: 42.0,
+    dischargeEnergyMwh: 38.0,
+    totalEnergyMwh: 80.0
   },
   {
     siteId: 'site-003',
@@ -163,7 +206,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'HEALTHY',
     warrantyStatusLabel: '正常履约 (微量超频可自动冲抵，寿命终了预测满足80%保证)',
     lastEvaluatedTime: '2026-08-19 11:00',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 50.8,
+    totalOverLimitCount: 2,
+    isRedAlert: true,
+    dailyCrate: 0.42,
+    dailyPackAvgSoc: 50.8,
+    dailyOperatingHours: 17.8,
+    dailyCycles: 1.05,
+    dailyDod: 85.0,
+    chargeEnergyMwh: 34.5,
+    dischargeEnergyMwh: 31.5,
+    totalEnergyMwh: 66.0
   },
   {
     siteId: 'site-004',
@@ -201,7 +257,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'CRITICAL_OVER',
     warrantyStatusLabel: '严重超工况 (超温超倍率高负荷运行，SOH衰减过快，需停机核损与责任界定)',
     lastEvaluatedTime: '2026-07-15 09:30',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 55.4,
+    totalOverLimitCount: 28,
+    isRedAlert: true,
+    dailyCrate: 0.58,
+    dailyPackAvgSoc: 55.4,
+    dailyOperatingHours: 21.4,
+    dailyCycles: 1.48,
+    dailyDod: 93.5,
+    chargeEnergyMwh: 26.8,
+    dischargeEnergyMwh: 23.6,
+    totalEnergyMwh: 50.4
   },
   {
     siteId: 'site-005',
@@ -239,7 +308,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'HEALTHY',
     warrantyStatusLabel: '达标受保 (集群均衡良好，工况符合合同基准约定)',
     lastEvaluatedTime: '2026-08-20 15:40',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 48.6,
+    totalOverLimitCount: 0,
+    isRedAlert: false,
+    dailyCrate: 0.36,
+    dailyPackAvgSoc: 48.6,
+    dailyOperatingHours: 15.2,
+    dailyCycles: 0.92,
+    dailyDod: 80.5,
+    chargeEnergyMwh: 60.5,
+    dischargeEnergyMwh: 55.2,
+    totalEnergyMwh: 115.7
   },
   {
     siteId: 'site-006',
@@ -277,7 +359,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'SLIGHT_OVER',
     warrantyStatusLabel: '轻度超工况 (夏季局部风道温升偏高，终了预测略低于80%保证)',
     lastEvaluatedTime: '2026-08-20 12:10',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 53.1,
+    totalOverLimitCount: 9,
+    isRedAlert: true,
+    dailyCrate: 0.48,
+    dailyPackAvgSoc: 53.1,
+    dailyOperatingHours: 18.5,
+    dailyCycles: 1.18,
+    dailyDod: 89.2,
+    chargeEnergyMwh: 31.2,
+    dischargeEnergyMwh: 28.3,
+    totalEnergyMwh: 59.5
   },
   {
     siteId: 'site-007',
@@ -315,7 +410,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'HEALTHY',
     warrantyStatusLabel: '达标受保 (数据中心后备式运行，放电深度适中，寿命保持良好)',
     lastEvaluatedTime: '2026-08-20 10:15',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 49.5,
+    totalOverLimitCount: 0,
+    isRedAlert: false,
+    dailyCrate: 0.35,
+    dailyPackAvgSoc: 49.5,
+    dailyOperatingHours: 14.8,
+    dailyCycles: 0.88,
+    dailyDod: 78.0,
+    chargeEnergyMwh: 48.0,
+    dischargeEnergyMwh: 44.0,
+    totalEnergyMwh: 92.0
   },
   {
     siteId: 'site-008',
@@ -353,7 +461,20 @@ export const INITIAL_SITE_WARRANTY_SUMMARIES: SiteFlexibleWarrantySummary[] = [
     warrantyStatus: 'HEALTHY',
     warrantyStatusLabel: '达标受保 (高原冷凉气候散热佳，容量衰减速率显著低于基准)',
     lastEvaluatedTime: '2026-08-20 09:20',
-    algorithmVersion: 'v3.4.2-Arrhenius'
+    algorithmVersion: 'v3.4.2-Arrhenius',
+    currentContractYear: 3,
+    contractPlannedSoc: 50.0,
+    actualAvgSoc: 47.8,
+    totalOverLimitCount: 0,
+    isRedAlert: false,
+    dailyCrate: 0.39,
+    dailyPackAvgSoc: 47.8,
+    dailyOperatingHours: 16.0,
+    dailyCycles: 0.96,
+    dailyDod: 81.0,
+    chargeEnergyMwh: 105.0,
+    dischargeEnergyMwh: 96.0,
+    totalEnergyMwh: 201.0
   }
 ];
 

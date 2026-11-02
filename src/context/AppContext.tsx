@@ -59,7 +59,9 @@ export type NavigationTab =
   | 'analytics'
   | 'performance_evaluation'
   | 'performance_stats'
+  | 'baseline_condition_eval'
   | 'flexible_warranty'
+  | 'flexible_warranty_stats'
   | 'fault_diagnosis'
   | 'opportunity_mining'
   | 'reports'
@@ -102,6 +104,8 @@ interface AppContextType {
   flexibleWarrantyDetailSiteId: string | null;
   setFlexibleWarrantyDetailSiteId: (siteId: string | null) => void;
   navigateToFlexibleWarranty: (siteId?: string) => void;
+  navigateToBaselineConditionEval: () => void;
+  navigateToFlexibleWarrantyStats: () => void;
 
   // Opportunity mining navigation
   navigateToOpportunityMining: () => void;
@@ -331,6 +335,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setFlexibleWarrantyDetailSiteId(null);
     }
     setActiveTab('flexible_warranty');
+  };
+
+  const navigateToBaselineConditionEval = () => {
+    setActiveTab('baseline_condition_eval');
+  };
+
+  const navigateToFlexibleWarrantyStats = () => {
+    setActiveTab('flexible_warranty_stats');
   };
 
   const navigateToOpportunityMining = () => {
@@ -1117,6 +1129,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         flexibleWarrantyDetailSiteId,
         setFlexibleWarrantyDetailSiteId,
         navigateToFlexibleWarranty,
+        navigateToBaselineConditionEval,
+        navigateToFlexibleWarrantyStats,
         navigateToOpportunityMining,
         navigateToSiteDetail,
         navigateToAvailabilityDrilldown,

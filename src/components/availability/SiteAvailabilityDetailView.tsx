@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
+import { StatusLampBadge } from '../common/StatusBadge';
 import {
   ArrowLeft,
   Activity,
@@ -15,14 +15,18 @@ import {
   ArrowUpRight,
   TrendingDown,
   TrendingUp,
-  Cpu
+  Cpu,
+  Calendar,
+  Archive,
+  Edit3,
+  FolderKanban
 } from 'lucide-react';
 import { AvailabilityDetailsTab } from './AvailabilityDetailsTab';
 import { MergedFaultsTab } from '../sites/MergedFaultsTab';
 import { WorkOrdersTab } from '../sites/WorkOrdersTab';
 import { EditSiteModal } from '../sites/EditSiteModal';
 import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
-import { Edit3, FolderKanban } from 'lucide-react';
+import { HistoricalContractArchiveModal } from './HistoricalContractArchiveModal';
 
 export const SiteAvailabilityDetailView: React.FC = () => {
   const {
@@ -37,13 +41,20 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     navigateToSiteDetail,
     updateSite,
     workOrders,
+    contracts,
     reportCenterItems,
     openAiDrawer
   } = useApp();
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const site = sites.find(s => s.id === selectedSiteId) || sites[0];
+
+  // Resolve current availability contract year dates
+  const siteContract = contracts?.find(c => c.contractNo === site.contractNo) || contracts?.find(c => c.siteId === site.id);
+  const currentContractStart = siteContract?.validFrom || '2026-01-01';
+  const currentContractEnd = siteContract?.validTo || '2026-12-31';
 
   // Associated work orders for this site
   const siteOrders = workOrders.filter(
@@ -58,6 +69,9 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     deviceCode?: string;
     activeSubView?: 'merged' | 'alarms';
     alarmId?: string;
+    startDate?: string;
+    endDate?: string;
+    timeRangeLabel?: string;
   } | null>(null);
 
   const isBreached = site.currentAvailability < site.slaThreshold;
@@ -100,7 +114,14 @@ export const SiteAvailabilityDetailView: React.FC = () => {
 
   const handleDrilldownNavigate = (
     targetIdx: number,
-    extra?: { deviceCode?: string; activeSubView?: 'merged' | 'alarms'; alarmId?: string }
+    extra?: {
+      deviceCode?: string;
+      activeSubView?: 'merged' | 'alarms';
+      alarmId?: string;
+      startDate?: string;
+      endDate?: string;
+      timeRangeLabel?: string;
+    }
   ) => {
     if (extra) {
       setFaultCausalChainTarget(extra);
@@ -187,7 +208,29 @@ export const SiteAvailabilityDetailView: React.FC = () => {
                 <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">
                   {site.siteCode}
                 </span>
-                <RedundancyBadge level={site.redundancy} />
+
+                {/* Current Contract Year Period Display */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-medium">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="text-slate-600">当年合同周期:</span>
+                  <span className="font-mono font-bold text-indigo-900">
+                    {currentContractStart} 至 {currentContractEnd}
+                  </span>
+                </div>
+
+                {/* Query Previous Years Contract Archive Button */}
+                <button
+                  id="btn-query-historical-archive"
+                  onClick={() => setShowArchiveModal(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-semibold border border-slate-300 hover:border-indigo-400 shadow-2xs transition-all"
+                  title="查询该站点之前每年合同的可用度监控归档信息与审计报表"
+                >
+                  <Archive className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>查询历年合同可用度归档</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-100 text-indigo-700 font-bold">
+                    4个归档年
+                  </span>
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 mt-2">
@@ -217,6 +260,14 @@ export const SiteAvailabilityDetailView: React.FC = () => {
                 <span>
                   合同编号:{' '}
                   <span className="text-blue-600 font-mono font-medium">{site.contractNo}</span>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  当年合同起始时间:{' '}
+                  <span className="font-mono text-slate-800 font-semibold">{currentContractStart}</span>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  当年合同结束时间:{' '}
+                  <span className="font-mono text-slate-800 font-semibold">{currentContractEnd}</span>
                 </span>
                 <span>
                   装机规模:{' '}
@@ -352,6 +403,9 @@ export const SiteAvailabilityDetailView: React.FC = () => {
           selectedDate={availabilityDrilldownDate}
           onSelectDate={date => setAvailabilityDrilldownDate(date)}
           onNavigateTab={handleDrilldownNavigate}
+          onOpenArchiveModal={() => setShowArchiveModal(true)}
+          contractStartDate={currentContractStart}
+          contractEndDate={currentContractEnd}
         />
       )}
 
@@ -390,6 +444,13 @@ export const SiteAvailabilityDetailView: React.FC = () => {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         onSave={updateSite}
+      />
+
+      {/* Historical Contract Availability Monitoring Archive Modal */}
+      <HistoricalContractArchiveModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        site={site}
       />
     </div>
   );

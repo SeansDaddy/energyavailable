@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { Site, CoreDevice, RedundancyLevel } from '../../types';
-import { RedundancyBadge } from '../common/StatusBadge';
 import { DeviceDetailWorkbench } from './DeviceDetailWorkbench';
 import {
   Cpu,
   Shield,
-  Edit,
-  Save,
   Info,
   CheckCircle2,
   AlertTriangle,
@@ -21,25 +18,16 @@ import {
 
 interface CoreDevicesTabProps {
   site: Site;
-  onUpdateRedundancy: (siteId: string, redundancy: RedundancyLevel, notes: string) => void;
+  onUpdateRedundancy?: (siteId: string, redundancy: RedundancyLevel, notes: string) => void;
   onNavigateTab: (tabIdx: number) => void;
 }
 
 export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
   site,
-  onUpdateRedundancy,
   onNavigateTab
 }) => {
-  const [isEditingRedundancy, setIsEditingRedundancy] = useState(false);
-  const [editRedundancy, setEditRedundancy] = useState<RedundancyLevel>(site.redundancy);
-  const [editNotes, setEditNotes] = useState(site.redundancyNotes || '');
   const [selectedDevice, setSelectedDevice] = useState<CoreDevice | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
-
-  const handleSave = () => {
-    onUpdateRedundancy(site.id, editRedundancy, editNotes);
-    setIsEditingRedundancy(false);
-  };
 
   // If a device is selected for drilldown, render the comprehensive Deep-Dive Workbench
   if (selectedDevice) {
@@ -68,63 +56,31 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
         <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <div>
           <strong className="text-blue-900 font-semibold">
-            核心设备认定与冗余拓扑规则 (Rule R2 & R1)：
+            核心设备认定规则 (Rule R2 & R1)：
           </strong>
           可用度计算仅统计由<strong>核心计量设备（PCS变流器、BMS电池簇、EMS主控）</strong>非计划停机所引发的等效中断时长。辅机设备故障不触发扣除。点击任意设备可进入<strong>遥测时序、运行工况历史、点表清单与中断责任全景下钻工作台</strong>。
         </div>
       </div>
 
-      {/* Redundancy Maintenance & Visual Topology */}
+      {/* Visual Topology Diagram */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-blue-600" />
-              组网冗余拓扑与在线维护 (运维实时维护)
+              <Layers className="w-4 h-4 text-blue-600" />
+              <span>现场核心设备拓扑架构与链路全景</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              当前等级: <strong className="text-slate-800 font-semibold">{site.redundancy}</strong> · 影响内部管理可靠性评分 (权重 20%)
+              纳管核心设备共 <strong className="text-slate-800 font-semibold">{site.coreDevices.length}</strong> 台套 · 涵盖变流、储能堆与能源管控中枢
             </p>
           </div>
-
-          {!isEditingRedundancy ? (
-            <button
-              onClick={() => setIsEditingRedundancy(true)}
-              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-blue-600 rounded text-xs font-semibold border border-slate-200 transition-colors flex items-center gap-1.5 self-start sm:self-auto"
-            >
-              <Edit className="w-3.5 h-3.5" />
-              <span>修改组网冗余配置</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                onClick={() => setIsEditingRedundancy(false)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-xs flex items-center gap-1 shadow-sm transition-colors"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>保存并重算得分</span>
-              </button>
-            </div>
-          )}
+          <span className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
+            Rule R2 核心设备纳管
+          </span>
         </div>
 
-        {/* Visual Topology Diagram */}
-        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
-          <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span>现场组网拓扑结构简图</span>
-            </span>
-            <RedundancyBadge level={isEditingRedundancy ? editRedundancy : site.redundancy} />
-          </div>
-
-          {/* Graphical Topology Map */}
+        {/* Graphical Topology Map */}
+        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
           <div className="p-4 bg-white rounded border border-slate-200 flex flex-col md:flex-row items-center justify-around gap-4 text-xs">
             <div className="p-3 rounded bg-blue-50 border border-blue-200 text-center w-full md:w-44 shadow-sm">
               <Server className="w-5 h-5 text-blue-600 mx-auto mb-1" />
@@ -133,63 +89,25 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
             </div>
 
             <div className="text-slate-400 font-mono text-xs flex md:flex-col items-center gap-1">
-              <span>◄──双环自愈网──►</span>
+              <span>◄──系统通信网络──►</span>
             </div>
 
             <div className="p-3 rounded bg-indigo-50 border border-indigo-200 text-center w-full md:w-44 shadow-sm">
               <Zap className="w-5 h-5 text-indigo-600 mx-auto mb-1" />
-              <div className="font-bold text-slate-900">双机并联 PCS 变流组</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">主用 01A + 备用 01B</div>
+              <div className="font-bold text-slate-900">PCS 变流机组</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">并网逆变与交直流变换</div>
             </div>
 
             <div className="text-slate-400 font-mono text-xs flex md:flex-col items-center gap-1">
-              <span>◄──CAN/RS485──►</span>
+              <span>◄──CAN / RS485 簇控──►</span>
             </div>
 
             <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-center w-full md:w-44 shadow-sm">
               <Activity className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
               <div className="font-bold text-slate-900">BMS 高压电池堆</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">280Ah LFP 簇控</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">280Ah LFP 簇控单元</div>
             </div>
           </div>
-
-          {!isEditingRedundancy ? (
-            <div className="text-xs text-slate-600 bg-white p-3 rounded border border-slate-200">
-              <strong className="text-slate-800">运维备注说明:</strong>{' '}
-              {site.redundancyNotes || '现场按标准双机热备架构组网，支持无缝热备切换。'}
-            </div>
-          ) : (
-            <div className="space-y-3 pt-2 text-xs">
-              <div>
-                <label className="block text-slate-700 mb-1 font-semibold">
-                  选择组网拓扑冗余等级
-                </label>
-                <select
-                  value={editRedundancy}
-                  onChange={e => setEditRedundancy(e.target.value as RedundancyLevel)}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 focus:outline-none focus:border-blue-500 shadow-sm"
-                >
-                  <option value="DUAL_HOT_BACKUP">双机热备 (Dual Hot-Backup) - 95分</option>
-                  <option value="RING_TOPOLOGY">光纤自愈环网 (Ring Topology) - 98分</option>
-                  <option value="MULTI_ACTIVE">多活负荷分担 (Multi-Active) - 100分</option>
-                  <option value="N_PLUS_1">N+1 单元模块热备 (N+1 Modular) - 85分</option>
-                  <option value="NONE">单机无冗余 (None) - 40分</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-slate-700 mb-1 font-semibold">
-                  拓扑变更原因与现场说明
-                </label>
-                <textarea
-                  rows={2}
-                  value={editNotes}
-                  onChange={e => setEditNotes(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 focus:outline-none focus:border-blue-500 shadow-sm"
-                  placeholder="填写现场组网改造日期及拓扑架构变动描述..."
-                />
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

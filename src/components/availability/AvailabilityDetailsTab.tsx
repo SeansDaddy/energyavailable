@@ -28,7 +28,8 @@ import {
   ShieldCheck,
   AlertCircle,
   Sliders,
-  Link2
+  Link2,
+  Archive
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -54,6 +55,9 @@ interface AvailabilityDetailsTabProps {
   selectedDate?: string;
   onSelectDate?: (date: string) => void;
   onNavigateTab: (tabIdx: number, extra?: any) => void;
+  onOpenArchiveModal?: () => void;
+  contractStartDate?: string;
+  contractEndDate?: string;
 }
 
 export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
@@ -61,7 +65,10 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
   workOrders = [],
   selectedDate: initialSelectedDate,
   onSelectDate,
-  onNavigateTab
+  onNavigateTab,
+  onOpenArchiveModal,
+  contractStartDate = '2026-01-01',
+  contractEndDate = '2026-12-31'
 }) => {
   const [cycle, setCycle] = useState<MonitoringCycle>('5min');
   
@@ -840,10 +847,28 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
           </button>
         </div>
 
-        {/* Contract SLA Reference */}
-        <div className="text-xs text-slate-500 flex items-center gap-1.5">
-          <span>合同 SLA 门槛:</span>
-          <strong className="text-blue-600 font-mono">{site.slaThreshold}%</strong>
+        {/* Contract SLA Reference & Current Contract Year Dates */}
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <div className="text-slate-500 flex items-center gap-1.5">
+            <span>当年可用度合同周期:</span>
+            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              {contractStartDate} 至 {contractEndDate}
+            </span>
+          </div>
+          <div className="text-slate-500 flex items-center gap-1.5">
+            <span>合同 SLA 门槛:</span>
+            <strong className="text-blue-600 font-mono">{site.slaThreshold}%</strong>
+          </div>
+          {onOpenArchiveModal && (
+            <button
+              onClick={onOpenArchiveModal}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold transition-colors shadow-2xs"
+              title="查询之前每年合同的可用度监控归档信息与履约审计报告"
+            >
+              <Archive className="w-3.5 h-3.5 text-indigo-600" />
+              <span>历年合同可用度归档</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -2652,6 +2677,18 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
                 建站至今全部 (2021~2026)
               </button>
             </div>
+
+            {/* Historical Archive Query Action in Yearly Dimension */}
+            {onOpenArchiveModal && (
+              <button
+                onClick={onOpenArchiveModal}
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all shadow-2xs"
+                title="查询历年已封存合同年份的可用度监控归档数据与考核报告"
+              >
+                <Archive className="w-3.5 h-3.5 text-indigo-600" />
+                <span>查询历年合同可用度归档档案 (2022~2025)</span>
+              </button>
+            )}
           </div>
 
           {/* Yearly Summary Statistics KPIs */}

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Site, RedundancyLevel, WorkOrder } from '../../types';
+import { Site, WorkOrder } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { StatusLampBadge, RedundancyBadge } from '../common/StatusBadge';
+import { StatusLampBadge } from '../common/StatusBadge';
 import { SitePanoramaTimelineChart } from './SitePanoramaTimelineChart';
 import {
   Activity,
@@ -380,13 +380,13 @@ export const SitePanoramaTab: React.FC<SitePanoramaTabProps> = ({
 
           <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
             <span className="text-slate-500">
-              当前冗余等级: <strong className="text-slate-800">{site.redundancy}</strong>
+              当前纳管核心设备: <strong className="text-slate-800">{site.coreDeviceCount} 台套</strong>
             </span>
             <button
               onClick={() => onNavigateTab(1)}
               className="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
             >
-              <span>查看拓扑与在线维护冗余度 &rarr;</span>
+              <span>查看核心设备拓扑 &rarr;</span>
             </button>
           </div>
         </div>

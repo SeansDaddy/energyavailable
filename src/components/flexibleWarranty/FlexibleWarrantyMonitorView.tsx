@@ -463,13 +463,14 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
             <thead className="bg-slate-100/75 text-slate-600 font-semibold border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4 min-w-[200px]">站点基本信息</th>
-                <th className="py-3 px-3 min-w-[150px]">质保合同 & 周期</th>
-                <th className="py-3 px-3 min-w-[150px]">合同基准工况约定</th>
+                <th className="py-3 px-3 min-w-[140px]">质保合同 & 周期</th>
+                <th className="py-3 px-3 min-w-[140px]">合同基准工况约定</th>
                 <th className="py-3 px-3 min-w-[150px]">实际运行工况统计</th>
-                <th className="py-3 px-3 min-w-[160px]">超工况指标核算</th>
-                <th className="py-3 px-3 min-w-[170px]">SOH双衰减打点对比</th>
-                <th className="py-3 px-3 min-w-[130px]">质保履约状态</th>
-                <th className="py-3 px-4 text-center min-w-[180px]">操作</th>
+                <th className="py-3 px-3 min-w-[150px]">超工况指标核算</th>
+                <th className="py-3 px-3 min-w-[160px]">当前合同年考核 (标红)</th>
+                <th className="py-3 px-3 min-w-[160px]">SOH双衰减打点对比</th>
+                <th className="py-3 px-3 min-w-[120px]">质保履约状态</th>
+                <th className="py-3 px-4 text-center min-w-[170px]">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -566,6 +567,56 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
                         超倍率吞吐: <span className="font-mono">{item.overCrateThroughputMwh} MWh</span>
+                      </div>
+                    </td>
+
+                    {/* Current Contract Year Over-Condition & Red Highlighting */}
+                    <td className="py-3.5 px-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-slate-800">
+                          第{item.currentContractYear || 3}合同年
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                            item.isRedAlert
+                              ? 'bg-red-600 text-white animate-pulse'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {item.isRedAlert ? '🔴 标红超限' : '🟢 合规'}
+                        </span>
+                      </div>
+
+                      <div className="mt-1 text-[11px]">
+                        <span className="text-slate-500">超限: </span>
+                        <strong
+                          className={`font-mono ${
+                            (item.totalOverLimitCount ?? 0) > 0 ? 'text-red-600 font-black' : 'text-slate-700'
+                          }`}
+                        >
+                          {item.totalOverLimitCount ?? 0} 次
+                        </strong>
+                        {(item.totalOverLimitCount ?? 0) > 0 && (
+                          <span className="text-[10px] text-red-500 ml-1">(&gt;0)</span>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] mt-0.5">
+                        <span className="text-slate-500">均SOC: </span>
+                        <strong
+                          className={`font-mono ${
+                            (item.actualAvgSoc ?? 50.0) > (item.contractPlannedSoc ?? 50.0)
+                              ? 'text-red-600 font-black'
+                              : 'text-slate-700'
+                          }`}
+                        >
+                          {item.actualAvgSoc ?? 50.0}%
+                        </strong>
+                        <span className="text-[10px] text-slate-400"> (规{item.contractPlannedSoc ?? 50.0}%)</span>
+                      </div>
+
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                        倍率 {item.dailyCrate ?? 0.44}C · DOD {item.dailyDod ?? 85}%
                       </div>
                     </td>
 
