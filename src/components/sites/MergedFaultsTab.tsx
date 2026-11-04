@@ -36,8 +36,11 @@ import {
   Zap,
   Activity,
   Calendar,
-  Edit3
+  Edit3,
+  Link2,
+  Unlink
 } from 'lucide-react';
+import { AssociateWorkOrderModal } from './AssociateWorkOrderModal';
 
 interface MergedFaultsTabProps {
   site: Site;
@@ -291,18 +294,23 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
     >
   >({});
 
+  // Interactive Work Order Association Overrides
+  const [workOrderOverrides, setWorkOrderOverrides] = useState<Record<string, string | null>>({});
+  const [associateModalAlarm, setAssociateModalAlarm] = useState<AvailabilityAlarmItem | null>(null);
+
   // Compute period alarms & devices for this site and custom period
   const { devices, alarms: rawAlarms } = useMemo(() => {
     return getEquipmentAndAlarmsForPeriod(site, periodStartDate, periodEndDate, workOrders);
   }, [site, periodStartDate, periodEndDate, workOrders]);
 
-  // Merge ecoOverrides into alarms
+  // Merge ecoOverrides and workOrderOverrides into alarms
   const alarms: AvailabilityAlarmItem[] = useMemo(() => {
     return rawAlarms.map(a => {
+      let item = { ...a };
       const override = ecoOverrides[a.id];
       if (override !== undefined) {
-        return {
-          ...a,
+        item = {
+          ...item,
           isEcoExempt: override.isEcoExempt,
           ecoExemptReason: override.reason,
           ecoExemptOperator: override.operator,
@@ -316,9 +324,12 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
           availabilityImpactPercent: override.isEcoExempt ? 0 : a.availabilityImpactPercent
         };
       }
-      return a;
+      if (workOrderOverrides[a.id] !== undefined) {
+        item.workOrderNo = workOrderOverrides[a.id] || undefined;
+      }
+      return item;
     });
-  }, [rawAlarms, ecoOverrides]);
+  }, [rawAlarms, ecoOverrides, workOrderOverrides]);
 
   // Filtered alarms
   const filteredAlarms = useMemo(() => {
@@ -482,6 +493,61 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
     }));
     setToastMessage(`已取消告警【${alarmCode}】的 ECO 外因停机免责标注，恢复纳入 SLA 考核。`);
     setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  // Helper to find overlapping work orders for any alarm
+  const getOverlappingWorkOrders = (alarm: AvailabilityAlarmItem): WorkOrder[] => {
+    if (!workOrders || workOrders.length === 0) return [];
+    let sMs = 0;
+    let eMs = 0;
+    try {
+      sMs = new Date((alarm.triggerTime || '').replace(' ', 'T')).getTime();
+      const endStr = alarm.clearTime || getAlarmDefaultEndTime(alarm);
+      eMs = new Date(endStr.replace(' ', 'T')).getTime();
+      if (isNaN(eMs) || eMs <= sMs) {
+        eMs = sMs + (alarm.durationMinutes || 60) * 60000;
+      }
+    } catch {
+      return [];
+    }
+
+    return workOrders.filter(wo => {
+      if (wo.siteId && site.id && wo.siteId !== site.id) return false;
+      let woStartMs = 0;
+      let woEndMs = 0;
+      try {
+        woStartMs = new Date(wo.createTime.replace(' ', 'T')).getTime();
+        const endStr = wo.closeTime || wo.solutionTime;
+        if (endStr) {
+          woEndMs = new Date(endStr.replace(' ', 'T')).getTime();
+        } else {
+          woEndMs = woStartMs + 24 * 3600 * 1000;
+        }
+      } catch {
+        return false;
+      }
+      return sMs <= woEndMs && woStartMs <= eMs;
+    });
+  };
+
+  const handleAssociateWorkOrder = (alarmId: string, orderNo: string) => {
+    setWorkOrderOverrides(prev => ({
+      ...prev,
+      [alarmId]: orderNo
+    }));
+    setToastMessage(`已成功将告警关联至现场闭环工单【${orderNo}】！可在告警与工单间双向穿透`);
+    setAssociateModalAlarm(null);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleUnlinkWorkOrder = (alarmId: string) => {
+    setWorkOrderOverrides(prev => ({
+      ...prev,
+      [alarmId]: null
+    }));
+    setToastMessage(`已解除该告警的工单关联`);
+    setAssociateModalAlarm(null);
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
   const clearDeviceFilter = () => {
@@ -1197,6 +1263,8 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                   const isExpanded = expandedAlarmId === alarm.id;
                   const isCritical = alarm.severity === 'CRITICAL';
                   const isMajor = alarm.severity === 'MAJOR';
+                  const overlappingWOs = getOverlappingWorkOrders(alarm);
+                  const linkedOrder = alarm.workOrderNo ? (workOrders || []).find(w => w.orderNo === alarm.workOrderNo) : null;
 
                   return (
                     <div
@@ -1313,6 +1381,90 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                               </span>
                             </div>
 
+                            {/* Linked Work Order or Overlapping Work Order Prompt */}
+                            {alarm.workOrderNo ? (
+                              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-indigo-50/80 border border-indigo-200 text-xs">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Wrench className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                  <span className="text-slate-600">已关联现场工单:</span>
+                                  <strong className="font-mono text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-2xs font-bold">
+                                    {alarm.workOrderNo}
+                                  </strong>
+                                  {linkedOrder && (
+                                    <span className="text-slate-700 font-medium truncate max-w-[280px]">
+                                      ({linkedOrder.title})
+                                    </span>
+                                  )}
+                                  {linkedOrder?.assignee && (
+                                    <span className="text-slate-400 font-mono text-[11px]">
+                                      · 负责人: {linkedOrder.assignee}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button
+                                    onClick={() => setAssociateModalAlarm(alarm)}
+                                    className="px-2 py-1 rounded bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-300 font-semibold text-[11px] transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="更换所关联的现场工单"
+                                  >
+                                    <Link2 className="w-3 h-3 text-indigo-600" />
+                                    <span>更换工单</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleUnlinkWorkOrder(alarm.id)}
+                                    className="px-2 py-1 rounded bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 text-[11px] font-medium transition-colors cursor-pointer"
+                                    title="解除与工单的关联"
+                                  >
+                                    <Unlink className="w-3 h-3" />
+                                    <span>解除</span>
+                                  </button>
+                                  <button
+                                    onClick={() => onNavigateTab(2)}
+                                    className="px-2 py-1 text-blue-600 hover:text-blue-800 text-[11px] font-semibold flex items-center gap-0.5"
+                                  >
+                                    <span>前往工单</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : overlappingWOs.length > 0 ? (
+                              <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-amber-50/90 border border-amber-300 text-xs text-amber-950 shadow-2xs">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <span className="font-bold text-amber-900">提示：告警发生时段与现场工单重叠！可能关联工单：</span>
+                                  <span className="font-mono font-bold text-amber-950 bg-white px-2 py-0.5 rounded border border-amber-300 shadow-2xs">
+                                    {overlappingWOs[0].orderNo}
+                                  </span>
+                                  <span className="text-amber-800 truncate max-w-[240px] font-medium">
+                                    {overlappingWOs[0].title}
+                                  </span>
+                                  {overlappingWOs.length > 1 && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-900 font-bold font-mono">
+                                      共 {overlappingWOs.length} 个重叠工单
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button
+                                    onClick={() => handleAssociateWorkOrder(alarm.id, overlappingWOs[0].orderNo)}
+                                    className="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                                    title={`一键关联检测到的时段重叠工单 ${overlappingWOs[0].orderNo}`}
+                                  >
+                                    <Link2 className="w-3 h-3" />
+                                    <span>关联此工单</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setAssociateModalAlarm(alarm)}
+                                    className="px-2 py-1 rounded-md bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-semibold transition-colors cursor-pointer"
+                                    title="查看全部重叠工单时段与详情并选择关联"
+                                  >
+                                    <span>{overlappingWOs.length > 1 ? `挑选全部(${overlappingWOs.length})` : '时段详情'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
+
                             {/* ECO Rationale if exempt */}
                             {alarm.isEcoExempt && alarm.ecoExemptReason && (
                               <div className="mt-2 text-[11px] bg-cyan-50/90 text-cyan-950 p-2.5 rounded-lg border border-cyan-200 space-y-1.5">
@@ -1380,6 +1532,39 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
                               <span>标注ECO外因免责</span>
                             </button>
                           )}
+
+                          {/* Link Work Order Button */}
+                          <button
+                            onClick={() => setAssociateModalAlarm(alarm)}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border ${
+                              alarm.workOrderNo
+                                ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                                : overlappingWOs.length > 0
+                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                            title={
+                              alarm.workOrderNo
+                                ? `已关联工单: ${alarm.workOrderNo}，点击可更换`
+                                : overlappingWOs.length > 0
+                                ? `检测到 ${overlappingWOs.length} 个时段重叠工单，点击关联`
+                                : '关联现场消缺工单'
+                            }
+                          >
+                            <Link2
+                              className={`w-3.5 h-3.5 ${
+                                alarm.workOrderNo
+                                  ? 'text-indigo-600'
+                                  : overlappingWOs.length > 0
+                                  ? 'text-amber-600'
+                                  : 'text-slate-500'
+                              }`}
+                            />
+                            <span>{alarm.workOrderNo ? '已关联工单' : '关联工单'}</span>
+                            {!alarm.workOrderNo && overlappingWOs.length > 0 && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                            )}
+                          </button>
 
                           {/* AI Diagnostic Button */}
                           <button
@@ -1986,6 +2171,16 @@ export const MergedFaultsTab: React.FC<MergedFaultsTabProps> = ({
           }}
         />
       )}
+      {/* MODAL 4: Associate Work Order Modal */}
+      <AssociateWorkOrderModal
+        isOpen={Boolean(associateModalAlarm)}
+        onClose={() => setAssociateModalAlarm(null)}
+        alarm={associateModalAlarm}
+        siteWorkOrders={workOrders || []}
+        currentAssociatedOrderNo={associateModalAlarm?.workOrderNo}
+        onAssociate={(alarmId, orderNo) => handleAssociateWorkOrder(alarmId, orderNo)}
+        onUnlink={alarmId => handleUnlinkWorkOrder(alarmId)}
+      />
     </div>
   );
 };

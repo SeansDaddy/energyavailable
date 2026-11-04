@@ -19,7 +19,8 @@ import {
   Calendar,
   Archive,
   Edit3,
-  FolderKanban
+  FolderKanban,
+  ShieldCheck
 } from 'lucide-react';
 import { AvailabilityDetailsTab } from './AvailabilityDetailsTab';
 import { MergedFaultsTab } from '../sites/MergedFaultsTab';
@@ -27,6 +28,7 @@ import { WorkOrdersTab } from '../sites/WorkOrdersTab';
 import { EditSiteModal } from '../sites/EditSiteModal';
 import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 import { HistoricalContractArchiveModal } from './HistoricalContractArchiveModal';
+import { SiteContractEcoManagementTab } from './SiteContractEcoManagementTab';
 
 export const SiteAvailabilityDetailView: React.FC = () => {
   const {
@@ -109,6 +111,13 @@ export const SiteAvailabilityDetailView: React.FC = () => {
       subtext: 'SLA可用度履约与运行考核报告',
       icon: FolderKanban,
       count: siteReportsCount
+    },
+    {
+      id: 4,
+      label: '合同期ECO配置与报告',
+      subtext: '告警/工单免责明细清单 · 审计报告导出',
+      icon: ShieldCheck,
+      count: siteOrders.filter(w => w.isEcoExempt).length + 4
     }
   ];
 
@@ -130,10 +139,12 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     }
     if (targetIdx === 1) {
       setAvailabilityDrilldownTab(1); // 中断告警
-    } else if (targetIdx === 2 || targetIdx === 4) {
+    } else if (targetIdx === 2) {
       setAvailabilityDrilldownTab(2); // 工单详情
     } else if (targetIdx === 3) {
-      navigateToSiteDetail(site.id, 1); // 核心设备拓扑
+      setAvailabilityDrilldownTab(3); // 站点报告中心
+    } else if (targetIdx === 4) {
+      setAvailabilityDrilldownTab(4); // 合同期ECO配置与报告
     } else {
       setAvailabilityDrilldownTab(0); // 可用度详情
     }
@@ -230,6 +241,21 @@ export const SiteAvailabilityDetailView: React.FC = () => {
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-100 text-indigo-700 font-bold">
                     4个归档年
                   </span>
+                </button>
+
+                {/* Contract Period ECO Management & Report Button */}
+                <button
+                  id="btn-open-eco-management"
+                  onClick={() => setAvailabilityDrilldownTab(4)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border shadow-2xs transition-all ${
+                    availabilityDrilldownTab === 4
+                      ? 'bg-cyan-600 text-white border-cyan-600 shadow-sm'
+                      : 'bg-white hover:bg-cyan-50 text-slate-700 hover:text-cyan-800 border-slate-300 hover:border-cyan-400'
+                  }`}
+                  title="进入合同期独立的 ECO 配置和报告导出页面，展示告警与工单免责明细"
+                >
+                  <ShieldCheck className={`w-3.5 h-3.5 ${availabilityDrilldownTab === 4 ? 'text-white' : 'text-cyan-600'}`} />
+                  <span>合同期ECO配置与报告</span>
                 </button>
               </div>
 
@@ -435,6 +461,17 @@ export const SiteAvailabilityDetailView: React.FC = () => {
           moduleScope="AVAILABILITY"
           initialSiteId={site.id}
           lockSite={true}
+        />
+      )}
+
+      {/* Tab 4: 合同期独立的ECO配置和报告导出页面 */}
+      {availabilityDrilldownTab === 4 && (
+        <SiteContractEcoManagementTab
+          site={site}
+          contractStart={currentContractStart}
+          contractEnd={currentContractEnd}
+          workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
+          onNavigateTab={handleDrilldownNavigate}
         />
       )}
 
