@@ -51,7 +51,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
   } = useApp();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [detailSubTab, setDetailSubTab] = useState<'eval' | 'reports'>('eval');
+  const [detailSubTab, setDetailSubTab] = useState<'eval' | 'running' | 'contract' | 'reports'>('eval');
 
   const currentSite = sites.find(s => s.id === siteId) || sites[0] || {
     id: siteId,
@@ -255,155 +255,9 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         </div>
       </div>
 
-      {/* 2.5. 当前合同年超工况统计状态卡片 & 今日设备运行工况实时监测 (6项指标) */}
-      {(() => {
-        const summary = getSiteFlexibleWarrantySummary(currentSite.id);
-        const overCount = summary.totalOverLimitCount ?? 0;
-        const plannedSoc = summary.contractPlannedSoc ?? 50.0;
-        const avgSoc = summary.actualAvgSoc ?? 50.0;
-        const isSocOver = avgSoc > plannedSoc;
-        const isRedAlert = overCount > 0 || isSocOver;
-
-        return (
-          <div className="space-y-3">
-            {/* 当前合同年超工况统计预警卡片 (超限次数大于0或平均SOC大于合同规划SOC，标红展示) */}
-            <div
-              className={`rounded-2xl p-4 border transition-all ${
-                isRedAlert
-                  ? 'bg-red-50/95 border-2 border-red-500 shadow-md shadow-red-500/10'
-                  : 'bg-emerald-50/80 border border-emerald-300'
-              }`}
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      isRedAlert ? 'bg-red-600 text-white animate-pulse' : 'bg-emerald-600 text-white'
-                    }`}
-                  >
-                    {isRedAlert ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-black text-slate-900">
-                        当前履约周期: 第{summary.currentContractYear || 3}合同年 (2026年度) 超工况统计
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          isRedAlert ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
-                        }`}
-                      >
-                        {isRedAlert ? '🔴 标红预警 (超工况触发)' : '🟢 正常合规'}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        合同号: <strong className="font-mono text-slate-700">{summary.contractNo}</strong>
-                      </span>
-                    </div>
-
-                    <div className="text-xs mt-1 flex items-center gap-3 flex-wrap">
-                      <span className={overCount > 0 ? 'text-red-700 font-bold' : 'text-slate-600'}>
-                        超限总次数: <strong className={overCount > 0 ? 'text-red-600 font-black' : 'text-emerald-700'}>{overCount} 次</strong>
-                        {overCount > 0 && <span className="text-[10px] ml-1 text-red-500 font-normal">(&gt;0 标红)</span>}
-                      </span>
-                      <span className="text-slate-300">·</span>
-                      <span className={isSocOver ? 'text-red-700 font-bold' : 'text-slate-600'}>
-                        实际平均SOC: <strong className={isSocOver ? 'text-red-600 font-black' : 'text-emerald-700'}>{avgSoc}%</strong> (合同规划: {plannedSoc}%)
-                        {isSocOver && <span className="text-[10px] ml-1 text-red-500 font-normal">(+{ +(avgSoc - plannedSoc).toFixed(1) }%, 超规划标红)</span>}
-                      </span>
-                      <span className="text-slate-300">·</span>
-                      <span className="text-slate-600">
-                        基准最高温: {summary.baselineTempMax}℃ (实测: {summary.actualMaxTemp}℃) · 基准倍率: {summary.maxCrate}C (实测: {summary.actualMaxCrate}C)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {isRedAlert && (
-                  <div className="text-xs font-semibold text-red-700 bg-red-100/80 border border-red-300 px-3 py-1.5 rounded-xl self-end md:self-center shrink-0">
-                    ⚠️ 已触发灵活质保加速折损考核
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 6项核心设备运行工况数据实时看板 */}
-            <div className="bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-bold text-white">
-                    今日/当前设备运行工况实时监测
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-400">
-                  站级实时换算 · 6项关键工况指标
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
-                <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                  <div className="text-[10px] text-slate-400">1. 日充放电倍率</div>
-                  <div className="text-base font-black font-mono mt-0.5 text-white">
-                    {summary.dailyCrate ?? 0.44} <span className="text-xs font-normal text-slate-400">C</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">基准上限 0.50 C</div>
-                </div>
-
-                <div className={`rounded-xl p-2.5 border ${isSocOver ? 'bg-red-950/80 border-red-500/80' : 'bg-slate-800/70 border-slate-700/60'}`}>
-                  <div className="text-[10px] text-slate-400">2. 日PACK平均SOC</div>
-                  <div className="text-base font-black font-mono mt-0.5 flex items-baseline gap-1">
-                    <span className={isSocOver ? 'text-red-400 font-bold' : 'text-emerald-400'}>
-                      {summary.dailyPackAvgSoc ?? 52.8}%
-                    </span>
-                    <span className="text-[10px] font-normal text-slate-400">(规 {plannedSoc}%)</span>
-                  </div>
-                  <div className={`text-[10px] ${isSocOver ? 'text-red-300 font-bold' : 'text-slate-400'}`}>
-                    {isSocOver ? '🔴 超规划' : '🟢 正常'}
-                  </div>
-                </div>
-
-                <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                  <div className="text-[10px] text-slate-400">3. 日系统运行时间</div>
-                  <div className="text-base font-black font-mono mt-0.5 text-white">
-                    {summary.dailyOperatingHours ?? 19.2} <span className="text-xs font-normal text-slate-400">h</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">持续充放运行</div>
-                </div>
-
-                <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                  <div className="text-[10px] text-slate-400">4. 日循环次数</div>
-                  <div className="text-base font-black font-mono mt-0.5 text-white">
-                    {summary.dailyCycles ?? 1.25} <span className="text-xs font-normal text-slate-400">次 (EFC)</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">合同基准 1.0 次/日</div>
-                </div>
-
-                <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                  <div className="text-[10px] text-slate-400">5. 日DOD深度</div>
-                  <div className="text-base font-black font-mono mt-0.5 text-white">
-                    {summary.dailyDod ?? 88.5} <span className="text-xs font-normal text-slate-400">%</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">合同上限 90.0%</div>
-                </div>
-
-                <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                  <div className="text-[10px] text-slate-400">6. 充放电电量</div>
-                  <div className="text-xs font-black font-mono mt-0.5 text-white">
-                    充 {summary.chargeEnergyMwh ?? 28.5} / 放 {summary.dischargeEnergyMwh ?? 25.0}
-                  </div>
-                  <div className="text-[10px] text-emerald-400 font-mono">
-                    合计 {summary.totalEnergyMwh ?? 53.5} MWh
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* 3. Sub-Tab Switcher within Site Flexible Warranty Drill-Down */}
       <div className="border-b border-slate-200 bg-white rounded-t-xl px-2 pt-2 shadow-xs">
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
           <button
             onClick={() => setDetailSubTab('eval')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -413,7 +267,52 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
             }`}
           >
             <ShieldCheck className={`w-4 h-4 ${detailSubTab === 'eval' ? 'text-emerald-600' : 'text-slate-400'}`} />
-            <span>灵活质保工况评估工作台</span>
+            <span>灵活质保评估工作台</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                detailSubTab === 'eval' ? 'bg-emerald-200/80 text-emerald-900 font-bold' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              基准工况与SOH
+            </span>
+          </button>
+
+          <button
+            onClick={() => setDetailSubTab('running')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              detailSubTab === 'running'
+                ? 'bg-emerald-50 text-emerald-800 shadow-2xs border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Activity className={`w-4 h-4 ${detailSubTab === 'running' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>运行期间工况数据</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                detailSubTab === 'running' ? 'bg-emerald-200/80 text-emerald-900 font-bold' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              实时监测与超工况
+            </span>
+          </button>
+
+          <button
+            onClick={() => setDetailSubTab('contract')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              detailSubTab === 'contract'
+                ? 'bg-emerald-50 text-emerald-800 shadow-2xs border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <FileSpreadsheet className={`w-4 h-4 ${detailSubTab === 'contract' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>合同工况管理</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                detailSubTab === 'contract' ? 'bg-emerald-200/80 text-emerald-900 font-bold' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              基准与SOH曲线
+            </span>
           </button>
 
           <button
@@ -438,13 +337,18 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
       </div>
 
       {/* 4. Sub-Tab Content Rendering */}
-      {detailSubTab === 'eval' ? (
-        <WarrantyConditionTab site={currentSite as any} />
-      ) : (
+      {detailSubTab === 'reports' ? (
         <SiteScopedReportCenter
           moduleScope="FLEXIBLE_WARRANTY"
           initialSiteId={currentSite.id}
           lockSite={true}
+        />
+      ) : (
+        <WarrantyConditionTab
+          site={currentSite as any}
+          mode={detailSubTab}
+          onNavigateToContractManagement={() => setDetailSubTab('contract')}
+          onNavigateToRunningData={() => setDetailSubTab('running')}
         />
       )}
     </div>
