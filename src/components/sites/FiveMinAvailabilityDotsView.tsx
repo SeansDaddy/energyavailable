@@ -474,12 +474,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
             <Sliders className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">展示形式选择</span>
-              <span className="text-[11px] text-slate-500">
-                支持在【可用度打点与走势】图表与【打点明细表】列表之间切换审查
-              </span>
-            </div>
+            <span className="text-xs font-bold text-slate-900">展示形式选择</span>
           </div>
         </div>
 
@@ -541,9 +536,6 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                   {chartPoints.length} / 288 点已渲染
                 </span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                点击图表上的任意打点，即可在下方快速定位并审查该 5 分钟的功率容量与扣减原因。
-              </p>
             </div>
 
           {/* Time Window Buttons */}
@@ -721,14 +713,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
               <span>ECO外因停机打点 (免责)</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span>PCare工单处置中</span>
-            </span>
-            <span className="flex items-center gap-1.5 font-medium text-emerald-700">
-              <span className="w-2.5 h-0.5 border-t-2 border-dashed border-emerald-600" />
-              <span>PCare 方案闭环时刻 (R4)</span>
-            </span>
+
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-0.5 bg-red-500" />
               <span>SLA 合同基线 ({site.slaThreshold}%)</span>
@@ -876,54 +861,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                 />
               )}
 
-              {/* PCare Work Order Duration Background Span */}
-              {orderTimeBounds && (
-                <ReferenceArea
-                  {...({
-                    x1: orderTimeBounds.startTime,
-                    x2: orderTimeBounds.solutionTime,
-                    y1: 0,
-                    y2: 100,
-                    fill: '#fef3c7',
-                    fillOpacity: 0.45,
-                    stroke: '#f59e0b',
-                    strokeDasharray: '3 3'
-                  } as any)}
-                />
-              )}
 
-              {/* PCare Work Order Dispatch Vertical Line */}
-              {orderTimeBounds && (
-                <ReferenceLine
-                  x={orderTimeBounds.startTime}
-                  stroke="#d97706"
-                  strokeDasharray="3 3"
-                  strokeWidth={1.5}
-                  label={{
-                    value: `工单派发 ${orderTimeBounds.exactStartTime}`,
-                    fill: '#b45309',
-                    fontSize: 10,
-                    position: 'insideTopLeft'
-                  }}
-                />
-              )}
-
-              {/* PCare Work Order Closed-Loop (Rule R4 方案输出即闭环) Vertical Line */}
-              {orderTimeBounds && (
-                <ReferenceLine
-                  x={orderTimeBounds.solutionTime}
-                  stroke="#059669"
-                  strokeDasharray="3 3"
-                  strokeWidth={2}
-                  label={{
-                    value: `★ PCare闭环 ${orderTimeBounds.exactSolutionTime} (R4)`,
-                    fill: '#047857',
-                    fontSize: 10,
-                    fontWeight: 'bold',
-                    position: 'insideTopRight'
-                  }}
-                />
-              )}
 
               {/* Instant 5-Min Point Step Line */}
               <Line
@@ -937,7 +875,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                   let color = '#10b981';
                   if (payload.status === 'FAULT_TRIP') color = '#ef4444';
                   else if (payload.isEco) color = '#06b6d4';
-                  else if (payload.status === 'WORKORDER_ACTIVE') color = '#f59e0b';
+                  else if (payload.status === 'WORKORDER_ACTIVE') color = payload.interruptionMins > 0 ? '#ef4444' : '#10b981';
                   else if (payload.status === 'MAINTENANCE') color = '#3b82f6';
 
                   return (

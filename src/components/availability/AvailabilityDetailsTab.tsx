@@ -1168,12 +1168,7 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900">展示形式选择</span>
-                  <span className="text-[11px] text-slate-500">
-                    支持在【可用度走势图表】与【日履约明细表】之间自由切换
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900">展示形式选择</span>
               </div>
             </div>
 
@@ -1700,12 +1695,7 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900">展示形式选择</span>
-                  <span className="text-[11px] text-slate-500">
-                    支持在【周走势图表】与【周履约明细表】之间自由切换
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900">展示形式选择</span>
               </div>
             </div>
 
@@ -2225,12 +2215,7 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900">展示形式选择</span>
-                  <span className="text-[11px] text-slate-500">
-                    支持在【月履约走势图】与【月结算明细表】之间自由切换
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900">展示形式选择</span>
               </div>
             </div>
 
@@ -2769,12 +2754,7 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900">展示形式选择</span>
-                  <span className="text-[11px] text-slate-500">
-                    支持在【年度走势图表】与【年度台账清册列表】之间自由切换
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900">展示形式选择</span>
               </div>
             </div>
 

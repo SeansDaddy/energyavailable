@@ -88,34 +88,29 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     {
       id: 0,
       label: '可用度详情',
-      subtext: '5分钟 · 日 · 周 · 月 · 年 周期监控',
       icon: Zap
     },
     {
       id: 1,
       label: '中断告警',
-      subtext: 'Rule R11 · 故障归并 / 中断告警 / ECO免责',
       icon: Clock,
       count: site.mergedFaults?.length || 0
     },
     {
       id: 2,
       label: '工单详情',
-      subtext: 'Rule R4 · 现场消缺 / 方案闭环 / MTTR',
       icon: Wrench,
       count: siteOrders.length
     },
     {
       id: 3,
       label: '站点报告中心',
-      subtext: 'SLA可用度履约与运行考核报告',
       icon: FolderKanban,
       count: siteReportsCount
     },
     {
       id: 4,
       label: '合同期ECO配置与报告',
-      subtext: '告警/工单免责明细清单 · 审计报告导出',
       icon: ShieldCheck,
       count: siteOrders.filter(w => w.isEcoExempt).length + 4
     }
@@ -377,7 +372,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 Availability Drilldown Tabs */}
+        {/* Availability Drilldown Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto border-t border-slate-100 pt-3 mt-2">
           {tabs.map(t => {
             const Icon = t.icon;
@@ -387,34 +382,23 @@ export const SiteAvailabilityDetailView: React.FC = () => {
                 key={t.id}
                 id={`tab-avail-drilldown-${t.id}`}
                 onClick={() => setAvailabilityDrilldownTab(t.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap border ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap border cursor-pointer ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                <div className="text-left">
-                  <div className="flex items-center gap-1.5">
-                    <span>{t.label}</span>
-                    {t.count !== undefined && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                          isActive ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}
-                      >
-                        {t.count}
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    className={`text-[10px] font-normal ${
-                      isActive ? 'text-blue-100' : 'text-slate-400'
+                <span>{t.label}</span>
+                {t.count !== undefined && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isActive ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
                   >
-                    {t.subtext}
-                  </div>
-                </div>
+                    {t.count}
+                  </span>
+                )}
               </button>
             );
           })}
