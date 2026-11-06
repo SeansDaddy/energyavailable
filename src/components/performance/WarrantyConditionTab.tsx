@@ -30,6 +30,7 @@ import {
 } from '../../utils/flexibleWarrantyAlgorithm';
 import { exportFlexibleWarrantyPdfReport } from '../../utils/flexibleWarrantyPdfReport';
 import { useApp } from '../../context/AppContext';
+import { MonthlyComplianceMatrix } from './MonthlyComplianceMatrix';
 import {
   LineChart,
   Line,
@@ -75,7 +76,8 @@ import {
   Check,
   FileCheck2,
   FolderKanban,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 
 interface WarrantyConditionTabProps {
@@ -157,6 +159,10 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
   // 日志解析搜索与筛选
   const [logSearchPack, setLogSearchPack] = useState('');
   const [logFilterOverOnly, setLogFilterOverOnly] = useState(false);
+
+  // 月度履约指标分析与超限考核矩阵联动事件日志的过滤条件 (双向绑定)
+  const [matrixFilterMonth, setMatrixFilterMonth] = useState<string | null>(null);
+  const [matrixFilterMetricType, setMatrixFilterMetricType] = useState<string | null>(null);
 
   // 4. 换算后的站级日数据与月度数据
   const { daily: dailyConditions, monthly: monthlyConditions } = useMemo(() => {
@@ -522,7 +528,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
-                    灵活质保工况评估工作台
+                    站点质保概览
                   </span>
                   <span className="text-xs text-indigo-200/80">
                     算法模型: <strong className="text-white font-mono">{sohResult.algorithmVersion}</strong>
@@ -669,10 +675,10 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   <button
                     onClick={onNavigateToRunningData}
                     className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-900/80 hover:bg-indigo-800 text-indigo-100 border border-indigo-600/50 flex items-center gap-1.5 transition-all cursor-pointer"
-                    title="切换至运行期间工况数据监测页面"
+                    title="切换至工况检测分析监测页面"
                   >
                     <Activity className="w-3.5 h-3.5 text-indigo-300" />
-                    <span>查看运行期间工况数据</span>
+                    <span>查看工况检测分析</span>
                   </button>
                 )}
                 {onNavigateToContractManagement ? (
@@ -803,145 +809,9 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
         </>
       )}
 
-      {/* 2. Running Data Mode: 超工况预警卡片 + 今日设备运行工况实时监测 6项指标 + 运行子导航 */}
+      {/* 2. 工况检测分析 (运行期间工况数据) */}
       {mode === 'running' && (
         <>
-          {/* 当前合同年超工况状态预警卡片 (如果超限次数大于0或平均SOC大于合同规划SOC，标红展示) */}
-          <div
-            onClick={() => setActiveSubView(5)}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-              contractYearSummary.isRedAlert
-                ? 'bg-red-50/95 border-2 border-red-500 shadow-md shadow-red-500/10'
-                : 'bg-emerald-50/80 border border-emerald-300'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  contractYearSummary.isRedAlert ? 'bg-red-600 text-white animate-pulse' : 'bg-emerald-600 text-white'
-                }`}
-              >
-                {contractYearSummary.isRedAlert ? (
-                  <AlertTriangle className="w-5 h-5" />
-                ) : (
-                  <CheckCircle2 className="w-5 h-5" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-slate-900">
-                    当前履约周期: {contractYearSummary.contractYearLabel} (2026年度) 超工况统计
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      contractYearSummary.isRedAlert
-                        ? 'bg-red-600 text-white'
-                        : 'bg-emerald-600 text-white'
-                    }`}
-                  >
-                    {contractYearSummary.isRedAlert ? '🔴 标红预警 (超工况触发)' : '🟢 履约合规'}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    合同编号: <span className="font-mono text-slate-700">{contractYearSummary.contractNo}</span>
-                  </span>
-                </div>
-                <div className="text-xs mt-1 flex items-center gap-3 flex-wrap">
-                  <span className={contractYearSummary.totalOverLimitCount > 0 ? 'text-red-700 font-bold' : 'text-slate-600'}>
-                    超限总次数: <strong className={contractYearSummary.totalOverLimitCount > 0 ? 'text-red-600 font-black' : 'text-emerald-700'}>{contractYearSummary.totalOverLimitCount} 次</strong>
-                    {contractYearSummary.totalOverLimitCount > 0 && <span className="text-[10px] ml-1 text-red-500 font-normal">(&gt;0 标红)</span>}
-                  </span>
-                  <span className="text-slate-300">·</span>
-                  <span className={contractYearSummary.isSocExceeded ? 'text-red-700 font-bold' : 'text-slate-600'}>
-                    实际平均SOC: <strong className={contractYearSummary.isSocExceeded ? 'text-red-600 font-black' : 'text-emerald-700'}>{contractYearSummary.actualAvgSoc}%</strong> (合同规划: {contractYearSummary.contractPlannedSoc}%)
-                    {contractYearSummary.isSocExceeded && <span className="text-[10px] ml-1 text-red-500 font-normal">(+{contractYearSummary.socDiff}%, 超规划标红)</span>}
-                  </span>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-slate-600">
-                    履约进度: {contractYearSummary.elapsedDays}/{contractYearSummary.totalDays} 天 ({contractYearSummary.progressPct}%)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${contractYearSummary.isRedAlert ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                {contractYearSummary.isRedAlert ? '⚠️ 已触发灵活质保加速折损考核' : '达标运行'}
-              </span>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </div>
-          </div>
-
-          {/* 今日设备运行工况实时监测 (6项指标) */}
-          <div className="bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-xs">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-white">
-                  今日/当前设备运行工况实时监测
-                </span>
-              </div>
-              <span className="text-[11px] text-slate-400">
-                站级实时换算 · 6项关键运行工况指标
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
-              <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                <div className="text-[10px] text-slate-400">1. 日充放电倍率</div>
-                <div className="text-base font-black font-mono mt-0.5 text-white">
-                  0.44 <span className="text-xs font-normal text-slate-400">C</span>
-                </div>
-                <div className="text-[10px] text-slate-400">基准上限 {contractBaseline.maxCrate} C</div>
-              </div>
-
-              <div className={`rounded-xl p-2.5 border ${contractYearSummary.isSocExceeded ? 'bg-red-950/80 border-red-500/80' : 'bg-slate-800/70 border-slate-700/60'}`}>
-                <div className="text-[10px] text-slate-400">2. 日PACK平均SOC</div>
-                <div className="text-base font-black font-mono mt-0.5 flex items-baseline gap-1">
-                  <span className={contractYearSummary.isSocExceeded ? 'text-red-400 font-bold' : 'text-emerald-400'}>
-                    {contractYearSummary.actualAvgSoc}%
-                  </span>
-                  <span className="text-[10px] font-normal text-slate-400">(规划 {contractYearSummary.contractPlannedSoc}%)</span>
-                </div>
-                <div className={`text-[10px] ${contractYearSummary.isSocExceeded ? 'text-red-300 font-bold' : 'text-slate-400'}`}>
-                  {contractYearSummary.isSocExceeded ? '🔴 超规划' : '🟢 正常'}
-                </div>
-              </div>
-
-              <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                <div className="text-[10px] text-slate-400">3. 日系统运行时间</div>
-                <div className="text-base font-black font-mono mt-0.5 text-white">
-                  19.2 <span className="text-xs font-normal text-slate-400">h</span>
-                </div>
-                <div className="text-[10px] text-slate-400">持续充放运行</div>
-              </div>
-
-              <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                <div className="text-[10px] text-slate-400">4. 日循环次数</div>
-                <div className="text-base font-black font-mono mt-0.5 text-white">
-                  1.25 <span className="text-xs font-normal text-slate-400">次 (EFC)</span>
-                </div>
-                <div className="text-[10px] text-slate-400">合同基准 1.0 次/日</div>
-              </div>
-
-              <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                <div className="text-[10px] text-slate-400">5. 日DOD深度</div>
-                <div className="text-base font-black font-mono mt-0.5 text-white">
-                  88.5 <span className="text-xs font-normal text-slate-400">%</span>
-                </div>
-                <div className="text-[10px] text-slate-400">合同上限 {contractBaseline.maxDodPct}%</div>
-              </div>
-
-              <div className="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/60">
-                <div className="text-[10px] text-slate-400">6. 充放电电量</div>
-                <div className="text-xs font-black font-mono mt-0.5 text-white">
-                  充 28.5 / 放 25.0
-                </div>
-                <div className="text-[10px] text-emerald-400 font-mono">
-                  合计 53.5 MWh
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* 运行期间工况数据 4 个子标签页导航 */}
           <div className="border-b border-slate-200 bg-white rounded-t-xl px-2 pt-2 shadow-xs">
@@ -2363,394 +2233,414 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
             </div>
           )}
 
-          {/* 6 Key Over-Condition KPI Cards (标红高亮) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            {/* Card 1: 超限总次数 */}
-            <div
-              className={`rounded-2xl p-4 border transition-all ${
-                contractYearSummary.totalOverLimitCount > 0
-                  ? 'bg-red-50/90 border-2 border-red-500 shadow-md shadow-red-500/10'
-                  : 'bg-white border-slate-200 shadow-xs'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">当前合同年超限总次数</span>
-                {contractYearSummary.totalOverLimitCount > 0 ? (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white">
-                    标红超限
-                  </span>
-                ) : (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                    正常
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span
-                  className={`text-2xl font-black font-mono ${
-                    contractYearSummary.totalOverLimitCount > 0 ? 'text-red-600' : 'text-emerald-600'
-                  }`}
-                >
-                  {contractYearSummary.totalOverLimitCount}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">次超限</span>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1 leading-tight">
-                包含超温{contractYearSummary.tempOverLimitCount}天 · 超倍率{contractYearSummary.crateOverLimitCount}天 · 超DOD{contractYearSummary.dodOverLimitCount}天
-              </p>
-            </div>
-
-            {/* Card 2: 实际平均SOC vs 合同规划SOC */}
-            <div
-              className={`rounded-2xl p-4 border transition-all ${
-                contractYearSummary.isSocExceeded
-                  ? 'bg-red-50/90 border-2 border-red-500 shadow-md shadow-red-500/10'
-                  : 'bg-white border-slate-200 shadow-xs'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">实际均SOC vs 规划SOC</span>
-                {contractYearSummary.isSocExceeded ? (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white">
-                    标红超标
-                  </span>
-                ) : (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                    合规
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span
-                  className={`text-2xl font-black font-mono ${
-                    contractYearSummary.isSocExceeded ? 'text-red-600' : 'text-emerald-600'
-                  }`}
-                >
-                  {contractYearSummary.actualAvgSoc}%
-                </span>
-                <span className="text-xs text-slate-500 font-medium">
-                  / 规划 {contractYearSummary.contractPlannedSoc}%
-                </span>
-              </div>
-              <p className={`text-[10px] mt-1 font-medium ${contractYearSummary.isSocExceeded ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
-                {contractYearSummary.isSocExceeded ? `偏离规划 +${contractYearSummary.socDiff}% (高SOC应力加速衰减)` : '处于合同规划设计窗口'}
-              </p>
-            </div>
-
-            {/* Card 3: 超温超限 */}
-            <div
-              className={`rounded-2xl p-4 border transition-all ${
-                contractYearSummary.tempOverLimitCount > 0
-                  ? 'bg-red-50/70 border border-red-400'
-                  : 'bg-white border-slate-200 shadow-xs'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">电芯工作温度超限</span>
-                <Flame className={`w-4 h-4 ${contractYearSummary.tempOverLimitCount > 0 ? 'text-red-500' : 'text-slate-400'}`} />
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className={`text-2xl font-black font-mono ${contractYearSummary.tempOverLimitCount > 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                  {contractYearSummary.tempOverLimitCount}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">天超温</span>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">
-                最高 <strong className={contractYearSummary.tempMaxRecorded > contractYearSummary.tempThreshold ? 'text-red-600 font-bold' : ''}>{contractYearSummary.tempMaxRecorded}℃</strong> (门槛 {contractYearSummary.tempThreshold}℃)
-              </p>
-            </div>
-
-            {/* Card 4: 超倍率充放电 */}
-            <div
-              className={`rounded-2xl p-4 border transition-all ${
-                contractYearSummary.crateOverLimitCount > 0
-                  ? 'bg-red-50/70 border border-red-400'
-                  : 'bg-white border-slate-200 shadow-xs'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">充放电倍率超限</span>
-                <Zap className={`w-4 h-4 ${contractYearSummary.crateOverLimitCount > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className={`text-2xl font-black font-mono ${contractYearSummary.crateOverLimitCount > 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                  {contractYearSummary.crateOverLimitCount}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">天超倍率</span>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">
-                峰值 <strong className={contractYearSummary.crateMaxRecorded > contractYearSummary.crateThreshold ? 'text-red-600 font-bold' : ''}>{contractYearSummary.crateMaxRecorded} C</strong> (门槛 {contractYearSummary.crateThreshold} C)
-              </p>
-            </div>
-
-            {/* Card 5: 超DOD深度放电 */}
-            <div
-              className={`rounded-2xl p-4 border transition-all ${
-                contractYearSummary.dodOverLimitCount > 0
-                  ? 'bg-red-50/70 border border-red-400'
-                  : 'bg-white border-slate-200 shadow-xs'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">放电深度DOD超限</span>
-                <TrendingDown className={`w-4 h-4 ${contractYearSummary.dodOverLimitCount > 0 ? 'text-red-500' : 'text-slate-400'}`} />
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className={`text-2xl font-black font-mono ${contractYearSummary.dodOverLimitCount > 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                  {contractYearSummary.dodOverLimitCount}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">天超限</span>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">
-                最大深度 <strong className={contractYearSummary.dodMaxRecorded > contractYearSummary.dodThreshold ? 'text-red-600 font-bold' : ''}>{contractYearSummary.dodMaxRecorded}%</strong> (门槛 {contractYearSummary.dodThreshold}%)
-              </p>
-            </div>
-
-            {/* Card 6: 等效循环与吞吐量 */}
-            <div className="rounded-2xl p-4 border bg-white border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">年度等效循环 (EFC)</span>
-                <RefreshCw className="w-4 h-4 text-indigo-500" />
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-2xl font-black font-mono text-slate-900">
-                  {contractYearSummary.cumulativeActualCycles}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">
-                  / {contractYearSummary.plannedAnnualCycles} 次
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">
-                吞吐 <strong className="text-slate-800">{contractYearSummary.throughputActualMwh}</strong> / {contractYearSummary.throughputLimitMwh} MWh
-              </p>
-            </div>
-          </div>
-
-          {/* 6项核心设备工况运行数据横向看板 */}
-          <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950 text-white rounded-2xl p-5 shadow-sm border border-slate-800">
-            <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-indigo-400" />
-                <h4 className="text-xs font-bold tracking-tight text-white">
-                  当前合同年设备工况数据全景 (6项核心工况指标)
-                </h4>
-              </div>
-              <span className="text-[11px] text-slate-400 font-mono">
-                日充放电倍率 · PACK均SOC · 运行时间 · 循环次数 · DOD · 充放电量
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-                <div className="text-[11px] text-slate-300 font-medium">1. 日充放电倍率 (年均)</div>
-                <div className="text-lg font-black font-mono mt-1 text-white">
-                  {contractYearSummary.annualAvgDailyCrate} <span className="text-xs font-normal text-slate-400">C</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">基准上限 0.50 C</div>
-              </div>
-
-              <div className={`rounded-xl p-3 border ${contractYearSummary.isSocExceeded ? 'bg-red-950/80 border-red-500/80' : 'bg-slate-800/60 border-slate-700/60'}`}>
-                <div className="text-[11px] text-slate-300 font-medium">2. 日电池PACK平均SOC</div>
-                <div className="text-lg font-black font-mono mt-1 flex items-baseline gap-1">
-                  <span className={contractYearSummary.isSocExceeded ? 'text-red-400 font-bold' : 'text-emerald-400'}>
-                    {contractYearSummary.annualAvgPackSoc}%
-                  </span>
-                  <span className="text-[10px] font-normal text-slate-400">
-                    (规划 {contractYearSummary.contractPlannedSoc}%)
-                  </span>
-                </div>
-                <div className={`text-[10px] mt-1 ${contractYearSummary.isSocExceeded ? 'text-red-300 font-bold' : 'text-slate-400'}`}>
-                  {contractYearSummary.isSocExceeded ? '🔴 超规划标红' : '🟢 规划内正常'}
-                </div>
-              </div>
-
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-                <div className="text-[11px] text-slate-300 font-medium">3. 日系统运行时间 (年均)</div>
-                <div className="text-lg font-black font-mono mt-1 text-white">
-                  {contractYearSummary.annualAvgOperatingHours} <span className="text-xs font-normal text-slate-400">h / 日</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">高可用率运行态</div>
-              </div>
-
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-                <div className="text-[11px] text-slate-300 font-medium">4. 日循环 / 年累计循环</div>
-                <div className="text-lg font-black font-mono mt-1 text-white">
-                  {contractYearSummary.annualTotalCycles} <span className="text-xs font-normal text-slate-400">次 (EFC)</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">日均 {(contractYearSummary.annualTotalCycles / contractYearSummary.elapsedDays).toFixed(2)} 次/日</div>
-              </div>
-
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-                <div className="text-[11px] text-slate-300 font-medium">5. 日放电深度DOD (年均)</div>
-                <div className="text-lg font-black font-mono mt-1 text-white">
-                  {contractYearSummary.annualAvgDod} <span className="text-xs font-normal text-slate-400">%</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">基准上限 90.0%</div>
-              </div>
-
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-                <div className="text-[11px] text-slate-300 font-medium">6. 充放电电量 (年累计)</div>
-                <div className="text-sm font-black font-mono mt-1 text-white">
-                  充 {contractYearSummary.annualTotalChargeMwh} / 放 {contractYearSummary.annualTotalDischargeMwh}
-                </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-1">
-                  总电量 {contractYearSummary.annualTotalEnergyMwh} MWh
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Monthly Breakdown Table with Red Highlighting */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* 当前合同年工况考核指标全景卡片 (9 项指标卡网格) */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-indigo-600" />
-                  <span>当前合同年月度工况与超限考核拆解表 (超限次数大于0或平均SOC大于规划SOC标红)</span>
-                </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  红底标亮行表示该月存在超限或平均SOC超合同规划；支持逐月追溯考核指标。
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                    <Activity className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 tracking-tight">
+                    当前合同年工况考核指标全景
+                  </h4>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
+                    9项核心考核指标
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  依据当前合同履约基准对倍率、温度、SOC、运行时间、循环及衰减进行闭环监测，作为灵活质保 SOH 加速折损评定依据。
                 </p>
               </div>
-              <span className="text-xs font-mono text-slate-500">
-                规划SOC基准: <strong className="text-slate-800">{contractYearSummary.contractPlannedSoc}%</strong>
-              </span>
+
+              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <span className="text-xs font-mono text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  合同考核基准 · 实测运行统计 · 履约判定
+                </span>
+              </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="py-2.5 px-3">合同月份</th>
-                    <th className="py-2.5 px-3">运营天数</th>
-                    <th className="py-2.5 px-3">实际平均SOC(%)</th>
-                    <th className="py-2.5 px-3">合同规划SOC(%)</th>
-                    <th className="py-2.5 px-3">SOC偏离量</th>
-                    <th className="py-2.5 px-3">超限天数/次数</th>
-                    <th className="py-2.5 px-3">实测最高温(℃)</th>
-                    <th className="py-2.5 px-3">实测最高倍率(C)</th>
-                    <th className="py-2.5 px-3">实际循环(EFC)</th>
-                    <th className="py-2.5 px-3">规划循环(EFC)</th>
-                    <th className="py-2.5 px-3">放电吞吐(MWh)</th>
-                    <th className="py-2.5 px-3 text-center">标红考核判定</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-mono">
-                  {contractYearSummary.monthlyBreakdown.map(m => {
-                    const socDelta = +(m.avgSoc - contractYearSummary.contractPlannedSoc).toFixed(1);
-                    return (
-                      <tr
-                        key={m.month}
-                        className={`hover:bg-slate-50 transition-colors ${
-                          m.isRed ? 'bg-red-50/40 text-red-950 font-medium' : ''
-                        }`}
-                      >
-                        <td className="py-3 px-3 font-bold font-sans text-slate-900">
-                          {m.month}
-                        </td>
-                        <td className="py-3 px-3 text-slate-600 font-sans">{m.daysCount} 天</td>
-                        <td className={`py-3 px-3 font-bold ${m.isSocExceeded ? 'text-red-600 bg-red-100/60 px-2 rounded' : 'text-slate-800'}`}>
-                          {m.avgSoc}%
-                        </td>
-                        <td className="py-3 px-3 text-slate-600">{contractYearSummary.contractPlannedSoc}%</td>
-                        <td className={`py-3 px-3 font-bold ${socDelta > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                          {socDelta > 0 ? `+${socDelta}%` : `${socDelta}%`}
-                        </td>
-                        <td className={`py-3 px-3 font-black ${m.overLimitCount > 0 ? 'text-red-600 bg-red-100/60 px-2 rounded' : 'text-slate-600'}`}>
-                          {m.overLimitCount > 0 ? `${m.overLimitCount} 次` : '0 次'}
-                        </td>
-                        <td className={`py-3 px-3 ${m.maxTemp > contractBaseline.baselineTempMax ? 'text-red-600 font-bold' : 'text-slate-700'}`}>
-                          {m.maxTemp}℃
-                        </td>
-                        <td className={`py-3 px-3 ${m.maxCrate > contractBaseline.maxCrate ? 'text-red-600 font-bold' : 'text-slate-700'}`}>
-                          {m.maxCrate} C
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-slate-900">{m.actualCycles}</td>
-                        <td className="py-3 px-3 text-slate-500">{m.plannedCycles}</td>
-                        <td className="py-3 px-3 text-slate-800">{m.throughputMwh}</td>
-                        <td className="py-3 px-3 text-center font-sans">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              m.isRed
-                                ? 'bg-red-600 text-white'
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {m.isRed ? '🔴 标红预警' : '🟢 正常合规'}
+            {/* 单行横向排布 9 个指标卡 */}
+            <div className="overflow-x-auto pb-1.5 -mx-1 px-1 scrollbar-thin">
+              <div className="grid grid-cols-9 gap-2.5 min-w-[1240px]">
+                {[
+                  {
+                    id: 1,
+                    name: '充电倍率',
+                    benchmark: '≤ 0.5 C',
+                    value: '年均 0.33 C',
+                    status: '履约合规',
+                    type: 'compliant' as const,
+                    icon: Zap,
+                    iconColor: 'text-amber-500'
+                  },
+                  {
+                    id: 2,
+                    name: '放电倍率',
+                    benchmark: '≤ 0.5 C',
+                    value: '年均 0.41 C',
+                    status: '履约合规',
+                    type: 'compliant' as const,
+                    icon: Zap,
+                    iconColor: 'text-blue-500'
+                  },
+                  {
+                    id: 3,
+                    name: '循环平均温度',
+                    benchmark: '均≤25℃',
+                    value: '年均 21.2℃',
+                    status: '履约合规',
+                    type: 'compliant' as const,
+                    icon: Thermometer,
+                    iconColor: 'text-orange-500'
+                  },
+                  {
+                    id: 4,
+                    name: '平均SOC',
+                    benchmark: '≤ 50 %',
+                    value: '年均 47.4 %',
+                    status: '履约合规',
+                    type: 'compliant' as const,
+                    icon: Activity,
+                    iconColor: 'text-emerald-500'
+                  },
+                  {
+                    id: 5,
+                    name: '系统运行时间',
+                    benchmark: '10.0 h/日',
+                    value: '年均 18.8 h/日',
+                    status: '正常运行',
+                    type: 'normal' as const,
+                    icon: Clock,
+                    iconColor: 'text-indigo-500'
+                  },
+                  {
+                    id: 6,
+                    name: '循环次数',
+                    benchmark: '365 次/年',
+                    value: '累计 199.3 次',
+                    status: '占额度 54.6%',
+                    type: 'quota' as const,
+                    icon: RefreshCw,
+                    iconColor: 'text-purple-500'
+                  },
+                  {
+                    id: 7,
+                    name: '最大放电深度DOD',
+                    benchmark: '≤ 90 %',
+                    value: '峰值 92.1 %',
+                    status: '超限 3 次',
+                    type: 'alert' as const,
+                    icon: TrendingDown,
+                    iconColor: 'text-red-500'
+                  },
+                  {
+                    id: 8,
+                    name: '滑窗内充放电量',
+                    benchmark: '7300 MWh',
+                    value: '充4305.8/放3986.8',
+                    status: '占额度 54.6%',
+                    type: 'quota' as const,
+                    icon: Layers,
+                    iconColor: 'text-cyan-600'
+                  },
+                  {
+                    id: 9,
+                    name: 'SOH',
+                    benchmark: '92.09 %',
+                    value: '基准 92.54 %',
+                    status: '低于基准 -0.45%',
+                    type: 'warning' as const,
+                    icon: ShieldCheck,
+                    iconColor: 'text-indigo-500'
+                  }
+                ].map(item => {
+                  const Icon = item.icon;
+                  const isAlert = item.type === 'alert';
+                  const isWarning = item.type === 'warning';
+                  const isCompliant = item.type === 'compliant';
+                  const isNormal = item.type === 'normal';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`rounded-xl p-3 transition-all duration-200 flex flex-col justify-between group ${
+                        isAlert
+                          ? 'bg-red-50/50 border-2 border-red-500/90 shadow-sm shadow-red-500/10'
+                          : isWarning
+                          ? 'bg-amber-50/40 border border-amber-300 shadow-2xs hover:border-amber-400'
+                          : 'bg-slate-50/60 hover:bg-white border border-slate-200/90 hover:border-indigo-200 shadow-2xs hover:shadow-xs'
+                      }`}
+                    >
+                      {/* 第1行：指标名（左带图标）   限值/基准（右） */}
+                      <div className="flex items-center justify-between gap-1.5 pb-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <Icon className={`w-3.5 h-3.5 ${item.iconColor} shrink-0`} />
+                          <span className="text-[11px] font-bold text-slate-800 tracking-tight truncate" title={item.name}>
+                            {item.name}
                           </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200/90 shadow-2xs shrink-0">
+                          {item.benchmark}
+                        </span>
+                      </div>
 
-          {/* Detailed Over-Limit Events Log Table */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-red-500" />
-                  <span>当前合同年超工况事件详细日志记录 (下钻分析)</span>
-                </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  记录发生超温、超倍率、超深DOD、日均SOC超规划的具体事件与电池加速衰减机理分析。
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg">
-                累计记录 {contractYearSummary.overLimitEvents.length} 条违约日志
-              </span>
-            </div>
+                      {/* 第2行：核心数值（大号加粗字体突出展示） */}
+                      <div className="my-2.5">
+                        <div
+                          className={`font-black font-mono tracking-tight truncate ${
+                            item.value.length > 12 ? 'text-xs xl:text-sm' : 'text-base xl:text-lg'
+                          } ${
+                            isAlert
+                              ? 'text-red-600'
+                              : isWarning
+                              ? 'text-amber-700'
+                              : 'text-slate-900'
+                          }`}
+                          title={item.value}
+                        >
+                          {item.value}
+                        </div>
+                      </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="py-2.5 px-3">序号</th>
-                    <th className="py-2.5 px-3">发生日期</th>
-                    <th className="py-2.5 px-3">超限指标类型</th>
-                    <th className="py-2.5 px-3">实测记录值</th>
-                    <th className="py-2.5 px-3">合同基准门槛</th>
-                    <th className="py-2.5 px-3">超标偏离幅度</th>
-                    <th className="py-2.5 px-3">质保与电芯损伤机理说明</th>
-                    <th className="py-2.5 px-3 text-center">预警等级</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-mono">
-                  {contractYearSummary.overLimitEvents.map(evt => (
-                    <tr key={evt.id} className="hover:bg-red-50/20 transition-colors">
-                      <td className="py-2.5 px-3 text-slate-500 font-sans">{evt.id}</td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-900 font-sans">{evt.date}</td>
-                      <td className="py-2.5 px-3 font-sans font-bold text-slate-800">
-                        {evt.typeName}
-                      </td>
-                      <td className="py-2.5 px-3 font-bold text-red-600 bg-red-50/80 px-2 rounded">
-                        {evt.recordedValue}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-600">{evt.contractLimit}</td>
-                      <td className="py-2.5 px-3 font-black text-red-600">{evt.deviation}</td>
-                      <td className="py-2.5 px-3 font-sans text-slate-600 max-w-md text-[11px] leading-relaxed">
-                        {evt.impactDescription}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-sans">
+                      {/* 第3行：状态/结论（Badge标签样式） */}
+                      <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between gap-1">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            evt.severity === 'CRITICAL'
-                              ? 'bg-red-600 text-white animate-pulse'
-                              : 'bg-amber-100 text-amber-800'
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-colors truncate ${
+                            isAlert
+                              ? 'bg-red-600 text-white shadow-2xs'
+                              : isWarning
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : isCompliant
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                              : isNormal
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
                           }`}
                         >
-                          {evt.severity === 'CRITICAL' ? '严重超限 (红)' : '轻度超限 (黄)'}
+                          {isAlert && <AlertTriangle className="w-3 h-3 animate-pulse shrink-0" />}
+                          {isCompliant && <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />}
+                          {isNormal && <Check className="w-3 h-3 text-blue-600 shrink-0" />}
+                          {isWarning && <TrendingDown className="w-3 h-3 text-amber-700 shrink-0" />}
+                          <span className="truncate">{item.status}</span>
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                          #{item.id}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
+
+          {/* 月度履约指标分析与超限考核矩阵 (承上启下的下钻枢纽) */}
+          <MonthlyComplianceMatrix
+            contractYearSummary={contractYearSummary}
+            contractBaseline={contractBaseline}
+            filterMonth={matrixFilterMonth}
+            filterMetricType={matrixFilterMetricType}
+            onFilterChange={(m, t) => {
+              setMatrixFilterMonth(m);
+              setMatrixFilterMetricType(t);
+            }}
+          />
+
+          {/* Detailed Over-Limit Events Log Table (带双向联动过滤) */}
+          {(() => {
+            const filteredEvents = contractYearSummary.overLimitEvents.filter(evt => {
+              if (matrixFilterMonth && !evt.date.startsWith(matrixFilterMonth)) {
+                return false;
+              }
+              if (matrixFilterMetricType && matrixFilterMetricType !== 'ALL') {
+                if (matrixFilterMetricType === 'THROUGHPUT') {
+                  return true;
+                }
+                if (evt.type !== matrixFilterMetricType) {
+                  return false;
+                }
+              }
+              return true;
+            });
+
+            const hasActiveFilter = Boolean(matrixFilterMonth || (matrixFilterMetricType && matrixFilterMetricType !== 'ALL'));
+
+            // 获取指标类型名称映射
+            const getTypeName = (code: string | null) => {
+              switch (code) {
+                case 'TEMP': return '循环平均温度 (TEMP)';
+                case 'CRATE': return '放电倍率 (CRATE)';
+                case 'SOC': return '平均SOC (SOC)';
+                case 'DOD': return '最大放电深度 (DOD)';
+                case 'CYCLE': return '循环次数 (CYCLE)';
+                case 'THROUGHPUT': return '充放电量 (THROUGHPUT)';
+                default: return '全部指标类型';
+              }
+            };
+
+            return (
+              <div id="over-limit-events-section" className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 scroll-mt-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-red-500" />
+                      <span>当前合同年超工况事件详细日志记录 (下钻分析)</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      记录发生超温、超倍率、超深DOD、日均SOC超规划的具体事件与电池加速衰减机理分析。支持从上方矩阵点击直接联动。
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg font-mono">
+                      展示 {filteredEvents.length} / 累计 {contractYearSummary.overLimitEvents.length} 条违约日志
+                    </span>
+                  </div>
+                </div>
+
+                {/* 联动筛选控制栏 (双向同步) */}
+                <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="text-slate-600 font-semibold flex items-center gap-1">
+                      <Filter className="w-3.5 h-3.5 text-slate-500" />
+                      <span>日志筛选:</span>
+                    </span>
+
+                    {/* 月份下拉 */}
+                    <select
+                      value={matrixFilterMonth || ''}
+                      onChange={e => setMatrixFilterMonth(e.target.value ? e.target.value : null)}
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-700 text-xs font-mono font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <option value="">全部月份 (2026-01 ~ 2026-08)</option>
+                      {['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'].map(m => (
+                        <option key={m} value={m}>{m} ({m === '2026-07' ? '10条超限' : m === '2026-06' ? '5条超限' : m === '2026-08' ? '4条超限' : m === '2026-05' ? '3条超限' : '0条合规'})</option>
+                      ))}
+                    </select>
+
+                    {/* 指标类型下拉 */}
+                    <select
+                      value={matrixFilterMetricType || 'ALL'}
+                      onChange={e => setMatrixFilterMetricType(e.target.value === 'ALL' ? null : e.target.value)}
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <option value="ALL">全部超限类型</option>
+                      <option value="TEMP">电芯工作温度超限 (TEMP · 8条)</option>
+                      <option value="SOC">日平均SOC超合同规划 (SOC · 5条)</option>
+                      <option value="CRATE">放电倍率超限 (CRATE · 3条)</option>
+                      <option value="CYCLE">月度等效循环超限 (CYCLE · 3条)</option>
+                      <option value="DOD">放电深度DOD超限 (DOD · 3条)</option>
+                    </select>
+                  </div>
+
+                  {/* 激活状态下的提示与清除按钮 */}
+                  {hasActiveFilter && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[11px] font-medium">
+                        <span>当前过滤:</span>
+                        <strong className="font-mono">{matrixFilterMonth || '所有月份'}</strong>
+                        <span>×</span>
+                        <strong className="font-sans">{getTypeName(matrixFilterMetricType)}</strong>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setMatrixFilterMonth(null);
+                          setMatrixFilterMetricType(null);
+                        }}
+                        className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="清除筛选条件恢复全量日志"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>清除筛选</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 日志表格或空态提示 */}
+                {filteredEvents.length === 0 ? (
+                  <div className="py-12 text-center space-y-2 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div className="text-xs font-bold text-slate-800">
+                      当前筛选条件下无超限事件记录
+                    </div>
+                    <div className="text-[11px] text-slate-500 max-w-md mx-auto">
+                      该月份/指标在合同基准窗口内运行合规，未触发加速老化与超工况考核违约。
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMatrixFilterMonth(null);
+                        setMatrixFilterMetricType(null);
+                      }}
+                      className="mt-2 px-3 py-1 bg-white hover:bg-slate-100 text-indigo-600 border border-indigo-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      查看全量超工况日志 (22条)
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3">序号</th>
+                          <th className="py-2.5 px-3">发生日期</th>
+                          <th className="py-2.5 px-3">超限指标类型</th>
+                          <th className="py-2.5 px-3">实测记录值</th>
+                          <th className="py-2.5 px-3">合同基准门槛</th>
+                          <th className="py-2.5 px-3">超标偏离幅度</th>
+                          <th className="py-2.5 px-3">质保与电芯损伤机理说明</th>
+                          <th className="py-2.5 px-3 text-center">预警等级</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-mono">
+                        {filteredEvents.map(evt => (
+                          <tr key={evt.id} className="hover:bg-red-50/20 transition-colors">
+                            <td className="py-2.5 px-3 text-slate-500 font-sans">{evt.id}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-900 font-sans">{evt.date}</td>
+                            <td className="py-2.5 px-3 font-sans font-bold text-slate-800">
+                              <span className="inline-flex items-center gap-1.5">
+                                {evt.type === 'TEMP' && <Thermometer className="w-3.5 h-3.5 text-orange-500" />}
+                                {evt.type === 'CRATE' && <Zap className="w-3.5 h-3.5 text-blue-500" />}
+                                {evt.type === 'SOC' && <Activity className="w-3.5 h-3.5 text-emerald-500" />}
+                                {evt.type === 'DOD' && <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
+                                {evt.type === 'CYCLE' && <RefreshCw className="w-3.5 h-3.5 text-purple-500" />}
+                                <span>{evt.typeName}</span>
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-red-600 bg-red-50/80 px-2 rounded">
+                              {evt.recordedValue}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600">{evt.contractLimit}</td>
+                            <td className="py-2.5 px-3 font-black text-red-600">{evt.deviation}</td>
+                            <td className="py-2.5 px-3 font-sans text-slate-600 max-w-md text-[11px] leading-relaxed">
+                              {evt.impactDescription}
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-sans">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  evt.severity === 'CRITICAL'
+                                    ? 'bg-red-600 text-white animate-pulse'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {evt.severity === 'CRITICAL' ? '严重超限 (红)' : '轻度超限 (黄)'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

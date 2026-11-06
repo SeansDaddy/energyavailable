@@ -225,6 +225,20 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
             <span>报告中心 ({siteReportsCount} 份)</span>
           </button>
 
+          {/* 右上角“合同工况管理”操作按钮 */}
+          <button
+            onClick={() => setDetailSubTab('contract')}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer border ${
+              detailSubTab === 'contract'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+            }`}
+            title="合同工况管理：维护合同基准工况参数与SOH衰减曲线"
+          >
+            <FileSpreadsheet className={`w-3.5 h-3.5 ${detailSubTab === 'contract' ? 'text-white' : 'text-indigo-600'}`} />
+            <span>合同工况管理</span>
+          </button>
+
           <button
             onClick={downloadContractBaselineTemplate}
             className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -255,7 +269,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         </div>
       </div>
 
-      {/* 3. Sub-Tab Switcher within Site Flexible Warranty Drill-Down */}
+      {/* 3. 4个核心Tab页签：站点质保概览、工况检测分析、合同工况管理、站点质保报告中心 */}
       <div className="border-b border-slate-200 bg-white rounded-t-xl px-2 pt-2 shadow-xs">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
           <button
@@ -267,7 +281,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
             }`}
           >
             <ShieldCheck className={`w-4 h-4 ${detailSubTab === 'eval' ? 'text-emerald-600' : 'text-slate-400'}`} />
-            <span>灵活质保评估工作台</span>
+            <span>站点质保概览</span>
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
                 detailSubTab === 'eval' ? 'bg-emerald-200/80 text-emerald-900 font-bold' : 'bg-slate-100 text-slate-600'
@@ -286,7 +300,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
             }`}
           >
             <Activity className={`w-4 h-4 ${detailSubTab === 'running' ? 'text-emerald-600' : 'text-slate-400'}`} />
-            <span>运行期间工况数据</span>
+            <span>工况检测分析</span>
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
                 detailSubTab === 'running' ? 'bg-emerald-200/80 text-emerald-900 font-bold' : 'bg-slate-100 text-slate-600'
