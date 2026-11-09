@@ -220,10 +220,10 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
           <button
             onClick={() => navigateToFlexibleWarranty()}
             className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
-            title="前往平级的灵活质保大盘"
+            title="前往平级的灵活性能保证大盘"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>灵活质保大盘</span>
+            <span>灵活性能保证大盘</span>
           </button>
         </div>
       </div>
@@ -743,11 +743,11 @@ export const PerformanceMonitorView: React.FC<PerformanceMonitorViewProps> = ({
                             navigateToFlexibleWarranty(s.siteId);
                           }}
                           className="p-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg border border-emerald-200 hover:border-emerald-300 transition-all inline-flex items-center gap-1 text-xs shadow-2xs"
-                          title="跳转至该站点的灵活质保详情工作台"
+                          title="跳转至该站点的灵活性能保证详情工作台"
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                           <span className="hidden xl:inline font-medium text-emerald-800">
-                            灵活质保
+                            灵活性能保证
                           </span>
                         </button>
 

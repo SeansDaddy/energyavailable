@@ -187,7 +187,7 @@ export const ReportsView: React.FC = () => {
       const targetSite = sites.find(s => s.id === report.siteId) || sites[0];
 
       if (report.category === 'FLEXIBLE_WARRANTY' && targetSite) {
-        // 调用标准灵活质保 PDF 渲染导出引擎
+        // 调用标准灵活性能保证 PDF 渲染导出引擎
         const baseline = getDefaultContractBaseline(
           targetSite.id,
           targetSite.capacityMw ? targetSite.capacityMw * 2 : 20.0
@@ -279,9 +279,9 @@ export const ReportsView: React.FC = () => {
     const sohResult = calculateFlexibleWarrantySohAlgorithm(baseline, DEFAULT_SOH_BASELINE_CURVE, monthly, daily);
 
     const newReport = addReportToCenter({
-      title: `${siteObj.siteName} 灵活质保工况与SOH衰减综合评估报告 (最新重算版)`,
+      title: `${siteObj.siteName} 灵活性能保证工况与SOH衰减综合评估报告 (最新重算版)`,
       category: 'FLEXIBLE_WARRANTY',
-      categoryName: '灵活质保SOH评估',
+      categoryName: '灵活性能保证SOH评估',
       siteId: siteObj.id,
       siteCode: siteObj.siteCode,
       siteName: siteObj.siteName,
@@ -355,7 +355,7 @@ export const ReportsView: React.FC = () => {
       }
 
       const reportNames: Record<ReportCategory, string> = {
-        FLEXIBLE_WARRANTY: '灵活质保工况与SOH衰减综合评估报告',
+        FLEXIBLE_WARRANTY: '灵活性能保证工况与SOH衰减综合评估报告',
         PERFORMANCE_CONDITION: '性能工况月度深度体检分析报告',
         AVAILABILITY_SLA: 'SLA可用度履约与运行考核月报',
         SITE_LEDGER: '站点资产台账与设备档案全景报告',
@@ -398,7 +398,7 @@ export const ReportsView: React.FC = () => {
     switch (category) {
       case 'FLEXIBLE_WARRANTY':
         return {
-          label: '灵活质保SOH',
+          label: '灵活性能保证SOH',
           className: 'bg-emerald-50 text-emerald-700 border-emerald-200'
         };
       case 'PERFORMANCE_CONDITION':
@@ -466,7 +466,7 @@ export const ReportsView: React.FC = () => {
               能源电站评估与质保报告管理中心
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-4xl leading-relaxed">
-              集中存储和管理全网历史上所有生成的《灵活质保SOH评估报告》、《性能工况体检月报》、《SLA可用度履约分析报告》与《AI故障诊断报告》，支持按照站点维度进行历史版本归档、在线高清预览、真实 PDF 导出及重新标定测算。
+              集中存储和管理全网历史上所有生成的《灵活性能保证SOH评估报告》、《性能工况体检月报》、《SLA可用度履约分析报告》与《AI故障诊断报告》，支持按照站点维度进行历史版本归档、在线高清预览、真实 PDF 导出及重新标定测算。
             </p>
           </div>
 
@@ -535,7 +535,7 @@ export const ReportsView: React.FC = () => {
 
           <div className="bg-slate-900/80 rounded-xl p-3 border border-blue-900/40">
             <div className="text-[11px] text-emerald-300 font-medium flex items-center justify-between">
-              <span>灵活质保评估报告</span>
+              <span>灵活性能保证评估报告</span>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             </div>
             <div className="text-2xl font-black font-mono text-emerald-300 mt-1">
@@ -716,7 +716,7 @@ export const ReportsView: React.FC = () => {
                   </span>
                   {[
                     { id: 'ALL', label: '全部类别' },
-                    { id: 'FLEXIBLE_WARRANTY', label: '灵活质保SOH评估' },
+                    { id: 'FLEXIBLE_WARRANTY', label: '灵活性能保证SOH评估' },
                     { id: 'PERFORMANCE_CONDITION', label: '性能工况体检' },
                     { id: 'AVAILABILITY_SLA', label: 'SLA可用度履约' },
                     { id: 'FAULT_DIAGNOSIS', label: '故障诊断报告' }
@@ -754,7 +754,7 @@ export const ReportsView: React.FC = () => {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>立即生成灵活质保评估报告</span>
+                  <span>立即生成灵活性能保证评估报告</span>
                 </button>
               </div>
             ) : (
@@ -927,7 +927,7 @@ export const ReportsView: React.FC = () => {
                 className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500 shadow-xs"
               >
                 <option value="ALL">全部业务类别</option>
-                <option value="FLEXIBLE_WARRANTY">灵活质保SOH评估报告</option>
+                <option value="FLEXIBLE_WARRANTY">灵活性能保证SOH评估报告</option>
                 <option value="PERFORMANCE_CONDITION">性能工况深度体检报告</option>
                 <option value="AVAILABILITY_SLA">可用度监控与SLA履约月报</option>
                 <option value="FAULT_DIAGNOSIS">核心设备异常与故障诊断报告</option>
@@ -1221,7 +1221,7 @@ export const ReportsView: React.FC = () => {
                   {[
                     {
                       id: 'FLEXIBLE_WARRANTY',
-                      title: '灵活质保SOH评估报告',
+                      title: '灵活性能保证SOH评估报告',
                       desc: '双衰减曲线拟合、日超工况积分、动力学寿命折算'
                     },
                     {

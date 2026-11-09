@@ -314,3 +314,33 @@ export interface OpportunityEngineSummary {
   avgIrrPct: number; // 平均测算 IRR %
   avgPaybackYears: number; // 平均回收期 (年)
 }
+
+// 运行数据诊断与测算自定义规则配置实体
+export interface CalculationRuleConfig {
+  id: string;
+  ruleCode: string;
+  ruleName: string;
+  domain: OpportunityDomain | 'all';
+  domainLabel: string;
+  category: 'STORAGE_ECONOMICS' | 'PV_PR_GAP' | 'MODULE_WARRANTY' | 'STORAGE_CAPACITY_SCAN' | 'PUE_BENCHMARK';
+  categoryLabel: string;
+  targetMetric: string; // 测算核心指标
+  triggerCondition: string; // 触发商机门槛逻辑
+  thresholdValue: number; // 关键数值阈值
+  thresholdUnit: string; // 阈值单位 (% / 年 / 元/kWh)
+  benchmarkReference: string; // 对标基准来源
+  algorithmFormula: string; // 测算模型与算法公式简述
+  parameters: {
+    name: string;
+    key: string;
+    value: number;
+    unit: string;
+    description: string;
+  }[];
+  cooldownDays: number; // 去抖冷却期 (天)
+  autoTriggerCard: boolean; // 是否自动触发商机卡片
+  priority: 'P1' | 'P2' | 'P3';
+  isEnabled: boolean;
+  lastModified: string;
+}
+

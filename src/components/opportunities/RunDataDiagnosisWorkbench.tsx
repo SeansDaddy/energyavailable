@@ -16,7 +16,18 @@ import {
   Activity,
   CheckCircle2,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Settings,
+  Edit3,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Check,
+  RefreshCw,
+  Cpu,
+  Layers,
+  HelpCircle,
+  Copy
 } from 'lucide-react';
 import {
   StorageCalculatorParams,
@@ -24,15 +35,19 @@ import {
   PvDiagnosticItem,
   PvWarrantyClaimItem,
   StorageRetrofitScanItem,
-  DataCenterPueItem
+  DataCenterPueItem,
+  CalculationRuleConfig,
+  OpportunityDomain
 } from '../../types/opportunityMining';
 import {
   INITIAL_PV_DIAGNOSTICS,
   INITIAL_PV_WARRANTY_CLAIMS,
   INITIAL_STORAGE_SCANS,
   INITIAL_DATA_CENTER_PUES,
+  INITIAL_CALCULATION_RULES,
   calculateStorageEconomics
 } from '../../mock/opportunityMiningData';
+import { CalculationRuleModal } from './CalculationRuleModal';
 
 interface RunDataDiagnosisWorkbenchProps {
   onCreateCardFromTool: (newCardData: {
@@ -54,8 +69,15 @@ interface RunDataDiagnosisWorkbenchProps {
 export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps> = ({
   onCreateCardFromTool
 }) => {
-  // Sub-tabs: F4 (Calculator), F1 (PV Diagnosis), F2 (Warranty Claims), F3 (Storage Scanner), F5 (Data Center PUE)
-  const [subTab, setSubTab] = useState<'f4_calc' | 'f1_pv' | 'f2_claim' | 'f3_scan' | 'f5_pue'>('f4_calc');
+  // Sub-tabs: F4 (Calculator), F1 (PV Diagnosis), F2 (Warranty Claims), F3 (Storage Scanner), F5 (Data Center PUE), rules_config (Custom Calculation Rules)
+  const [subTab, setSubTab] = useState<'f4_calc' | 'f1_pv' | 'f2_claim' | 'f3_scan' | 'f5_pue' | 'rules_config'>('f4_calc');
+
+  // Calculation Rules State
+  const [rules, setRules] = useState<CalculationRuleConfig[]>(INITIAL_CALCULATION_RULES);
+  const [selectedRuleDomain, setSelectedRuleDomain] = useState<string>('ALL');
+  const [editingRule, setEditingRule] = useState<CalculationRuleConfig | null>(null);
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   // F4 Interactive Calculator parameters state
   const [calcParams, setCalcParams] = useState<StorageCalculatorParams>({
@@ -75,7 +97,7 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
   // Live calculation results
@@ -90,10 +112,109 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
   const [warrantyClaims, setWarrantyClaims] = useState<PvWarrantyClaimItem[]>(INITIAL_PV_WARRANTY_CLAIMS);
 
   // F3 State
-  const [storageScans] = useState<StorageRetrofitScanItem[]>(INITIAL_STORAGE_SCANS);
+  const [storageScans, setStorageScans] = useState<StorageRetrofitScanItem[]>(INITIAL_STORAGE_SCANS);
 
   // F5 State
-  const [dcPues] = useState<DataCenterPueItem[]>(INITIAL_DATA_CENTER_PUES);
+  const [dcPues, setDcPues] = useState<DataCenterPueItem[]>(INITIAL_DATA_CENTER_PUES);
+
+  // Active rules count
+  const activeRulesCount = rules.filter((r) => r.isEnabled).length;
+
+  // Filtered rules for config tab
+  const filteredRules = rules.filter((r) => {
+    if (selectedRuleDomain !== 'ALL' && r.domain !== selectedRuleDomain && r.domain !== 'all') {
+      return false;
+    }
+    return true;
+  });
+
+  // Handle Save Rule from Modal (Add or Edit)
+  const handleSaveRule = (savedRule: CalculationRuleConfig) => {
+    setRules((prev) => {
+      const exists = prev.some((r) => r.id === savedRule.id);
+      if (exists) {
+        return prev.map((r) => (r.id === savedRule.id ? savedRule : r));
+      }
+      return [savedRule, ...prev];
+    });
+    setIsRuleModalOpen(false);
+    setEditingRule(null);
+    showToast(`测算规则「${savedRule.ruleName}」已成功保存并立即生效！`);
+  };
+
+  // Toggle Rule Status
+  const handleToggleRule = (ruleId: string) => {
+    setRules((prev) =>
+      prev.map((r) => {
+        if (r.id === ruleId) {
+          const next = !r.isEnabled;
+          showToast(`规则「${r.ruleName}」已${next ? '启用' : '暂停'}`);
+          return { ...r, isEnabled: next };
+        }
+        return r;
+      })
+    );
+  };
+
+  // Delete Custom Rule
+  const handleDeleteRule = (ruleId: string) => {
+    setRules((prev) => prev.filter((r) => r.id !== ruleId));
+    showToast('自定义规则已删除');
+  };
+
+  // Inline Parameter Value Change
+  const handleInlineParamChange = (ruleId: string, paramKey: string, newValue: number) => {
+    setRules((prev) =>
+      prev.map((r) => {
+        if (r.id === ruleId) {
+          const updatedParams = r.parameters.map((p) =>
+            p.key === paramKey ? { ...p, value: newValue } : p
+          );
+          return {
+            ...r,
+            parameters: updatedParams,
+            lastModified: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          };
+        }
+        return r;
+      })
+    );
+  };
+
+  // Reset to Defaults
+  const handleResetDefaultRules = () => {
+    setRules(INITIAL_CALCULATION_RULES);
+    showToast('已恢复行业出厂默认测算规则与标杆参数');
+  };
+
+  // Apply Rules and Recalculate whole network
+  const handleApplyRulesAndRecalculate = () => {
+    setIsRecalculating(true);
+    setTimeout(() => {
+      // Find updated PV feed-in tariff from RULE-PV-PR-GAP
+      const pvRule = rules.find((r) => r.ruleCode === 'RULE-PV-PR-GAP');
+      const tariff = pvRule?.parameters.find((p) => p.key === 'grid_feed_in_tariff')?.value || 0.38;
+
+      // Dynamically recompute PV revenue loss
+      setPvDiagnostics((prev) =>
+        prev.map((item) => ({
+          ...item,
+          annualRevenueLossYuan: Math.round(item.annualGenerationLossMwh * 1000 * tariff)
+        }))
+      );
+
+      // Find storage discount rate & min IRR from RULE-STORAGE-IRR
+      const storageRule = rules.find((r) => r.ruleCode === 'RULE-STORAGE-IRR');
+      const discount = storageRule?.parameters.find((p) => p.key === 'discount_rate')?.value || 6.5;
+      setCalcParams((prev) => ({
+        ...prev,
+        discountRatePct: discount
+      }));
+
+      setIsRecalculating(false);
+      showToast('已按最新规则参数完成全网电站运行数据动态重算！');
+    }, 1200);
+  };
 
   // Handle Generate Card from Calculator
   const handleGenerateCardFromCalc = () => {
@@ -132,7 +253,8 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
             { id: 'f1_pv', label: 'F1 光伏健康诊断报告', icon: Sun, badge: 'PR对标' },
             { id: 'f2_claim', label: 'F2 组件衰减索赔助手', icon: ShieldAlert, badge: '证据包' },
             { id: 'f3_scan', label: 'F3 储能机会扫描器', icon: BatteryCharging, badge: 'IRR寻优' },
-            { id: 'f5_pue', label: 'F5 数据中心PUE对标', icon: Server, badge: '政策红线' }
+            { id: 'f5_pue', label: 'F5 数据中心PUE对标', icon: Server, badge: '政策红线' },
+            { id: 'rules_config', label: '⚙️ 测算规则配置中心', icon: Settings, badge: `${activeRulesCount} 条生效中` }
           ].map((item) => {
             const Icon = item.icon;
             const isActive = subTab === item.id;
@@ -142,7 +264,9 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
                 onClick={() => setSubTab(item.id as any)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? item.id === 'rules_config'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -150,7 +274,11 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
                 <span>{item.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${
-                    isActive ? 'bg-blue-700 text-blue-100' : 'bg-slate-100 text-slate-500'
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : item.id === 'rules_config'
+                      ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                      : 'bg-slate-100 text-slate-500'
                   }`}
                 >
                   {item.badge}
@@ -160,10 +288,326 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
           })}
         </div>
 
-        <div className="text-[11px] text-slate-500 pr-2 hidden md:block">
-          PRD V1.0 梯队一 · 从电站与工况运行数据中挖掘销售商机
+        {/* Quick Config Button */}
+        <div className="flex items-center gap-2 pr-1">
+          <button
+            onClick={() => {
+              setEditingRule(null);
+              setIsRuleModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-semibold shadow-2xs transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>新建测算规则</span>
+          </button>
         </div>
       </div>
+
+      {/* Rule Association Banner (Displayed when in F1-F5 to show which rule is currently in effect) */}
+      {subTab !== 'rules_config' && (
+        <div className="px-4 py-2.5 bg-blue-50/70 border border-blue-200 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-blue-950 font-medium">
+            <Cpu className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>
+              {subTab === 'f4_calc' && '当前依据 [RULE-STORAGE-IRR] 测算 · 最低准入门槛 IRR 10.0% · 贴现率 6.5% · 衰减率 1.8%/年'}
+              {subTab === 'f1_pv' && '当前依据 [RULE-PV-PR-GAP] 测算 · PR 偏离阈值 ≥ 5.0% · 燃煤上网电价 0.38元/kWh · 清洗改造 0.28元/W'}
+              {subTab === 'f2_claim' && '当前依据 [RULE-MODULE-WARRANTY] 测算 · 首年衰减上限 2.0% · 逐年保证斜率 0.55%/年 · 偏差 ≥ 1.5% 触发索赔'}
+              {subTab === 'f3_scan' && '当前依据 [RULE-STORAGE-SCAN-RATIO] 测算 · 推荐配比 20% · 放电时长 2.0h · 弃光率阈值 ≥ 3.0%'}
+              {subTab === 'f5_pue' && '当前依据 [RULE-IDC-PUE-LINE] 测算 · 地方准入红线 PUE 1.25 · 惩罚度电加价 0.12元/kWh · 间接蒸发冷节电 18%'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setSubTab('rules_config')}
+            className="text-blue-700 hover:text-blue-900 font-semibold underline text-xs shrink-0 flex items-center gap-1"
+          >
+            <span>自定义此测算规则与参数</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {/* rules_config: 自定义测算规则库 */}
+      {subTab === 'rules_config' && (
+        <div className="space-y-4">
+          {/* Rules Config Header Card */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-purple-600" />
+                  <span>自定义测算规则与诊断阈值配置引擎</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  支持企业技术委员会与销售运维团队自定义各业务领域的收益模型、对标标杆、公式参数与商机触发门槛
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleResetDefaultRules}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors"
+                  title="恢复出厂标杆默认规则"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>恢复默认</span>
+                </button>
+                <button
+                  onClick={handleApplyRulesAndRecalculate}
+                  disabled={isRecalculating}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-bold shadow-xs transition-colors"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
+                  <span>{isRecalculating ? '全网重算中...' : '应用规则并重算全网电站'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingRule(null);
+                    setIsRuleModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>新增自定义规则</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Macro Global Tuning Bar */}
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="text-[11px] font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                <span>全局核心通用基准参数快捷微调 (调整后点击右上角“应用规则并重算”即可生效)：</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="p-2 bg-white rounded border border-slate-200 flex items-center justify-between">
+                  <span className="text-slate-500">基准贴现率：</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      step="0.1"
+                      defaultValue={6.5}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCalcParams((prev) => ({ ...prev, discountRatePct: val }));
+                        handleInlineParamChange('rule-01', 'discount_rate', val);
+                      }}
+                      className="w-14 p-0.5 border border-slate-300 rounded text-right font-mono font-bold text-blue-700 text-xs"
+                    />
+                    <span className="text-slate-500 font-mono">%</span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-white rounded border border-slate-200 flex items-center justify-between">
+                  <span className="text-slate-500">电池年容量衰减率：</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      step="0.1"
+                      defaultValue={1.8}
+                      onChange={(e) => {
+                        handleInlineParamChange('rule-01', 'annual_degradation', Number(e.target.value));
+                      }}
+                      className="w-14 p-0.5 border border-slate-300 rounded text-right font-mono font-bold text-blue-700 text-xs"
+                    />
+                    <span className="text-slate-500 font-mono">%</span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-white rounded border border-slate-200 flex items-center justify-between">
+                  <span className="text-slate-500">光伏脱硫上网电价：</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      step="0.01"
+                      defaultValue={0.38}
+                      onChange={(e) => {
+                        handleInlineParamChange('rule-02', 'grid_feed_in_tariff', Number(e.target.value));
+                      }}
+                      className="w-14 p-0.5 border border-slate-300 rounded text-right font-mono font-bold text-blue-700 text-xs"
+                    />
+                    <span className="text-slate-500 font-mono">元</span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-white rounded border border-slate-200 flex items-center justify-between">
+                  <span className="text-slate-500">重点算力 PUE 红线：</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      step="0.01"
+                      defaultValue={1.25}
+                      onChange={(e) => {
+                        handleInlineParamChange('rule-05', 'national_pue_redline', Number(e.target.value));
+                      }}
+                      className="w-14 p-0.5 border border-slate-300 rounded text-right font-mono font-bold text-blue-700 text-xs"
+                    />
+                    <span className="text-slate-500 font-mono">PUE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter by Domain */}
+            <div className="flex items-center gap-2 pt-1 border-t border-slate-100 text-xs">
+              <span className="text-slate-500 font-medium">过滤业务领域：</span>
+              {[
+                { id: 'ALL', label: '全部领域' },
+                { id: 'storage', label: '电化学储能' },
+                { id: 'pv', label: '光伏电站' },
+                { id: 'dc', label: '数据中心' }
+              ].map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => setSelectedRuleDomain(d.id)}
+                  className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                    selectedRuleDomain === d.id
+                      ? 'bg-purple-600 text-white font-semibold shadow-2xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+              <span className="ml-auto text-slate-400">
+                当前共有 <strong className="text-slate-800">{filteredRules.length}</strong> 条规则生效
+              </span>
+            </div>
+          </div>
+
+          {/* Rules Cards List */}
+          <div className="space-y-3.5">
+            {filteredRules.map((r) => {
+              return (
+                <div
+                  key={r.id}
+                  className={`rounded-xl border p-5 transition-all shadow-xs ${
+                    r.isEnabled
+                      ? 'bg-white border-slate-200 hover:border-purple-300'
+                      : 'bg-slate-50/70 border-slate-200 opacity-70'
+                  }`}
+                >
+                  {/* Top Bar: Code, Name, Badges, Switch */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                        {r.ruleCode}
+                      </span>
+                      <h4 className="text-sm font-bold text-slate-900">{r.ruleName}</h4>
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                        {r.domainLabel}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                        {r.categoryLabel}
+                      </span>
+                      <span className={`px-2 py-0.2 rounded text-[10px] font-bold ${
+                        r.priority === 'P1' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {r.priority}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <span>规则状态：</span>
+                        <button
+                          onClick={() => handleToggleRule(r.id)}
+                          className={`text-xs font-semibold px-2 py-0.5 rounded transition-colors ${
+                            r.isEnabled
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {r.isEnabled ? '启用中' : '已停用'}
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setEditingRule(r);
+                          setIsRuleModalOpen(true);
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium border border-slate-300 transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>编辑</span>
+                      </button>
+
+                      {r.id.startsWith('rule-custom-') && (
+                        <button
+                          onClick={() => handleDeleteRule(r.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600"
+                          title="删除此规则"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Trigger Condition & Benchmark info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 text-xs">
+                    <div className="p-2.5 rounded-lg bg-amber-50/60 border border-amber-200">
+                      <span className="font-semibold text-amber-900">触发商机门槛条件：</span>
+                      <span className="text-slate-800 ml-1 font-medium">{r.triggerCondition}</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                      <span className="font-semibold text-slate-700">对标行业基准来源：</span>
+                      <span className="text-slate-600 ml-1">{r.benchmarkReference}</span>
+                    </div>
+                  </div>
+
+                  {/* Formula box */}
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs mb-3 font-mono text-slate-700">
+                    <strong className="text-slate-900 font-sans">数学模型计算逻辑：</strong> {r.algorithmFormula}
+                  </div>
+
+                  {/* Inline Parameter Table */}
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="py-2 px-3">参数名称</th>
+                          <th className="py-2 px-3 font-mono">Key 变量名</th>
+                          <th className="py-2 px-3 text-right">当前配置数值</th>
+                          <th className="py-2 px-2 text-center">单位</th>
+                          <th className="py-2 px-3">参数作用说明</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-800">
+                        {r.parameters.map((param) => (
+                          <tr key={param.key} className="hover:bg-slate-50/50">
+                            <td className="py-2 px-3 font-medium text-slate-900">{param.name}</td>
+                            <td className="py-2 px-3 font-mono text-slate-500 text-[11px]">{param.key}</td>
+                            <td className="py-2 px-3 text-right">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={param.value}
+                                onChange={(e) => handleInlineParamChange(r.id, param.key, Number(e.target.value))}
+                                className="w-20 p-1 border border-slate-300 rounded text-right font-mono font-bold text-blue-700 text-xs focus:outline-hidden focus:border-blue-500 bg-white"
+                              />
+                            </td>
+                            <td className="py-2 px-2 text-center text-slate-500 font-mono">{param.unit}</td>
+                            <td className="py-2 px-3 text-slate-600 text-[11px]">{param.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                    <div>
+                      去抖冷却保护：<strong>{r.cooldownDays} 天</strong> · 自动生成商机卡片：<strong>{r.autoTriggerCard ? '是' : '否'}</strong>
+                    </div>
+                    <div>最近配置修改：{r.lastModified}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* F4: 储能收益交互测算器 */}
       {subTab === 'f4_calc' && (
@@ -800,6 +1244,18 @@ export const RunDataDiagnosisWorkbench: React.FC<RunDataDiagnosisWorkbenchProps>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Calculation Rule Modal (Add / Edit) */}
+      {isRuleModalOpen && (
+        <CalculationRuleModal
+          rule={editingRule}
+          onClose={() => {
+            setIsRuleModalOpen(false);
+            setEditingRule(null);
+          }}
+          onSave={handleSaveRule}
+        />
       )}
     </div>
   );

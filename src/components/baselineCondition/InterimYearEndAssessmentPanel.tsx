@@ -85,7 +85,7 @@ export const InterimYearEndAssessmentPanel: React.FC<InterimYearEndAssessmentPan
   };
 
   const handleExport = () => {
-    setExportNotice('已成功生成《年底灵活质保SOH临时手动评估与处置备忘录.pdf》并准备下载！');
+    setExportNotice('已成功生成《年底灵活性能保证SOH临时手动评估与处置备忘录.pdf》并准备下载！');
     setTimeout(() => setExportNotice(null), 4000);
   };
 
@@ -138,10 +138,10 @@ export const InterimYearEndAssessmentPanel: React.FC<InterimYearEndAssessmentPan
               </span>
             </div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>{task.siteName} 灵活质保年底 SOH 临时手动评估</span>
+              <span>{task.siteName} 灵活性能保证年底 SOH 临时手动评估</span>
             </h2>
             <p className="text-xs text-blue-100/90 leading-relaxed max-w-3xl">
-              <strong className="text-white">业务初衷：</strong>在合同年结束之前，服务部门需提前对年底的灵活质保 SOH 有所预期，以便及时发现超工况损耗并提前加强质保服务与热管理优化。
+              <strong className="text-white">业务初衷：</strong>在合同年结束之前，服务部门需提前对年底的灵活性能保证 SOH 有所预期，以便及时发现超工况损耗并提前加强质保服务与热管理优化。
               评估逻辑以<span className="text-amber-300 font-semibold">合同工况年底预期 SOH (92.20%)</span> 为基准，结合<span className="text-rose-300 font-semibold">年初至今日实际超工况运行情况</span>执行精准 SOH 扣减，得出临时评估值。
             </p>
           </div>
@@ -227,7 +227,7 @@ export const InterimYearEndAssessmentPanel: React.FC<InterimYearEndAssessmentPan
             </div>
           </div>
 
-          {/* 阶段 3: 临时手动评估年底灵活质保 SOH */}
+          {/* 阶段 3: 临时手动评估年底灵活性能保证 SOH */}
           <div className="bg-indigo-50/80 p-4 rounded-xl border border-indigo-200/90 relative group">
             <div className="text-[11px] font-semibold text-indigo-700 flex items-center justify-between">
               <span>③ 临时手动评估年底 SOH</span>
@@ -239,7 +239,7 @@ export const InterimYearEndAssessmentPanel: React.FC<InterimYearEndAssessmentPan
               </span>
             </div>
             <div className="mt-1 text-[11px] text-indigo-700/90 leading-tight">
-              年底时灵活质保实际预期 SOH (扣减后最终实测预估)
+              年底时灵活性能保证实际预期 SOH (扣减后最终实测预估)
             </div>
           </div>
 

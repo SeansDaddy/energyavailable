@@ -133,6 +133,36 @@ const DEFAULT_DEVICES: CoreDevice[] = [
     status: 'NORMAL',
     isKeyDevice: false,
     installedDate: '2024-05-10'
+  },
+  {
+    id: 'dev-107',
+    deviceCode: 'BMS-RACK-02',
+    deviceName: '磷酸铁锂高压电池簇 02号',
+    deviceType: 'BMS_CLUSTER',
+    model: 'CATL-LFP-280Ah',
+    status: 'NORMAL',
+    isKeyDevice: true,
+    installedDate: '2024-05-15'
+  },
+  {
+    id: 'dev-108',
+    deviceCode: 'BMS-RACK-03',
+    deviceName: '磷酸铁锂高压电池簇 03号',
+    deviceType: 'BMS_CLUSTER',
+    model: 'CATL-LFP-280Ah',
+    status: 'NORMAL',
+    isKeyDevice: true,
+    installedDate: '2024-05-15'
+  },
+  {
+    id: 'dev-109',
+    deviceCode: 'BMS-RACK-04',
+    deviceName: '磷酸铁锂高压电池簇 04号',
+    deviceType: 'BMS_CLUSTER',
+    model: 'CATL-LFP-280Ah',
+    status: 'NORMAL',
+    isKeyDevice: true,
+    installedDate: '2024-05-15'
   }
 ];
 
@@ -581,7 +611,12 @@ export function getEquipmentAndAlarmsForPeriod(
   alarmsList.sort((a, b) => b.triggerTime.localeCompare(a.triggerTime));
 
   // 2. Build period device statuses
-  const rawDevices = site.coreDevices && site.coreDevices.length > 0 ? site.coreDevices : DEFAULT_DEVICES;
+  const rawDevices = site.coreDevices && site.coreDevices.length > 0 ? [...site.coreDevices] : [...DEFAULT_DEVICES];
+  DEFAULT_DEVICES.forEach(defDev => {
+    if (!rawDevices.some(d => d.deviceCode === defDev.deviceCode)) {
+      rawDevices.push(defDev);
+    }
+  });
 
   const devices: PeriodDeviceStatus[] = rawDevices.map(dev => {
     // Check alarms associated with this device

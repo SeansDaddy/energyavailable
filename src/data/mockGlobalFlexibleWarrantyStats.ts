@@ -1,4 +1,4 @@
-// 全网灵活质保统计 - 宏观多维分析数据
+// 全网灵活性能保证统计 - 宏观多维分析数据
 
 export interface GlobalWarrantyOverview {
   totalSites: number;

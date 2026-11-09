@@ -89,9 +89,9 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
 
       // 自动保存归档至历史报告中心 (站点维度管理)
       addReportToCenter({
-        title: `${currentSite.siteName} 灵活质保工况与SOH衰减综合评估报告 (2026-08)`,
+        title: `${currentSite.siteName} 灵活性能保证工况与SOH衰减综合评估报告 (2026-08)`,
         category: 'FLEXIBLE_WARRANTY',
-        categoryName: '灵活质保SOH评估',
+        categoryName: '灵活性能保证SOH评估',
         siteId: currentSite.id,
         siteCode: currentSite.siteCode,
         siteName: currentSite.siteName,
@@ -102,7 +102,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         author: '质量技术部算法工程组',
         status: 'APPROVED',
         version: 'v2.1',
-        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活质保模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh.toFixed(2)}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh.toFixed(2)}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%，资产处于健康受控状态。`,
+        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活性能保证模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh.toFixed(2)}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh.toFixed(2)}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%，资产处于健康受控状态。`,
         kpis: [
           { label: '灵活估算SOH', value: `${sohResult.currentFlexibleSoh.toFixed(2)}%`, benchmark: '95.40%', status: 'success' },
           { label: '基准偏离裕度', value: `${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%`, benchmark: '≥0.00%', status: 'success' },
@@ -119,7 +119,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
         ]
       });
 
-      setToastMsg(`《${currentSite.siteName} 灵活质保评估报告.pdf》已导出并成功归档至报告中心！`);
+      setToastMsg(`《${currentSite.siteName} 灵活性能保证评估报告.pdf》已导出并成功归档至报告中心！`);
       setTimeout(() => setToastMsg(null), 3500);
     } catch (err) {
       console.error('PDF export failed', err);
@@ -150,10 +150,10 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all font-medium group cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-600 transition-colors" />
-            <span>返回全网灵活质保大盘</span>
+            <span>返回全网灵活性能保证大盘</span>
           </button>
           <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-          <span className="text-slate-500">灵活质保工况评估</span>
+          <span className="text-slate-500">灵活性能保证工况评估</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
           <span className="font-bold text-slate-900">{currentSite.siteName}</span>
         </div>
@@ -205,7 +205,7 @@ export const SiteFlexibleWarrantyDetailView: React.FC<SiteFlexibleWarrantyDetail
             onClick={handleExportPdfReport}
             disabled={isExportingPdf}
             className="px-3.5 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-sm shadow-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
-            title="将当前站点的灵活质保计算结果下载为PDF文档，含关键性能指标和计算逻辑说明"
+            title="将当前站点的灵活性能保证计算结果下载为PDF文档，含关键性能指标和计算逻辑说明"
           >
             <FileText className={`w-3.5 h-3.5 ${isExportingPdf ? 'animate-pulse' : ''}`} />
             <span>{isExportingPdf ? '正在生成PDF报告...' : '导出评估报告'}</span>

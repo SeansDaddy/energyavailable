@@ -17,7 +17,8 @@ import {
   CarbonAssetMetric,
   BehaviorTrackEvent,
   ClientIntentProfile,
-  ChampionOnepagerData
+  ChampionOnepagerData,
+  CalculationRuleConfig
 } from '../types/opportunityMining';
 
 // 1. 北极星指标与大盘概览
@@ -1014,3 +1015,135 @@ export const INITIAL_CHAMPION_ONEPAGERS: Record<string, ChampionOnepagerData> = 
     ]
   }
 };
+
+// 15. 运行数据诊断与测算自定义规则配置初始数据
+export const INITIAL_CALCULATION_RULES: CalculationRuleConfig[] = [
+  {
+    id: 'rule-01',
+    ruleCode: 'RULE-STORAGE-IRR',
+    ruleName: '储能峰谷套利全投资 IRR 门槛与回本周期测算规则',
+    domain: 'storage',
+    domainLabel: '电化学储能',
+    category: 'STORAGE_ECONOMICS',
+    categoryLabel: '储能收益测算',
+    targetMetric: '全投资税后内部收益率 IRR (%)',
+    triggerCondition: 'IRR >= 10.0% 且 投资回收期 <= 5.5 年',
+    thresholdValue: 10.0,
+    thresholdUnit: '%',
+    benchmarkReference: '国资委央企新能源投委会基准投资回报率 8.0%',
+    algorithmFormula: 'NPV = -CapEx + Σ (年套利净收益 + 年容量租赁 - 年OpEx) / (1 + r)^t = 0 (含逐年衰减因子)',
+    parameters: [
+      { name: '最低准入 IRR 门槛', key: 'min_irr_threshold', value: 10.0, unit: '%', description: '触发商机卡片的最底线全投资收益率' },
+      { name: '基准贴现率', key: 'discount_rate', value: 6.5, unit: '%', description: 'DCF 现值折现率标准' },
+      { name: '年化容量衰减率', key: 'annual_degradation', value: 1.8, unit: '%', description: '电芯日历与循环综合年化容量衰减因子' },
+      { name: '系统年运维成本率', key: 'annual_opex_rate', value: 1.6, unit: '%', description: '占初始 CapEx 的百分比' }
+    ],
+    cooldownDays: 14,
+    autoTriggerCard: true,
+    priority: 'P1',
+    isEnabled: true,
+    lastModified: '2026-08-25 10:30'
+  },
+  {
+    id: 'rule-02',
+    ruleCode: 'RULE-PV-PR-GAP',
+    ruleName: '光伏电站实测 PR 落后标杆差距与年损失电费折算规则',
+    domain: 'pv',
+    domainLabel: '光伏电站',
+    category: 'PV_PR_GAP',
+    categoryLabel: '光伏健康诊断',
+    targetMetric: '性能比 (PR) 偏离差距 (%)',
+    triggerCondition: '实测 PR 落后区域标杆 >= 5.0% 且年损失电费 >= 50 万元',
+    thresholdValue: 5.0,
+    thresholdUnit: '%',
+    benchmarkReference: '区域同类光伏电站月度 PR 统计中位数 (华东 81.5% / 西北 84.0%)',
+    algorithmFormula: '年损失电量 (MWh) = 理论发电量 × (标杆PR - 实际PR); 年电费损失 = 损失电量 × 脱硫标杆上网电价',
+    parameters: [
+      { name: 'PR 偏离警示阈值', key: 'pr_gap_threshold', value: 5.0, unit: '%', description: '当 PR 落后超过该值时触发技改商机' },
+      { name: '光伏脱硫燃煤基准电价', key: 'grid_feed_in_tariff', value: 0.38, unit: '元/kWh', description: '损失发电量折算财务损失单价' },
+      { name: '自动化清洗改造成本单价', key: 'cleaning_retrofit_unit_cost', value: 0.28, unit: '元/W', description: '清洗机器人系统投资估算单价' }
+    ],
+    cooldownDays: 30,
+    autoTriggerCard: true,
+    priority: 'P1',
+    isEnabled: true,
+    lastModified: '2026-08-22 14:15'
+  },
+  {
+    id: 'rule-03',
+    ruleCode: 'RULE-MODULE-WARRANTY',
+    ruleName: '光伏组件历年线性衰减保证与质保索赔违约阈值规则',
+    domain: 'pv',
+    domainLabel: '光伏电站',
+    category: 'MODULE_WARRANTY',
+    categoryLabel: '组件衰减索赔',
+    targetMetric: '超标违约衰减率 (%)',
+    triggerCondition: '实测累计衰减 - 采购合同保证衰减上限 >= 1.5%',
+    thresholdValue: 1.5,
+    thresholdUnit: '%',
+    benchmarkReference: '一线组件技术保证协议：首年 <= 2.0%，历年线性衰减保证斜率 0.55%/年',
+    algorithmFormula: '索赔金额 = 存量组件总装机容量 × 超标衰减率 × 剩余保证年限 × 年等效利用小时 × 上网电价',
+    parameters: [
+      { name: '首年允许衰减上限', key: 'first_year_deg_limit', value: 2.0, unit: '%', description: '出厂技术协议首年保证线' },
+      { name: '后续逐年保证斜率', key: 'annual_linear_deg_slope', value: 0.55, unit: '%/年', description: '第 2~25 年年均保证衰减率' },
+      { name: '违约索赔最小触发偏差', key: 'claim_trigger_gap', value: 1.5, unit: '%', description: '避免测量仪器误差的防抖缓冲裕度' }
+    ],
+    cooldownDays: 60,
+    autoTriggerCard: true,
+    priority: 'P2',
+    isEnabled: true,
+    lastModified: '2026-08-18 16:40'
+  },
+  {
+    id: 'rule-04',
+    ruleCode: 'RULE-STORAGE-SCAN-RATIO',
+    ruleName: '新能源配储容量比例与充放电时长多目标寻优规则',
+    domain: 'storage',
+    domainLabel: '电化学储能',
+    category: 'STORAGE_CAPACITY_SCAN',
+    categoryLabel: '储能机会扫描',
+    targetMetric: '推荐配储容量与放电时长 (MW / MWh)',
+    triggerCondition: '光伏电站年化弃光率 >= 3.0% 或分时峰谷价差 >= 0.70 元/kWh',
+    thresholdValue: 3.0,
+    thresholdUnit: '%',
+    benchmarkReference: '国家发改委新能源市场化消纳与配储指引 (推荐 10%~25%, 2h~4h)',
+    algorithmFormula: '最优容量 = 光伏额定容量 × 推荐配比 (20%); 综合寻优指数 = 0.5×IRR + 0.3×弃电消纳率 + 0.2×政策热度',
+    parameters: [
+      { name: '默认推荐配储比例', key: 'default_storage_ratio', value: 20, unit: '%', description: '占存量光伏装机容量比例' },
+      { name: '推荐充放电时长', key: 'recommended_duration_hours', value: 2.0, unit: '小时', description: '系统额定持续放电时长 (2h / 4h)' },
+      { name: '弃电消纳关注阈值', key: 'curtailment_rate_threshold', value: 3.0, unit: '%', description: '超过此弃电率即判定为高潜配储对象' }
+    ],
+    cooldownDays: 30,
+    autoTriggerCard: true,
+    priority: 'P2',
+    isEnabled: true,
+    lastModified: '2026-08-20 11:00'
+  },
+  {
+    id: 'rule-05',
+    ruleCode: 'RULE-IDC-PUE-LINE',
+    ruleName: '数据中心能效 PUE 政策红线与超标电费阶梯加价规则',
+    domain: 'dc',
+    domainLabel: '数据中心能源',
+    category: 'PUE_BENCHMARK',
+    categoryLabel: '数据中心PUE',
+    targetMetric: '超出地方 PUE 准入红线偏差值',
+    triggerCondition: '实测年度 PUE > 地方政策准入红线 (1.25 / 1.30)',
+    thresholdValue: 1.25,
+    thresholdUnit: 'PUE',
+    benchmarkReference: '国家发改委高耗能行业重点领域能效标杆水平 (PUE <= 1.25/1.30)',
+    algorithmFormula: '超标能耗 (kWh) = IT总能耗 × (实际PUE - 标杆PUE); 年超额电费 = 超标能耗 × (工业电价 + 阶梯惩罚加价)',
+    parameters: [
+      { name: '全国重点算力枢纽 PUE 准入红线', key: 'national_pue_redline', value: 1.25, unit: 'PUE', description: '严控准入标准' },
+      { name: '超标阶梯惩罚加价标准', key: 'pue_penalty_tariff', value: 0.12, unit: '元/kWh', description: '工业和信息化厅超能耗累进加价' },
+      { name: '间接蒸发冷预计节能量比例', key: 'cooling_efficiency_gain', value: 18.0, unit: '%', description: '机房暖通技改综合降耗预期' },
+      { name: 'IDC机房技改预算估算单价', key: 'dc_retrofit_unit_cost', value: 1440, unit: '元/机柜', description: '用于快速评估技改 CapEx' }
+    ],
+    cooldownDays: 45,
+    autoTriggerCard: true,
+    priority: 'P1',
+    isEnabled: true,
+    lastModified: '2026-08-24 15:20'
+  }
+];
+

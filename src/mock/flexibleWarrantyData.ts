@@ -1,4 +1,4 @@
-// 全网站点灵活质保大盘与对比台账 Mock 数据
+// 全网站点灵活性能保证大盘与对比台账 Mock 数据
 import { Site } from '../types';
 
 export interface SiteFlexibleWarrantySummary {
@@ -38,10 +38,10 @@ export interface SiteFlexibleWarrantySummary {
 
   // 4. SOH 估算与双曲线当前打点对比
   currentBaselineSoh: number; // 当前基准工况 SOH 保证点 (%)
-  currentFlexibleSoh: number; // 当前灵活质保估算打点 SOH (%)
+  currentFlexibleSoh: number; // 当前灵活性能保证估算打点 SOH (%)
   sohDelta: number; // SOH 裕度 = flexible - baseline
   estimatedEndLifeSoh: number; // 算法预估 10 年质保终了 SOH (%)
-  equivalentWarrantyDaysChange: number; // 灵活质保期折算增减天数 (天)
+  equivalentWarrantyDaysChange: number; // 灵活性能保证期折算增减天数 (天)
 
   // 5. 履约判定与最新状态
   warrantyStatus: 'HEALTHY' | 'SLIGHT_OVER' | 'CRITICAL_OVER';

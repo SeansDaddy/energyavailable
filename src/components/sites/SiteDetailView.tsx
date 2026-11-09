@@ -251,10 +251,10 @@ export const SiteDetailView: React.FC = () => {
               <button
                 onClick={() => navigateToFlexibleWarranty(site.id)}
                 className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold border border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs"
-                title="查看该站点的灵活质保工况与SOH双衰减详情"
+                title="查看该站点的灵活性能保证工况与SOH双衰减详情"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>灵活质保</span>
+                <span>灵活性能保证</span>
               </button>
               <button
                 onClick={() =>

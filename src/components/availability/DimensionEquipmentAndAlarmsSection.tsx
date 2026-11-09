@@ -27,8 +27,12 @@ import {
   Tag,
   RotateCcw,
   Link2,
-  ZapOff
+  ZapOff,
+  Share2,
+  ListFilter,
+  SplitSquareVertical
 } from 'lucide-react';
+import { EquipmentTopologyGraph } from './EquipmentTopologyGraph';
 
 interface DimensionEquipmentAndAlarmsSectionProps {
   site: Site;
@@ -60,6 +64,7 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
   const [deviceSearchTerm, setDeviceSearchTerm] = useState<string>('');
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<string | null>(null);
   const [expandedDeviceId, setExpandedDeviceId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'topology' | 'table' | 'split'>('topology');
 
   // Generate equipment and alarms dataset for the given time range
   const { devices, alarms, stats } = useMemo(() => {
@@ -164,8 +169,57 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
           </p>
         </div>
 
-        {/* Drilldown Navigation Link */}
-        <div className="flex items-center gap-2">
+        {/* View Switcher & Drilldown Navigation */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Segmented Control */}
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setViewMode('topology')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+                viewMode === 'topology'
+                  ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="查看电气与通信设备拓扑染色图"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>设备拓扑染色</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800 font-mono">
+                R2全景
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+                viewMode === 'table'
+                  ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="查看设备明细台账与等效停运统计列表"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>状态统计列表</span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                ({filteredDevices.length})
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('split')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all ${
+                viewMode === 'split'
+                  ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="同屏上下展现设备拓扑染色图与明细列表"
+            >
+              <SplitSquareVertical className="w-3.5 h-3.5" />
+              <span>同屏并排</span>
+            </button>
+          </div>
+
           <button
             onClick={() => handleDrilldownToCausalChain()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs"
@@ -285,8 +339,51 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
         </div>
       </div>
 
-      {/* Quick Filter Bar (保留快捷筛选) */}
-      <div className="flex flex-col gap-2.5 bg-slate-50 p-3 rounded-lg border border-slate-200">
+      {/* 1. TOPOLOGY VIEW (设备拓扑染色展示) */}
+      {(viewMode === 'topology' || viewMode === 'split') && (
+        <EquipmentTopologyGraph
+          devices={devices}
+          alarms={alarms}
+          selectedDeviceCode={selectedDeviceCode}
+          onSelectDeviceCode={code => setSelectedDeviceCode(code)}
+          onDrilldownToCausalChain={handleDrilldownToCausalChain}
+          onNavigateTab={onNavigateTab}
+          timeRangeLabel={timeRangeLabel}
+          dimension={dimension}
+          startDate={startDate}
+          endDate={endDate}
+        />
+      )}
+
+      {/* Split View Divider */}
+      {viewMode === 'split' && (
+        <div className="pt-2 pb-1 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600 font-semibold">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-blue-600" />
+            <span>核心设备台账与工况明细列表</span>
+            {selectedDeviceCode && (
+              <span className="px-2 py-0.5 rounded text-[11px] bg-blue-100 text-blue-800 font-mono">
+                已联动拓扑锁定: {selectedDeviceCode}
+              </span>
+            )}
+          </div>
+          {selectedDeviceCode && (
+            <button
+              type="button"
+              onClick={() => setSelectedDeviceCode(null)}
+              className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
+            >
+              <span>清除设备锁定</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 2. TABLE & FILTER BAR (状态统计列表) */}
+      {(viewMode === 'table' || viewMode === 'split') && (
+        <>
+          {/* Quick Filter Bar (保留快捷筛选) */}
+          <div className="flex flex-col gap-2.5 bg-slate-50 p-3 rounded-lg border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           {/* Status Filters */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -749,6 +846,8 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

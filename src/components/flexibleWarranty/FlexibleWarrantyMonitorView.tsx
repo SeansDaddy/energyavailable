@@ -157,9 +157,9 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
 
       // 归档至统一历史报告中心
       addReportToCenter({
-        title: `${siteObj.siteName} 灵活质保工况与SOH衰减综合评估报告 (2026-08)`,
+        title: `${siteObj.siteName} 灵活性能保证工况与SOH衰减综合评估报告 (2026-08)`,
         category: 'FLEXIBLE_WARRANTY',
-        categoryName: '灵活质保SOH评估',
+        categoryName: '灵活性能保证SOH评估',
         siteId: siteObj.id,
         siteCode: siteObj.siteCode,
         siteName: siteObj.siteName,
@@ -170,7 +170,7 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
         author: '质量技术部算法工程组',
         status: 'APPROVED',
         version: 'v2.1',
-        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活质保模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh.toFixed(2)}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh.toFixed(2)}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%，资产处于健康受控状态。`,
+        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活性能保证模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh.toFixed(2)}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh.toFixed(2)}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%，资产处于健康受控状态。`,
         kpis: [
           { label: '灵活估算SOH', value: `${sohResult.currentFlexibleSoh.toFixed(2)}%`, benchmark: '95.40%', status: 'success' },
           { label: '基准偏离裕度', value: `${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin.toFixed(2)}%`, benchmark: '≥0.00%', status: 'success' },
@@ -214,10 +214,10 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
             </div>
 
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-              全网储能电站灵活质保工况管理大盘
+              全网储能电站灵活性能保证工况管理大盘
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
-              基于站点合同基准工况、实际运行工况日志与超工况量化分析，统一换算站级指标并调用算法团队提供的灵活质保 SOH 估算算法接口，生成 SOH 基准衰减与灵活质保双衰减曲线，支持按月工况台账统计与按天全量数据导出。
+              基于站点合同基准工况、实际运行工况日志与超工况量化分析，统一换算站级指标并调用算法团队提供的灵活性能保证 SOH 估算算法接口，生成 SOH 基准衰减与灵活性能保证双衰减曲线，支持按月工况台账统计与按天全量数据导出。
             </p>
           </div>
 
@@ -244,7 +244,7 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
             <button
               onClick={() => onOpenReports ? onOpenReports() : navigateToReportsCenter(undefined, 'FLEXIBLE_WARRANTY')}
               className="px-3.5 py-2 rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/40 text-xs font-semibold text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-              title="前往灵活质保报告中心按站点维度查看所有历史评估报告"
+              title="前往灵活性能保证报告中心按站点维度查看所有历史评估报告"
             >
               <FolderKanban className="w-3.5 h-3.5 text-blue-200" />
               <span>质保报告中心 ({reportCenterItems.filter(r => r.category === 'FLEXIBLE_WARRANTY').length} 份)</span>
@@ -258,7 +258,7 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
                   'site-all',
                   getDefaultContractBaseline('site-all', 40.0)
                 );
-                exportDailyConditionsToCsv(daily, '全网站点灵活质保日工况台账');
+                exportDailyConditionsToCsv(daily, '全网站点灵活性能保证日工况台账');
               }}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-xs font-bold text-white shadow-md shadow-emerald-900/40 transition-all flex items-center gap-1.5"
             >
@@ -448,9 +448,9 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-slate-900">储能电站灵活质保履约与衰减对比台账</h3>
+            <h3 className="text-sm font-bold text-slate-900">储能电站灵活性能保证履约与衰减对比台账</h3>
             <span className="text-xs text-slate-400">
-              (点击任意站点行直接进入该站点【灵活质保详情工作台】)
+              (点击任意站点行直接进入该站点【灵活性能保证详情工作台】)
             </span>
           </div>
           <div className="text-xs text-slate-500">
@@ -700,7 +700,7 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
                             onSelectSite(item.siteId);
                           }}
                           className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition-all flex items-center gap-1"
-                          title="进入该站点的灵活质保工况评估详情工作台"
+                          title="进入该站点的灵活性能保证工况评估详情工作台"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>质保详情</span>
@@ -718,7 +718,7 @@ export const FlexibleWarrantyMonitorView: React.FC<FlexibleWarrantyMonitorViewPr
                           onClick={e => handleExportSitePdf(item, e)}
                           disabled={exportingSiteId === item.siteId}
                           className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
-                          title="将当前站点的灵活质保计算结果下载为PDF评估报告并归档至报告中心"
+                          title="将当前站点的灵活性能保证计算结果下载为PDF评估报告并归档至报告中心"
                         >
                           <FileText className={`w-3.5 h-3.5 text-rose-600 ${exportingSiteId === item.siteId ? 'animate-pulse' : ''}`} />
                         </button>

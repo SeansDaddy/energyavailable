@@ -1,4 +1,4 @@
-// 灵活质保 - 基准工况评估 类型定义
+// 灵活性能保证 - 基准工况评估 类型定义
 
 export type BaselineEntryMode = 'site_select' | 'manual' | 'template_preset';
 
@@ -95,11 +95,11 @@ export interface WarrantyContractClauseRecommendation {
 
 // 5. 财务与履约风控测算
 export interface FinancialWarrantyRiskAssessment {
-  baseWarrantyContractTotalYuan: number; // 基础灵活质保合同总额 (万元)
+  baseWarrantyContractTotalYuan: number; // 基础灵活性能保证合同总额 (万元)
   projectedExceedingConditionServiceFeeYuan: number; // 预估超工况调节加收服务费 (万元)
   potentialBreachExposureYuan: number; // 潜在违约赔偿风险敞口 (万元)
   recommendedRetentionDepositYuan: number; // 建议预留质保保证金 (万元)
-  warrantyRoiGainPct: number; // 灵活质保对客户的全生命周期增益收益率 %
+  warrantyRoiGainPct: number; // 灵活性能保证对客户的全生命周期增益收益率 %
 }
 
 // 6. 完整基准工况评估结果

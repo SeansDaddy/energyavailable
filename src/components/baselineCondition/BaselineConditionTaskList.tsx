@@ -163,7 +163,7 @@ export const BaselineConditionTaskList: React.FC<BaselineConditionTaskListProps>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>灵活质保合同总额</span>
+            <span>灵活性能保证合同总额</span>
             <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
               <DollarSign className="w-4 h-4" />
             </span>
@@ -401,7 +401,7 @@ export const BaselineConditionTaskList: React.FC<BaselineConditionTaskListProps>
                           <button
                             onClick={() => onViewTask(task, 'next_year_plan')}
                             className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[11px] font-bold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-                            title="在年底之前计划下一年工况，基于计划工况评估下一年年底灵活质保SOH并联动服务报价确定计划工况"
+                            title="在年底之前计划下一年工况，基于计划工况评估下一年年底灵活性能保证SOH并联动服务报价确定计划工况"
                           >
                             <DollarSign className="w-3 h-3 text-emerald-600" />
                             <span>下年工况报价</span>

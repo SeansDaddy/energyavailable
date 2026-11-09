@@ -116,12 +116,12 @@ export const GlobalFlexibleWarrantyStatsView: React.FC = () => {
     setIsRefreshing(true);
     setTimeout(() => {
       setIsRefreshing(false);
-      showToast('全网 38,420 座电站灵活质保健康度指标已完成最新全量核算更新！');
+      showToast('全网 38,420 座电站灵活性能保证健康度指标已完成最新全量核算更新！');
     }, 700);
   };
 
   const handleExport = () => {
-    showToast(`正在导出《全网灵活质保与SOH健康态势综合运营报告 (${selectedPeriod}).xlsx》...`);
+    showToast(`正在导出《全网灵活性能保证与SOH健康态势综合运营报告 (${selectedPeriod}).xlsx》...`);
   };
 
   return (
@@ -149,7 +149,7 @@ export const GlobalFlexibleWarrantyStatsView: React.FC = () => {
             </span>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-lg font-bold text-slate-900 tracking-tight">全网灵活质保统计看板</h1>
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">全网灵活性能保证统计看板</h1>
                 <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded">
                   全网 38,420 站在册
                 </span>
@@ -589,12 +589,12 @@ export const GlobalFlexibleWarrantyStatsView: React.FC = () => {
             <BarChart3 className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-bold text-slate-900">
               {dimension === 'region'
-                ? '全网各大区灵活质保指标统计与履约台账'
+                ? '全网各大区灵活性能保证指标统计与履约台账'
                 : dimension === 'cell'
                 ? '各电芯技术路线真实工况衰减与质保排行'
                 : dimension === 'scenario'
                 ? '不同工况应用场景质保履约与超工况台账'
-                : '重点客户集团灵活质保合同履约全景台账'}
+                : '重点客户集团灵活性能保证合同履约全景台账'}
             </h3>
             <span className="text-[11px] text-slate-400 font-mono">共 {filteredTableData.length} 项</span>
           </div>

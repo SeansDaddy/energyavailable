@@ -228,7 +228,7 @@ export const BaselineConditionDetailView: React.FC<BaselineConditionDetailViewPr
         </div>
 
         <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-          <div className="text-[11px] text-slate-500">基础灵活质保合同额</div>
+          <div className="text-[11px] text-slate-500">基础灵活性能保证合同额</div>
           <div className="text-xl font-bold font-mono text-slate-900 mt-1">
             ¥ {result.financialAssessment.baseWarrantyContractTotalYuan} 万
           </div>

@@ -38,7 +38,7 @@ export const BaselineConditionReportModal: React.FC<BaselineConditionReportModal
           <div className="flex items-center gap-2">
             <FileCheck2 className="w-5 h-5 text-blue-400" />
             <div>
-              <div className="text-sm font-bold">灵活质保基准工况评估与签约建议报告 (预览)</div>
+              <div className="text-sm font-bold">灵活性能保证基准工况评估与签约建议报告 (预览)</div>
               <div className="text-[10px] text-slate-400 font-mono">编号: {task.taskNo} · 生成日期: {task.createdAt}</div>
             </div>
           </div>
@@ -79,7 +79,7 @@ export const BaselineConditionReportModal: React.FC<BaselineConditionReportModal
                   PROFESSIONAL SERVICES · FLEXIBLE WARRANTY ASSESSMENT REPORT
                 </div>
                 <h1 className="text-xl font-bold text-slate-900 mt-1">
-                  电化学储能电站灵活质保基准工况评估与商务签约建议书
+                  电化学储能电站灵活性能保证基准工况评估与商务签约建议书
                 </h1>
                 <div className="text-xs text-slate-500 mt-1">
                   评估电站：<span className="font-semibold text-slate-800">{task.siteName}</span> · 
@@ -243,10 +243,10 @@ export const BaselineConditionReportModal: React.FC<BaselineConditionReportModal
               </div>
             </div>
 
-            {/* 五、年底灵活质保 SOH 临时手动评估结论与提前加强服务措施 */}
+            {/* 五、年底灵活性能保证 SOH 临时手动评估结论与提前加强服务措施 */}
             <div>
               <h3 className="text-sm font-bold text-slate-900 mb-2 border-l-4 border-amber-600 pl-2">
-                五、年底灵活质保 SOH 临时手动评估结论与提前加强服务措施 (合同年结束前评估)
+                五、年底灵活性能保证 SOH 临时手动评估结论与提前加强服务措施 (合同年结束前评估)
               </h3>
               <div className="p-3.5 bg-amber-50/60 rounded-lg border border-amber-200/80 text-xs space-y-2">
                 <div className="grid grid-cols-3 gap-2 pb-2 border-b border-amber-200/60">
@@ -270,10 +270,10 @@ export const BaselineConditionReportModal: React.FC<BaselineConditionReportModal
               </div>
             </div>
 
-            {/* 六、下一年度工况计划与灵活质保服务报价建议 */}
+            {/* 六、下一年度工况计划与灵活性能保证服务报价建议 */}
             <div>
               <h3 className="text-sm font-bold text-slate-900 mb-2 border-l-4 border-emerald-600 pl-2">
-                六、下一年度工况计划与灵活质保服务报价建议 (协同决策确定)
+                六、下一年度工况计划与灵活性能保证服务报价建议 (协同决策确定)
               </h3>
               <div className="p-3.5 bg-emerald-50/60 rounded-lg border border-emerald-200/80 text-xs space-y-2">
                 <div className="grid grid-cols-4 gap-2 pb-2 border-b border-emerald-200/60">
@@ -295,7 +295,7 @@ export const BaselineConditionReportModal: React.FC<BaselineConditionReportModal
                   </div>
                 </div>
                 <div className="text-[11px] text-slate-700 leading-relaxed">
-                  <strong>商务闭环说明：</strong>经技术与财务综合评估，推荐双方以标准平衡型工况作为第4合同年执行基准；若业主拟提高参与电力现货调频频次至480次/年，灵活质保年报价相应调节为38.6万元/年，客户总套利增益可提升至43.1万元/年。
+                  <strong>商务闭环说明：</strong>经技术与财务综合评估，推荐双方以标准平衡型工况作为第4合同年执行基准；若业主拟提高参与电力现货调频频次至480次/年，灵活性能保证年报价相应调节为38.6万元/年，客户总套利增益可提升至43.1万元/年。
                 </div>
               </div>
             </div>
@@ -303,7 +303,7 @@ export const BaselineConditionReportModal: React.FC<BaselineConditionReportModal
             {/* 报告页脚签署 */}
             <div className="pt-6 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
               <div>
-                <div>评估编制单位：专业服务运营平台 · 灵活质保与储能健康保障中心</div>
+                <div>评估编制单位：专业服务运营平台 · 灵活性能保证与储能健康保障中心</div>
                 <div className="mt-0.5 font-mono">评估责任工程师：{task.creator}</div>
               </div>
               <div className="text-right">

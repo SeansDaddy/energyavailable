@@ -88,9 +88,9 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 3. 灵活质保管理 (独立分组)
+    // 3. 灵活性能保证管理 (独立分组)
     {
-      section: '灵活质保管理',
+      section: '灵活性能保证管理',
       items: [
         {
           id: 'baseline_condition_eval',
@@ -101,14 +101,14 @@ export const Sidebar: React.FC = () => {
         },
         {
           id: 'flexible_warranty',
-          label: '灵活质保',
+          label: '灵活性能保证',
           icon: ShieldCheck,
           badge: 'SOH衰减',
           badgeColor: 'bg-emerald-600 text-white'
         },
         {
           id: 'flexible_warranty_stats',
-          label: '全网灵活质保统计',
+          label: '全网灵活性能保证统计',
           icon: BarChart3,
           badge: '全网看板',
           badgeColor: 'bg-teal-600 text-white'

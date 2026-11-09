@@ -119,7 +119,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
   };
 
   const handleExportProtocol = () => {
-    setSignSuccessNotice(`已成功生成《${currentPlan.planName} · 下一年度工况计划与灵活质保服务协议附件.pdf》并准备下载！`);
+    setSignSuccessNotice(`已成功生成《${currentPlan.planName} · 下一年度工况计划与灵活性能保证服务协议附件.pdf》并准备下载！`);
     setTimeout(() => {
       setSignSuccessNotice(null);
     }, 4000);
@@ -159,11 +159,11 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
               </span>
             </div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>{task.siteName} 下一年度工况计划模拟与灵活质保服务报价测算</span>
+              <span>{task.siteName} 下一年度工况计划模拟与灵活性能保证服务报价测算</span>
             </h2>
             <p className="text-xs text-indigo-100/90 leading-relaxed max-w-3xl">
-              <strong className="text-white">业务初衷：</strong>在合同年结束之前，电站业主需前瞻计划下一年的充放工况强度；服务部门基于计划工况评估下一年年底灵活质保 SOH，
-              综合评估衰减损耗联动出具<span className="text-amber-300 font-semibold">灵活质保服务报价</span>，并结合客户峰谷套利收益，最终协同<span className="text-emerald-300 font-semibold">确定并锁定下一年的计划工况</span>。
+              <strong className="text-white">业务初衷：</strong>在合同年结束之前，电站业主需前瞻计划下一年的充放工况强度；服务部门基于计划工况评估下一年年底灵活性能保证 SOH，
+              综合评估衰减损耗联动出具<span className="text-amber-300 font-semibold">灵活性能保证服务报价</span>，并结合客户峰谷套利收益，最终协同<span className="text-emerald-300 font-semibold">确定并锁定下一年的计划工况</span>。
             </p>
           </div>
 
@@ -525,7 +525,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
         </div>
       )}
 
-      {/* 综合灵活质保 SOH 衰减与服务报价测算核心仪表盘 */}
+      {/* 综合灵活性能保证 SOH 衰减与服务报价测算核心仪表盘 */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
@@ -548,7 +548,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
           <div className="bg-gradient-to-br from-slate-50 to-blue-50/40 p-4 rounded-xl border border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800">
-                第4合同年年底灵活质保预期 SOH
+                第4合同年年底灵活性能保证预期 SOH
               </span>
               <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono font-bold">
                 加速因子: {currentPlan.accelerationFactor}x
@@ -591,11 +591,11 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
             </div>
           </div>
 
-          {/* 右侧：灵活质保服务商业报价与客户净套利收益 */}
+          {/* 右侧：灵活性能保证服务商业报价与客户净套利收益 */}
           <div className="bg-gradient-to-br from-emerald-50/50 to-teal-50/40 p-4 rounded-xl border border-emerald-200 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-emerald-900">
-                综合灵活质保服务报价与商业效益
+                综合灵活性能保证服务报价与商业效益
               </span>
               <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-mono font-bold">
                 客户投入产出比 ROI: {currentPlan.servicePricing.costBenefitRatio}x
@@ -604,7 +604,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
 
             <div className="grid grid-cols-2 gap-3 items-baseline">
               <div>
-                <span className="text-[10px] text-slate-500">年度灵活质保服务总报价</span>
+                <span className="text-[10px] text-slate-500">年度灵活性能保证服务总报价</span>
                 <div className="text-3xl font-extrabold font-mono text-blue-700 mt-0.5">
                   ¥ {currentPlan.servicePricing.totalAnnualServiceFeeWan} <span className="text-xs font-normal">万元/年</span>
                 </div>
@@ -637,7 +637,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
         {/* 商业报价详细构成清单拆解 */}
         <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2">
           <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
-            <span>灵活质保服务报价模型构成拆解 (万元/年)</span>
+            <span>灵活性能保证服务报价模型构成拆解 (万元/年)</span>
             <span className="font-mono text-xs text-blue-700 font-bold">
               总报价: ¥ {currentPlan.servicePricing.totalAnnualServiceFeeWan} 万元
             </span>
@@ -714,7 +714,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
               </span>
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  确认确定下一年计划工况与灵活质保服务报价
+                  确认确定下一年计划工况与灵活性能保证服务报价
                 </h3>
                 <p className="text-xs text-slate-500">
                   第4合同年 (2027年度) 工况确认与服务报价协议附录锁定
@@ -740,11 +740,11 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
                 <span className="font-mono text-slate-800">{currentPlan.plannedMaxCrate} C</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">预测年底灵活质保 SOH:</span>
+                <span className="text-slate-500">预测年底灵活性能保证 SOH:</span>
                 <span className="font-mono font-bold text-blue-700">{currentPlan.projectedYearEndFlexibleSoh}%</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-slate-200">
-                <span className="text-slate-700 font-semibold">年度灵活质保服务总报价:</span>
+                <span className="text-slate-700 font-semibold">年度灵活性能保证服务总报价:</span>
                 <span className="font-mono font-extrabold text-blue-700 text-sm">
                   ¥ {currentPlan.servicePricing.totalAnnualServiceFeeWan} 万元/年
                 </span>
@@ -758,7 +758,7 @@ export const NextYearConditionPlanPanel: React.FC<NextYearConditionPlanPanelProp
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              确定后，系统将自动将此计划工况注入站点灵活质保台账，并作为第4合同年日工况超限判定的最新边界基准，同时下发下一年度服务执行计划。
+              确定后，系统将自动将此计划工况注入站点灵活性能保证台账，并作为第4合同年日工况超限判定的最新边界基准，同时下发下一年度服务执行计划。
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">

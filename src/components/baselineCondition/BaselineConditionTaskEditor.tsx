@@ -77,7 +77,7 @@ export const BaselineConditionTaskEditor: React.FC<BaselineConditionTaskEditorPr
 
   // Task name and task number
   const [taskName, setTaskName] = useState<string>(
-    initialTask?.taskName || '某集中式储能电站灵活质保基准工况推演与签约评估'
+    initialTask?.taskName || '某集中式储能电站灵活性能保证基准工况推演与签约评估'
   );
   const [taskNo] = useState<string>(
     initialTask?.taskNo || `BC-EVAL-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`
@@ -147,7 +147,7 @@ export const BaselineConditionTaskEditor: React.FC<BaselineConditionTaskEditorPr
       capacityMwh: s.capacityMw * 2.0,
       expectedAnnualThroughputMwh: s.capacityMw * 2.0 * prev.dailyFullEquivalentCycles * prev.annualOperatingDays * 0.9
     }));
-    setTaskName(`${s.siteName} 灵活质保基准工况评估`);
+    setTaskName(`${s.siteName} 灵活性能保证基准工况评估`);
   };
 
   // Handle Scenario preset change
@@ -216,7 +216,7 @@ export const BaselineConditionTaskEditor: React.FC<BaselineConditionTaskEditorPr
                 {taskNo}
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                {initialTask ? '编辑/调整基准工况评估任务' : '新建灵活质保基准工况评估'}
+                {initialTask ? '编辑/调整基准工况评估任务' : '新建灵活性能保证基准工况评估'}
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -443,7 +443,7 @@ export const BaselineConditionTaskEditor: React.FC<BaselineConditionTaskEditorPr
                       >
                         <option value={5}>5 年标准期</option>
                         <option value={8}>8 年延长质保</option>
-                        <option value={10}>10 年长效灵活质保</option>
+                        <option value={10}>10 年长效灵活性能保证</option>
                         <option value={12}>12 年全生命周期</option>
                         <option value={15}>15 年深度质保</option>
                       </select>

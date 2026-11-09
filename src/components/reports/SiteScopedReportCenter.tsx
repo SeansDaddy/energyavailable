@@ -98,7 +98,7 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
         };
       case 'FLEXIBLE_WARRANTY':
         return {
-          title: '灵活质保报告中心',
+          title: '灵活性能保证报告中心',
           badge: 'SOH衰减与质保档案',
           badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           accentColor: 'emerald',
@@ -399,9 +399,9 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
       const sohResult = calculateFlexibleWarrantySohAlgorithm(baseline, DEFAULT_SOH_BASELINE_CURVE, monthly, daily);
 
       newReport = addReportToCenter({
-        title: `${siteObj.siteName} 灵活质保工况与SOH衰减综合评估报告 (最新重算版)`,
+        title: `${siteObj.siteName} 灵活性能保证工况与SOH衰减综合评估报告 (最新重算版)`,
         category: 'FLEXIBLE_WARRANTY',
-        categoryName: '灵活质保SOH评估',
+        categoryName: '灵活性能保证SOH评估',
         siteId: siteObj.id,
         siteCode: siteObj.siteCode,
         siteName: siteObj.siteName,
@@ -580,7 +580,7 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
       }
 
       const reportNames: Record<ReportCategory, string> = {
-        FLEXIBLE_WARRANTY: '灵活质保工况与SOH衰减综合评估报告',
+        FLEXIBLE_WARRANTY: '灵活性能保证工况与SOH衰减综合评估报告',
         PERFORMANCE_CONDITION: '性能工况深度体检与能效诊断报告',
         AVAILABILITY_SLA: '可用度与SLA履约运行考核报告',
         SITE_LEDGER: '站点资产台账与设备档案全景报告',
@@ -622,7 +622,7 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
   const getCategoryBadge = (category: ReportCategory) => {
     switch (category) {
       case 'FLEXIBLE_WARRANTY':
-        return { label: '灵活质保SOH', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+        return { label: '灵活性能保证SOH', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
       case 'PERFORMANCE_CONDITION':
         return { label: '性能工况体检', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
       case 'AVAILABILITY_SLA':
@@ -970,7 +970,7 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
                     <option value="ALL">全部类型</option>
                     <option value="AVAILABILITY_SLA">SLA可用度履约</option>
                     <option value="PERFORMANCE_CONDITION">性能工况体检</option>
-                    <option value="FLEXIBLE_WARRANTY">灵活质保SOH</option>
+                    <option value="FLEXIBLE_WARRANTY">灵活性能保证SOH</option>
                     <option value="SITE_LEDGER">站点台账档案</option>
                     <option value="FAULT_DIAGNOSIS">AI故障诊断</option>
                   </select>
@@ -1148,7 +1148,7 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
                   <option value="ALL">全部业务类型</option>
                   <option value="AVAILABILITY_SLA">SLA可用度履约</option>
                   <option value="PERFORMANCE_CONDITION">性能工况体检</option>
-                  <option value="FLEXIBLE_WARRANTY">灵活质保SOH</option>
+                  <option value="FLEXIBLE_WARRANTY">灵活性能保证SOH</option>
                   <option value="SITE_LEDGER">站点台账档案</option>
                   <option value="FAULT_DIAGNOSIS">AI故障诊断</option>
                 </select>
@@ -1400,7 +1400,7 @@ export const SiteScopedReportCenter: React.FC<SiteScopedReportCenterProps> = ({
                     },
                     {
                       id: 'FLEXIBLE_WARRANTY',
-                      title: '灵活质保SOH评估报告',
+                      title: '灵活性能保证SOH评估报告',
                       desc: '双衰减曲线拟合、日超工况积分、动力学寿命折算'
                     },
                     {

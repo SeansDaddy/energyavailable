@@ -5,7 +5,7 @@ export const INITIAL_BASELINE_EVALUATION_TASKS: BaselineEvaluationTaskRecord[] =
   {
     id: 'bc-task-001',
     taskNo: 'BC-EVAL-2026-0801',
-    taskName: '深圳光明储能电站二期 10MW/20MWh 灵活质保基准工况评估',
+    taskName: '深圳光明储能电站二期 10MW/20MWh 灵活性能保证基准工况评估',
     siteName: '深圳光明储能电站二期-04号站',
     region: '华南区',
     customerName: '南方电网深圳供电局',
@@ -169,7 +169,7 @@ export const INITIAL_BASELINE_EVALUATION_TASKS: BaselineEvaluationTaskRecord[] =
   {
     id: 'bc-task-003',
     taskNo: 'BC-EVAL-2026-0803',
-    taskName: '苏州工业园区综合能源储能 15年长效灵活质保签约前评估',
+    taskName: '苏州工业园区综合能源储能 15年长效灵活性能保证签约前评估',
     siteName: '苏州工业园区综合能源储能站',
     region: '华东区',
     customerName: '苏州新建元城市发展集团',

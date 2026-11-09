@@ -175,7 +175,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
     '2026-08': true
   });
 
-  // 5. 算法团队灵活质保 SOH 估算结果
+  // 5. 算法团队灵活性能保证 SOH 估算结果
   const [isAlgorithmCalculating, setIsAlgorithmCalculating] = useState(false);
   const [algorithmCalcTimestamp, setAlgorithmCalcTimestamp] = useState('2026-08-20 14:35:10');
 
@@ -209,7 +209,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
     );
   }, [site.id, contractBaseline, dailyConditions, monthlyConditions]);
 
-  // 7. 年底灵活质保 SOH 临时手动评估状态
+  // 7. 年底灵活性能保证 SOH 临时手动评估状态
   const [interventionMode, setInterventionMode] = useState<
     'CURRENT_INERTIA' | 'CONSERVATIVE_PROTECT' | 'AGGRESSIVE_UTILIZATION'
   >('CURRENT_INERTIA');
@@ -226,7 +226,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
     );
   }, [site.id, contractBaseline, sohBaselineCurve, dailyConditions, monthlyConditions, interventionMode, assessmentTimestamp]);
 
-  // 8. 下一年工况计划、SOH预测与灵活质保服务报价测算状态
+  // 8. 下一年工况计划、SOH预测与灵活性能保证服务报价测算状态
   const [activePlanType, setActivePlanType] = useState<'CONSERVATIVE' | 'BASELINE' | 'AGGRESSIVE' | 'CUSTOM'>('BASELINE');
   const [customPlanParams, setCustomPlanParams] = useState({
     plannedAnnualCycles: 420,
@@ -256,13 +256,13 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
   // 触发临时手动评估重算
   const handleTriggerInterimAssessment = () => {
     setAssessmentTimestamp(new Date().toLocaleString());
-    showToast(`已完成第${interimAssessment.contractYear}合同年年底灵活质保SOH临时评估：年底预期为 ${interimAssessment.interimEvaluatedYearEndSoh}% (累计超工况折损 -${interimAssessment.deductionBreakdown.totalDeductionPct}%)`);
+    showToast(`已完成第${interimAssessment.contractYear}合同年年底灵活性能保证SOH临时评估：年底预期为 ${interimAssessment.interimEvaluatedYearEndSoh}% (累计超工况折损 -${interimAssessment.deductionBreakdown.totalDeductionPct}%)`);
   };
 
   // 归档临时手动评估报告
   const handleArchiveInterimAssessment = () => {
     addReportToCenter({
-      title: `${site.siteName} 第${interimAssessment.contractYear}合同年年底灵活质保SOH临时手动评估表`,
+      title: `${site.siteName} 第${interimAssessment.contractYear}合同年年底灵活性能保证SOH临时手动评估表`,
       category: 'FLEXIBLE_WARRANTY',
       categoryName: '临时SOH评估',
       siteId: site.id,
@@ -275,7 +275,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
       author: interimAssessment.evaluator,
       status: 'APPROVED',
       version: 'v1.0-Interim',
-      summary: `基于合同工况年底预期SOH保证值 (${interimAssessment.contractBaselineExpectedYearEndSoh}%)，结合年初至今实测超工况运行累计折损 (-${interimAssessment.deductionBreakdown.totalDeductionPct}%)，临时评估年底灵活质保SOH为 ${interimAssessment.interimEvaluatedYearEndSoh}%。已生成针对性提前加强质保服务处置方案。`,
+      summary: `基于合同工况年底预期SOH保证值 (${interimAssessment.contractBaselineExpectedYearEndSoh}%)，结合年初至今实测超工况运行累计折损 (-${interimAssessment.deductionBreakdown.totalDeductionPct}%)，临时评估年底灵活性能保证SOH为 ${interimAssessment.interimEvaluatedYearEndSoh}%。已生成针对性提前加强质保服务处置方案。`,
       kpis: [
         { label: '合同年底保证SOH', value: `${interimAssessment.contractBaselineExpectedYearEndSoh}%`, benchmark: '基准保证', status: 'info' },
         { label: '临时评估年底SOH', value: `${interimAssessment.interimEvaluatedYearEndSoh}%`, benchmark: `${interimAssessment.contractBaselineExpectedYearEndSoh}%`, status: interimAssessment.sohMarginVsBaseline >= 0 ? 'success' : 'warning' },
@@ -285,14 +285,14 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
       diagnostics: interimAssessment.proactiveServiceRecommendations.slice(0, 3),
       recommendations: interimAssessment.proactiveServiceRecommendations.slice(1, 4)
     });
-    showToast(`《${site.siteName} 年底灵活质保SOH临时评估表》已归档至报告中心！`);
+    showToast(`《${site.siteName} 年底灵活性能保证SOH临时评估表》已归档至报告中心！`);
   };
 
   // 确认下一年计划工况与质保服务报价
   const handleConfirmNextYearPlan = () => {
     setConfirmedPlan(nextYearPlan);
     addReportToCenter({
-      title: `${site.siteName} ${nextYearPlan.targetYearLabel} 计划工况协议与灵活质保服务报价单`,
+      title: `${site.siteName} ${nextYearPlan.targetYearLabel} 计划工况协议与灵活性能保证服务报价单`,
       category: 'FLEXIBLE_WARRANTY',
       categoryName: '下年工况计划',
       siteId: site.id,
@@ -305,7 +305,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
       author: '质量技术部与客户服务部联合签发',
       status: 'APPROVED',
       version: 'v1.0-Confirmed',
-      summary: `已确认 ${nextYearPlan.targetYearLabel} 执行【${nextYearPlan.planName}】：计划年循环 ${nextYearPlan.plannedAnnualCycles} EFC，充放倍率 ${nextYearPlan.plannedMaxCrate}C，预计年底灵活质保SOH为 ${nextYearPlan.projectedYearEndFlexibleSoh}%。综合灵活质保服务总报价为 ¥${nextYearPlan.servicePricing.totalAnnualServiceFeeWan} 万元/年，客户预期电力现货套利收益 ¥${nextYearPlan.servicePricing.customerExpectedRevenueWan} 万元/年，客户净增益 ¥${nextYearPlan.servicePricing.customerNetGainWan} 万元/年。`,
+      summary: `已确认 ${nextYearPlan.targetYearLabel} 执行【${nextYearPlan.planName}】：计划年循环 ${nextYearPlan.plannedAnnualCycles} EFC，充放倍率 ${nextYearPlan.plannedMaxCrate}C，预计年底灵活性能保证SOH为 ${nextYearPlan.projectedYearEndFlexibleSoh}%。综合灵活性能保证服务总报价为 ¥${nextYearPlan.servicePricing.totalAnnualServiceFeeWan} 万元/年，客户预期电力现货套利收益 ¥${nextYearPlan.servicePricing.customerExpectedRevenueWan} 万元/年，客户净增益 ¥${nextYearPlan.servicePricing.customerNetGainWan} 万元/年。`,
       kpis: [
         { label: '计划年等效循环', value: `${nextYearPlan.plannedAnnualCycles} 次`, benchmark: '365 次', status: 'info' },
         { label: '预估下年底SOH', value: `${nextYearPlan.projectedYearEndFlexibleSoh}%`, benchmark: `${nextYearPlan.baselineYearEndSoh}%`, status: nextYearPlan.projectedSohDelta >= 0 ? 'success' : 'warning' },
@@ -321,7 +321,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
         '建议服务组在下合同年开启前完成首批液冷管路保养与电芯阻抗复测。'
       ]
     });
-    showToast(`🎉 已成功确认并签署《${nextYearPlan.targetYearLabel} 计划工况与灵活质保服务报价单》！`);
+    showToast(`🎉 已成功确认并签署《${nextYearPlan.targetYearLabel} 计划工况与灵活性能保证服务报价单》！`);
   };
 
   // 触发算法重新估算
@@ -330,7 +330,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
     setTimeout(() => {
       setIsAlgorithmCalculating(false);
       setAlgorithmCalcTimestamp(new Date().toLocaleString());
-      showToast('算法团队灵活质保SOH接口调用成功，已根据最新站级超工况更新打点与衰减曲线！');
+      showToast('算法团队灵活性能保证SOH接口调用成功，已根据最新站级超工况更新打点与衰减曲线！');
     }, 700);
   };
 
@@ -443,7 +443,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
     showToast(`已生成并导出《${site.siteName} 站级日工况与超工况明细.csv》！`);
   };
 
-  // 导出灵活质保评估报告为 PDF 文档
+  // 导出灵活性能保证评估报告为 PDF 文档
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const handleExportPdfReport = async () => {
     try {
@@ -459,9 +459,9 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
 
       // 归档至统一历史报告中心
       addReportToCenter({
-        title: `${site.siteName} 灵活质保工况与SOH衰减综合评估报告 (2026-08)`,
+        title: `${site.siteName} 灵活性能保证工况与SOH衰减综合评估报告 (2026-08)`,
         category: 'FLEXIBLE_WARRANTY',
-        categoryName: '灵活质保SOH评估',
+        categoryName: '灵活性能保证SOH评估',
         siteId: site.id,
         siteCode: site.siteCode,
         siteName: site.siteName,
@@ -472,7 +472,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
         author: '质量技术部算法工程组',
         status: 'APPROVED',
         version: 'v2.1',
-        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活质保模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin}%，资产处于健康受控状态。`,
+        summary: `基于实测PACK工况数据换算站级工况积分，调用算法团队灵活性能保证模型测算：当前灵活估算SOH为 ${sohResult.currentFlexibleSoh}%，相比基准衰减曲线打点保证值 (${sohResult.currentBaselineSoh}%) 质保裕度为 ${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin}%，资产处于健康受控状态。`,
         kpis: [
           { label: '灵活估算SOH', value: `${sohResult.currentFlexibleSoh}%`, benchmark: '95.40%', status: 'success' },
           { label: '基准偏离裕度', value: `${sohResult.sohMargin >= 0 ? '+' : ''}${sohResult.sohMargin}%`, benchmark: '≥0.00%', status: 'success' },
@@ -489,7 +489,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
         ]
       });
 
-      showToast(`《${site.siteName} 灵活质保工况评估报告.pdf》已导出并成功归档至报告中心！`);
+      showToast(`《${site.siteName} 灵活性能保证工况评估报告.pdf》已导出并成功归档至报告中心！`);
     } catch (err) {
       console.error('PDF export failed', err);
       showToast('导出评估报告失败，请重试');
@@ -545,7 +545,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   </span>
                 </h2>
                 <p className="text-xs text-indigo-200/80 leading-relaxed max-w-4xl">
-                  结合合同约定基准工况参数与实测设备工况折算，调用灵活质保模型推算真实 SOH 衰减轨迹、年度折损与年底保证水平，联动下年工况计划与服务报价。
+                  结合合同约定基准工况参数与实测设备工况折算，调用灵活性能保证模型推算真实 SOH 衰减轨迹、年度折损与年底保证水平，联动下年工况计划与服务报价。
                 </p>
               </div>
 
@@ -570,7 +570,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   onClick={handleExportPdfReport}
                   disabled={isExportingPdf}
                   className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-800 text-white rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-                  title="将当前站点的灵活质保计算结果下载为PDF文档，格式包含关键性能指标和计算逻辑说明"
+                  title="将当前站点的灵活性能保证计算结果下载为PDF文档，格式包含关键性能指标和计算逻辑说明"
                 >
                   <FileText className={`w-3.5 h-3.5 ${isExportingPdf ? 'animate-pulse' : ''}`} />
                   <span>{isExportingPdf ? '正在生成PDF报告...' : '导出评估报告'}</span>
@@ -650,7 +650,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
             </div>
           </div>
 
-          {/* 🌟 核心需求 1：灵活质保评估工作台重点展示【当前合同基准工况】卡片 */}
+          {/* 🌟 核心需求 1：灵活性能保证评估工作台重点展示【当前合同基准工况】卡片 */}
           <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-2 border-indigo-500/50 rounded-2xl p-5 text-white shadow-sm space-y-3.5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-indigo-800/50">
               <div className="space-y-1">
@@ -773,7 +773,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
             </div>
           </div>
 
-          {/* 灵活质保评估工作台内部子导航 */}
+          {/* 灵活性能保证评估工作台内部子导航 */}
           <div className="border-b border-slate-200 bg-white rounded-t-xl px-2 pt-2 shadow-xs">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
               <button
@@ -891,7 +891,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-indigo-200/80 leading-relaxed max-w-4xl">
-                独立维护电站合同基准工况参数、质保起止周期与全寿命 SOH 基准衰减曲线。在此处设定的基准参数将作为灵活质保算法计算超工况与寿命折损的唯一法定基准。
+                独立维护电站合同基准工况参数、质保起止周期与全寿命 SOH 基准衰减曲线。在此处设定的基准参数将作为灵活性能保证算法计算超工况与寿命折损的唯一法定基准。
               </p>
             </div>
 
@@ -926,10 +926,10 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
               <div>
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <TrendingDown className="w-5 h-5 text-indigo-600" />
-                  <span>SOH基准工况衰减曲线 vs. 灵活质保工况SOH衰减曲线 (全寿命10年对比)</span>
+                  <span>SOH基准工况衰减曲线 vs. 灵活性能保证工况SOH衰减曲线 (全寿命10年对比)</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  深蓝曲线为合同约定的标准 SOH 基准衰减底线；翡翠/琥珀曲线为基于实际日工况与超工况应力测算的灵活质保 SOH 打点值。
+                  深蓝曲线为合同约定的标准 SOH 基准衰减底线；翡翠/琥珀曲线为基于实际日工况与超工况应力测算的灵活性能保证 SOH 打点值。
                 </p>
               </div>
 
@@ -941,7 +941,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                 <span className="flex items-center gap-1.5 text-slate-600">
                   <span className="w-3 h-0.5 bg-emerald-600 inline-block rounded-full"></span>
                   <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>
-                  <span>灵活质保工况SOH打点曲线</span>
+                  <span>灵活性能保证工况SOH打点曲线</span>
                 </span>
                 <span className="flex items-center gap-1.5 text-slate-400">
                   <span className="w-3 h-0.5 bg-red-400 border-t border-dashed inline-block"></span>
@@ -951,7 +951,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   onClick={handleExportPdfReport}
                   disabled={isExportingPdf}
                   className="ml-2 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                  title="下载当前站点的灵活质保双曲线及SOH计算结果为PDF评估报告"
+                  title="下载当前站点的灵活性能保证双曲线及SOH计算结果为PDF评估报告"
                 >
                   <FileText className="w-3 h-3 text-rose-600" />
                   <span>{isExportingPdf ? '导出中...' : '导出评估报告 (PDF)'}</span>
@@ -992,7 +992,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                           </div>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1">
                             <div>基准保证SOH: <strong className="text-blue-400 font-mono">{point.baselineSoh}%</strong></div>
-                            <div>灵活质保SOH: <strong className="text-emerald-400 font-mono">{point.flexibleWarrantySoh}%</strong></div>
+                            <div>灵活性能保证SOH: <strong className="text-emerald-400 font-mono">{point.flexibleWarrantySoh}%</strong></div>
                             <div>偏离差值 ΔSOH: <strong className={point.deltaSoh >= 0 ? 'text-emerald-400' : 'text-amber-400 font-mono'}>{point.deltaSoh >= 0 ? `+${point.deltaSoh}` : point.deltaSoh}%</strong></div>
                             <div>累计超工况惩罚: <strong className="text-red-400 font-mono">-{point.cumulativeOverPenaltyPct}%</strong></div>
                             <div>累计等效满充循环: <strong className="text-slate-300 font-mono">{point.cumulativeCycles} 次</strong></div>
@@ -1022,11 +1022,11 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                     strokeWidth={2.5}
                     dot={{ r: 4, fill: '#2563eb' }}
                   />
-                  {/* 灵活质保工况SOH衰减曲线 (翠绿/琥珀打点) */}
+                  {/* 灵活性能保证工况SOH衰减曲线 (翠绿/琥珀打点) */}
                   <Line
                     type="monotone"
                     dataKey="flexibleWarrantySoh"
-                    name="灵活质保工况SOH衰减曲线"
+                    name="灵活性能保证工况SOH衰减曲线"
                     stroke="#059669"
                     strokeWidth={2.5}
                     strokeDasharray="0"
@@ -1050,7 +1050,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                     <th className="py-2.5 px-3">运营年份</th>
                     <th className="py-2.5 px-3">状态阶段</th>
                     <th className="py-2.5 px-3">SOH基准工况值(%)</th>
-                    <th className="py-2.5 px-3">灵活质保估算打点值(%)</th>
+                    <th className="py-2.5 px-3">灵活性能保证估算打点值(%)</th>
                     <th className="py-2.5 px-3">差值 (ΔSOH)</th>
                     <th className="py-2.5 px-3">累计超工况扣减(%)</th>
                     <th className="py-2.5 px-3">累计等效循环(次)</th>
@@ -1471,7 +1471,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   <span>合同工况基准版本履历与变更归档 (合规审计记录)</span>
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  追踪每次合同条款补充协议与基准工况参数调整的历史记录，确保灵活质保计算具有完整法律依据。
+                  追踪每次合同条款补充协议与基准工况参数调整的历史记录，确保灵活性能保证计算具有完整法律依据。
                 </p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
@@ -1495,7 +1495,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   <tr className="hover:bg-slate-50/80">
                     <td className="py-2.5 px-3 font-bold font-mono text-indigo-600">v1.1</td>
                     <td className="py-2.5 px-3 font-mono text-slate-600">2025-06-15</td>
-                    <td className="py-2.5 px-3 font-semibold text-slate-800">电站二期充放电调度与灵活质保补充协议</td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-800">电站二期充放电调度与灵活性能保证补充协议</td>
                     <td className="py-2.5 px-3 text-slate-600">
                       明确日平均规划SOC基准为 50.0%（高出规划按超工况标红考核），放宽夏季极端负荷日放电深度上限至 90.0%。
                     </td>
@@ -2060,7 +2060,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  依据当前合同履约基准对倍率、温度、SOC、运行时间、循环及衰减进行闭环监测，作为灵活质保 SOH 加速折损评定依据。
+                  依据当前合同履约基准对倍率、温度、SOC、运行时间、循环及衰减进行闭环监测，作为灵活性能保证 SOH 加速折损评定依据。
                 </p>
               </div>
 
@@ -2456,7 +2456,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* SUB-VIEW 6: 年底灵活质保 SOH 临时手动评估与下年工况计划报价测算 */}
+      {/* SUB-VIEW 6: 年底灵活性能保证 SOH 临时手动评估与下年工况计划报价测算 */}
       {/* ========================================================================= */}
       {activeSubView === 6 && (
         <div className="space-y-5 animate-in fade-in duration-150">
@@ -2466,14 +2466,14 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-base font-bold text-slate-900">
-                  第 {interimAssessment.contractYear} 合同年年底灵活质保 SOH 临时手动评估与处置
+                  第 {interimAssessment.contractYear} 合同年年底灵活性能保证 SOH 临时手动评估与处置
                 </h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
                   提前预判干预
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                评估周期: {interimAssessment.startDate} 至 {interimAssessment.todayDate} (年底前预判) · 评估人: {interimAssessment.evaluator} · 基于年初至今实测超工况推算年底灵活质保状态。
+                评估周期: {interimAssessment.startDate} 至 {interimAssessment.todayDate} (年底前预判) · 评估人: {interimAssessment.evaluator} · 基于年初至今实测超工况推算年底灵活性能保证状态。
               </p>
             </div>
 
@@ -2500,7 +2500,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
             <div className="text-xs font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
               <Sliders className="w-4 h-4 text-indigo-600" />
-              <span>后续履约调度干预策略模式 (影响年底预期灵活质保SOH推算)：</span>
+              <span>后续履约调度干预策略模式 (影响年底预期灵活性能保证SOH推算)：</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
@@ -2640,16 +2640,16 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
             </div>
           </div>
 
-          {/* 下一年工况计划、SOH预测与灵活质保服务报价测算 */}
+          {/* 下一年工况计划、SOH预测与灵活性能保证服务报价测算 */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-indigo-600" />
-                  <span>{nextYearPlan.targetYearLabel} 计划工况协议与灵活质保服务报价测算</span>
+                  <span>{nextYearPlan.targetYearLabel} 计划工况协议与灵活性能保证服务报价测算</span>
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  根据本年度实测工况与业主下一年运行需求，联动测算下年底 SOH 保证水平与差异化灵活质保服务报价。
+                  根据本年度实测工况与业主下一年运行需求，联动测算下年底 SOH 保证水平与差异化灵活性能保证服务报价。
                 </p>
               </div>
 
@@ -2777,7 +2777,7 @@ export const WarrantyConditionTab: React.FC<WarrantyConditionTabProps> = ({
                   <div className="text-xl font-black font-mono text-indigo-300 mt-1">
                     ¥{nextYearPlan.servicePricing.totalAnnualServiceFeeWan} <span className="text-xs font-normal text-slate-400">万/年</span>
                   </div>
-                  <div className="text-[10px] text-indigo-400">全包式灵活质保</div>
+                  <div className="text-[10px] text-indigo-400">全包式灵活性能保证</div>
                 </div>
 
                 <div className="bg-emerald-950/70 rounded-xl p-3 border border-emerald-600/50">

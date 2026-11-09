@@ -584,7 +584,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const cat = item.category || 'FLEXIBLE_WARRANTY';
     const defaultCatNames: Record<ReportCategory, string> = {
-      FLEXIBLE_WARRANTY: '灵活质保SOH评估',
+      FLEXIBLE_WARRANTY: '灵活性能保证SOH评估',
       PERFORMANCE_CONDITION: '性能工况体检',
       AVAILABILITY_SLA: 'SLA可用度履约',
       SITE_LEDGER: '站点台账档案',
