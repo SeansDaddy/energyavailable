@@ -718,10 +718,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
               <span className="w-2.5 h-0.5 bg-red-500" />
               <span>SLA 合同基线 ({site.slaThreshold}%)</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-0.5 bg-indigo-500" />
-              <span>当日累计可用度走势</span>
-            </span>
+
           </div>
 
           <span className="font-mono text-slate-400">
@@ -894,15 +891,7 @@ export const FiveMinAvailabilityDotsView: React.FC<FiveMinAvailabilityDotsViewPr
                 activeDot={{ r: 6, fill: '#1d4ed8', stroke: '#ffffff', strokeWidth: 2 }}
               />
 
-              {/* Cumulative Day Availability Line */}
-              <Line
-                type="monotone"
-                dataKey="cumulativeDayAvailability"
-                stroke="#6366f1"
-                strokeWidth={1.5}
-                strokeDasharray="2 2"
-                dot={false}
-              />
+
             </ComposedChart>
           </ResponsiveContainer>
         </div>

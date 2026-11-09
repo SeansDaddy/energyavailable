@@ -116,16 +116,16 @@ export const Sidebar: React.FC = () => {
       ]
     },
 
-    // 4. 商业化运营与机会点挖掘
+    // 4. 商业化运营与机会点管理 (PRD-ENGY-2026-001)
     {
       section: '商业化运营',
       items: [
         {
           id: 'opportunity_mining',
-          label: '机会点挖掘',
+          label: '机会点管理',
           icon: Target,
-          badge: '14项能力',
-          badgeColor: 'bg-amber-600 text-white'
+          badge: '价值量化',
+          badgeColor: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-xs'
         }
       ]
     },
