@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp, PlatformDomain } from '../../context/AppContext';
 import { CURRENT_USERS } from '../../mock/initialData';
 import {
   Bell,
@@ -11,7 +11,10 @@ import {
   ChevronDown,
   Activity,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Zap,
+  Server,
+  SunMedium
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -26,7 +29,9 @@ export const Header: React.FC = () => {
     syncContracts,
     isAiDrawerOpen,
     setIsAiDrawerOpen,
-    openAiDrawer
+    openAiDrawer,
+    currentDomain,
+    setCurrentDomain
   } = useApp();
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -43,11 +48,26 @@ export const Header: React.FC = () => {
     }
   };
 
+  const domainOptions: { id: PlatformDomain; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'station', label: '电站', icon: Zap },
+    { id: 'data_center', label: '数据中心', icon: Server },
+    { id: 'distributed_pv_storage', label: '分布式光储充', icon: SunMedium },
+  ];
+
   return (
     <header className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs text-slate-800">
-      {/* Left: Brand + Environment Status */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveTab('workbench')}>
+      {/* Left: Brand + Domain Switcher */}
+      <div className="flex items-center gap-5">
+        <div 
+          className="flex items-center gap-2.5 cursor-pointer" 
+          onClick={() => {
+            if (currentDomain === 'station') {
+              setActiveTab('workbench');
+            } else {
+              setActiveTab('opportunity_mining');
+            }
+          }}
+        >
           <div>
             <div className="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-2">
               专业服务运营平台
@@ -56,18 +76,43 @@ export const Header: React.FC = () => {
               </span>
             </div>
             <div className="text-[11px] text-slate-500 font-medium">
-              Professional Service Operations Platform (数万级站点规模)
+              Professional Service Operations Platform
             </div>
           </div>
         </div>
 
-        {/* Evaluation Period Pill */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-700">
-          <span className="text-slate-500 font-medium">考核周期:</span>
-          <span className="font-semibold text-blue-700 font-mono">2026-08 (自然月度)</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-1"></span>
-          <span className="text-[11px] text-emerald-700 font-medium">运行中</span>
+        {/* Domain Switcher (电站 / 数据中心 / 分布式光储充) */}
+        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          {domainOptions.map(option => {
+            const Icon = option.icon;
+            const isSelected = currentDomain === option.id;
+            return (
+              <button
+                key={option.id}
+                id={`btn-domain-${option.id}`}
+                onClick={() => setCurrentDomain(option.id)}
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                  isSelected
+                    ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-blue-600' : 'text-slate-500'}`} />
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
         </div>
+
+        {/* Evaluation Period Pill (Only in station view or subtle info) */}
+        {currentDomain === 'station' && (
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-700">
+            <span className="text-slate-500 font-medium">考核周期:</span>
+            <span className="font-semibold text-blue-700 font-mono">2026-08</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>
+            <span className="text-[11px] text-emerald-700 font-medium">运行中</span>
+          </div>
+        )}
       </div>
 
       {/* Center: Global Search Bar */}

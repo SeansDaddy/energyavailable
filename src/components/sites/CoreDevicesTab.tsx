@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Site, CoreDevice, RedundancyLevel } from '../../types';
+import { Site, CoreDevice, RedundancyLevel, SitePowerTopology } from '../../types';
+import { useApp } from '../../context/AppContext';
 import { DeviceDetailWorkbench } from './DeviceDetailWorkbench';
+import { PowerTopologyStudio } from './PowerTopologyStudio';
 import {
   Cpu,
   Shield,
@@ -26,6 +28,7 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
   site,
   onNavigateTab
 }) => {
+  const { updateSite } = useApp();
   const [selectedDevice, setSelectedDevice] = useState<CoreDevice | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
 
@@ -49,6 +52,10 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
       d.model.toLowerCase().includes(searchKeyword.toLowerCase())
   );
 
+  const handleUpdateTopology = (newTopology: SitePowerTopology) => {
+    updateSite(site.id, { powerTopology: newTopology });
+  };
+
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
       {/* Rule R2 Banner */}
@@ -56,60 +63,20 @@ export const CoreDevicesTab: React.FC<CoreDevicesTabProps> = ({
         <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <div>
           <strong className="text-blue-900 font-semibold">
-            核心设备认定规则 (Rule R2 & R1)：
+            现场核心设备功率拓扑与认定规则 (Rule R2 & R1)：
           </strong>
-          可用度计算仅统计由<strong>核心计量设备（PCS变流器、BMS电池簇、EMS主控）</strong>非计划停机所引发的等效中断时长。辅机设备故障不触发扣除。点击任意设备可进入<strong>遥测时序、运行工况历史、点表清单与中断责任全景下钻工作台</strong>。
+          支持通过托拉拽现场核心设备自由构建功率拓扑。可用度计算仅统计由<strong>核心计量设备（PCS变流器、BMS电池簇、EMS主控）</strong>非计划停机所引发的等效中断时长。辅机设备故障不触发扣除。点击任意设备可进入<strong>遥测时序、运行工况历史、点表清单与中断责任全景下钻工作台</strong>。
         </div>
       </div>
 
-      {/* Visual Topology Diagram */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-600" />
-              <span>现场核心设备拓扑架构与链路全景</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              纳管核心设备共 <strong className="text-slate-800 font-semibold">{site.coreDevices.length}</strong> 台套 · 涵盖变流、储能堆与能源管控中枢
-            </p>
-          </div>
-          <span className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
-            Rule R2 核心设备纳管
-          </span>
-        </div>
+      {/* Interactive Power Topology Studio (Drag & Drop, Wiring, Auto-layout, Real-time status) */}
+      <PowerTopologyStudio
+        site={site}
+        onUpdateTopology={handleUpdateTopology}
+        onSelectDevice={dev => setSelectedDevice(dev)}
+        onNavigateTab={onNavigateTab}
+      />
 
-        {/* Graphical Topology Map */}
-        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <div className="p-4 bg-white rounded border border-slate-200 flex flex-col md:flex-row items-center justify-around gap-4 text-xs">
-            <div className="p-3 rounded bg-blue-50 border border-blue-200 text-center w-full md:w-44 shadow-sm">
-              <Server className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-              <div className="font-bold text-slate-900">EMS 调度主站</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">IEC 61850 / 104</div>
-            </div>
-
-            <div className="text-slate-400 font-mono text-xs flex md:flex-col items-center gap-1">
-              <span>◄──系统通信网络──►</span>
-            </div>
-
-            <div className="p-3 rounded bg-indigo-50 border border-indigo-200 text-center w-full md:w-44 shadow-sm">
-              <Zap className="w-5 h-5 text-indigo-600 mx-auto mb-1" />
-              <div className="font-bold text-slate-900">PCS 变流机组</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">并网逆变与交直流变换</div>
-            </div>
-
-            <div className="text-slate-400 font-mono text-xs flex md:flex-col items-center gap-1">
-              <span>◄──CAN / RS485 簇控──►</span>
-            </div>
-
-            <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-center w-full md:w-44 shadow-sm">
-              <Activity className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
-              <div className="font-bold text-slate-900">BMS 高压电池堆</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">280Ah LFP 簇控单元</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Core Devices Inventory Table */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">

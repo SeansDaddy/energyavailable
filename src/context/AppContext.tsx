@@ -46,6 +46,8 @@ import {
 } from '../types/reportCenter';
 import { INITIAL_REPORT_CENTER_DATA } from '../mock/initialReportCenterData';
 
+export type PlatformDomain = 'station' | 'data_center' | 'distributed_pv_storage';
+
 export type NavigationTab =
   | 'login'
   | 'workbench'
@@ -66,7 +68,9 @@ export type NavigationTab =
   | 'opportunity_mining'
   | 'reports'
   | 'work_orders'
-  | 'contracts';
+  | 'contracts'
+  | 'service_journal'
+  | 'ai_pv_storage_analysis';
 
 export interface ReliabilityWeights {
   historyInterruptionFreq: number;
@@ -77,6 +81,8 @@ export interface ReliabilityWeights {
 }
 
 interface AppContextType {
+  currentDomain: PlatformDomain;
+  setCurrentDomain: (domain: PlatformDomain) => void;
   activeTab: NavigationTab;
   setActiveTab: (tab: NavigationTab) => void;
   currentUser: UserProfile;
@@ -211,7 +217,25 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [currentDomain, setCurrentDomainState] = useState<PlatformDomain>('station');
   const [activeTab, setActiveTab] = useState<NavigationTab>('workbench');
+
+  const setCurrentDomain = (domain: PlatformDomain) => {
+    setCurrentDomainState(domain);
+    if (domain === 'data_center') {
+      if (activeTab !== 'opportunity_mining' && activeTab !== 'service_journal') {
+        setActiveTab('opportunity_mining');
+      }
+    } else if (domain === 'distributed_pv_storage') {
+      if (activeTab !== 'opportunity_mining' && activeTab !== 'ai_pv_storage_analysis') {
+        setActiveTab('opportunity_mining');
+      }
+    } else if (domain === 'station') {
+      if (activeTab === 'service_journal' || activeTab === 'ai_pv_storage_analysis') {
+        setActiveTab('workbench');
+      }
+    }
+  };
   const [currentUser, setCurrentUser] = useState<UserProfile>(CURRENT_USERS[0]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>('site-001');
   const [siteDetailTab, setSiteDetailTab] = useState<number>(0);
@@ -1082,6 +1106,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider
       value={{
+        currentDomain,
+        setCurrentDomain,
         activeTab,
         setActiveTab,
         currentUser,

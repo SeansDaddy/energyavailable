@@ -21,6 +21,8 @@ import { GlobalFlexibleWarrantyStatsView } from './components/flexibleWarranty/G
 import { BaselineConditionEvaluationView } from './components/baselineCondition/BaselineConditionEvaluationView';
 import { DiagnosisCenterView } from './components/diagnosis/DiagnosisCenterView';
 import { OpportunityMiningView } from './components/opportunities/OpportunityMiningView';
+import { ServiceJournalView } from './components/journal/ServiceJournalView';
+import { AiPvStorageAnalysisView } from './components/pvStorage/AiPvStorageAnalysisView';
 import { AiAssistantDrawer } from './components/ai/AiAssistantDrawer';
 
 const MainLayout: React.FC = () => {
@@ -52,6 +54,8 @@ const MainLayout: React.FC = () => {
           {activeTab === 'flexible_warranty_stats' && <GlobalFlexibleWarrantyStatsView />}
           {activeTab === 'fault_diagnosis' && <DiagnosisCenterView />}
           {activeTab === 'opportunity_mining' && <OpportunityMiningView />}
+          {activeTab === 'service_journal' && <ServiceJournalView />}
+          {activeTab === 'ai_pv_storage_analysis' && <AiPvStorageAnalysisView />}
           {activeTab === 'contracts' && <ContractsView />}
           {activeTab === 'work_orders' && <WorkOrdersView />}
           {activeTab === 'reports' && <ReportsView />}

@@ -50,6 +50,56 @@ export interface CoreDevice {
   ratedPowerKw?: number;
 }
 
+export type TopologyNodeType = 
+  | 'GRID' 
+  | 'TRANSFORMER' 
+  | 'AC_BUS' 
+  | 'PCS' 
+  | 'DC_BUS' 
+  | 'BATTERY' 
+  | 'EMS' 
+  | 'PV_STRING' 
+  | 'LOAD';
+
+export type TopologyEdgeType = 'AC_POWER' | 'DC_POWER' | 'COMMUNICATION';
+
+export interface TopologyNode {
+  id: string;
+  deviceId?: string; // 关联的站点核心设备 ID
+  name: string;
+  code: string;
+  type: TopologyNodeType;
+  ratedPowerKw?: number;
+  voltageLevel?: string;
+  x: number; // 画布坐标 X
+  y: number; // 画布坐标 Y
+  status: 'NORMAL' | 'WARNING' | 'FAULT' | 'MAINTENANCE';
+  isKeyDevice?: boolean;
+  model?: string;
+  customNotes?: string;
+}
+
+export interface TopologyEdge {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  edgeType: TopologyEdgeType;
+  flowDirection?: 'FORWARD' | 'REVERSE' | 'BIDIRECTIONAL';
+  ratedVoltage?: string;
+  currentPowerKw?: number;
+  label?: string;
+}
+
+export interface SitePowerTopology {
+  siteId: string;
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
+  updatedAt: string;
+  updatedBy?: string;
+  layoutVersion?: string;
+}
+
+
 export interface RawEvent {
   id: string;
   type: 'alarm' | 'workorder' | 'log';
@@ -147,6 +197,7 @@ export interface Site {
   updatedAt?: string; // 台账更新时间
   domain: string;
   coreDevices: CoreDevice[];
+  powerTopology?: SitePowerTopology;
   reliabilityScore: ReliabilityScore;
   mergedFaults: MergedFault[];
   dailySnapshots: DailySnapshot[];
