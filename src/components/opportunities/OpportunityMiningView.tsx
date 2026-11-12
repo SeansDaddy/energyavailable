@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import { DistributedPvStorageOpportunityView } from './DistributedPvStorageOpportunityView';
 import {
   OpportunityCard,
   OpportunityCardStatus,
@@ -36,6 +38,13 @@ import {
 type MainTabKey = 'cards_hub' | 'run_data_v1' | 'public_radar_v2' | 'behavior_ecosystem_v3';
 
 export const OpportunityMiningView: React.FC = () => {
+  const { currentDomain } = useApp();
+
+  // 当处于「分布式光储充」领域时，直接交付专用机会点挖掘工作台（PRD 专题一 M-01 ~ M-08）
+  if (currentDomain === 'distributed_pv_storage') {
+    return <DistributedPvStorageOpportunityView />;
+  }
+
   const [activeTab, setActiveTab] = useState<MainTabKey>('cards_hub');
   const [cards, setCards] = useState<OpportunityCard[]>(INITIAL_OPPORTUNITY_CARDS);
   const [summary, setSummary] = useState(INITIAL_ENGINE_SUMMARY);
