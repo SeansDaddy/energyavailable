@@ -1282,6 +1282,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-001',
     contractNo: 'CSG-SZ-2025-SLA-081',
+    contractType: 'AVAILABILITY',
     title: '南方电网深圳区域储能站点高可用度保障服务合同 (2025-2027)',
     customer: '南方电网深圳供电局',
     evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
@@ -1315,6 +1316,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-002',
     contractNo: 'BW-SH-2025-SLA-012',
+    contractType: 'AVAILABILITY',
     title: '宝武钢铁集团上海基地微电网高可靠度运维专项合同',
     customer: '中国宝武钢铁集团',
     evaluationPeriod: '自然季度与月度双重考核',
@@ -1347,6 +1349,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-003',
     contractNo: 'SM-NW-2025-SLA-095',
+    contractType: 'AVAILABILITY',
     title: '陕煤集团西安高新热电联产储能调峰运维SLA合同',
     customer: '陕煤集团西安能源公司',
     evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
@@ -1380,6 +1383,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-004',
     contractNo: 'SPIC-BJ-2025-SLA-044',
+    contractType: 'AVAILABILITY',
     title: '国家电投北京怀柔科学城智能微电网保障服务合同',
     customer: '国家电投北京分公司',
     evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
@@ -1412,6 +1416,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-005',
     contractNo: 'JS-GX-2025-SLA-067',
+    contractType: 'AVAILABILITY',
     title: '江苏省国信集团江北变电侧储能电站高可靠SLA运维合同',
     customer: '江苏省国信集团',
     evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
@@ -1445,6 +1450,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-006',
     contractNo: 'GD-YD-2025-SLA-072',
+    contractType: 'AVAILABILITY',
     title: '广东粤电南沙自贸区综合能源港储能可用度保障合同',
     customer: '广东粤电储能',
     evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
@@ -1478,6 +1484,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-007',
     contractNo: 'ZJ-NY-2025-SLA-033',
+    contractType: 'AVAILABILITY',
     title: '浙江省能源集团钱塘数据中心备电储能超高可用度合同',
     customer: '浙江省能源集团',
     evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
@@ -1511,6 +1518,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
   {
     id: 'cnt-008',
     contractNo: 'CTG-NW-2025-SLA-058',
+    contractType: 'AVAILABILITY',
     title: '三峡新能源兰州新区光伏配储电站全生命周期运维SLA合同',
     customer: '三峡新能源西北分公司',
     evaluationPeriod: '自然年度与月度联合考核',
@@ -1539,6 +1547,90 @@ export const INITIAL_CONTRACTS: Contract[] = [
       { month: '2026-06', targetSla: 99.00, actualSla: 99.31, isFulfilled: true },
       { month: '2026-07', targetSla: 99.00, actualSla: 99.33, isFulfilled: true },
       { month: '2026-08', targetSla: 99.00, actualSla: 99.35, isFulfilled: true }
+    ]
+  },
+  {
+    id: 'cnt-009',
+    contractNo: 'CSG-SZ-2024-SOH-018',
+    contractType: 'FLEXIBLE_WARRANTY',
+    title: '深圳光明二期储能电站10年灵活性能保障（SOH衰减质保）协议',
+    customer: '南方电网深圳供电局',
+    evaluationPeriod: '年度 SOH 标定与日工况连续积分考核',
+    slaThreshold: 93.80,
+    flexibleWarrantySpec: {
+      warrantyYears: 10,
+      finalGuaranteedSoh: 80.0,
+      currentSohBaseline: 93.8,
+      annualBaselineEfc: 365,
+      maxCrate: 0.50,
+      maxDodPct: 90.0,
+      baselineTempMax: 35.0,
+      plannedAvgSocPct: 50.0
+    },
+    siteCount: 1,
+    fulfilledSiteCount: 0,
+    validFrom: '2024-01-01',
+    validTo: '2033-12-31',
+    penaltyClause: '按标准基准工况考核，10年质保终了SOH不低于80.0%；若因超循环、超温或高SOC静置导致衰减加速，按灵活性能保障算法等寿命折算质保期或触发补容方案。',
+    overallStatus: 'AT_RISK',
+    lastSyncedAt: '2026-08-20 16:30 (SOH 评估联动同步)',
+    associatedSites: [
+      {
+        siteId: 'site-001',
+        siteCode: 'SZ-ESS-0042',
+        siteName: '深圳光明储能电站二期-04号站',
+        siteSlaThreshold: 99.50,
+        currentAvailability: 98.62,
+        statusLamp: 'red'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 93.80, actualSla: 94.10, isFulfilled: true },
+      { month: '2026-04', targetSla: 93.80, actualSla: 93.85, isFulfilled: true },
+      { month: '2026-05', targetSla: 93.80, actualSla: 93.50, isFulfilled: false },
+      { month: '2026-06', targetSla: 93.80, actualSla: 93.12, isFulfilled: false },
+      { month: '2026-07', targetSla: 93.80, actualSla: 92.80, isFulfilled: false },
+      { month: '2026-08', targetSla: 93.80, actualSla: 92.50, isFulfilled: false }
+    ]
+  },
+  {
+    id: 'cnt-010',
+    contractNo: 'JS-GX-2025-PERF-021',
+    contractType: 'FLEXIBLE_CONDITION',
+    title: '江苏省国信江北储能电站全维灵活工况性能保障协议 (SOH/AUC/RTE/可用度)',
+    customer: '江苏省国信集团',
+    evaluationPeriod: '自然月度与季度四维综合考核',
+    slaThreshold: 99.60,
+    flexibleConditionSpec: {
+      sohThreshold: 94.0,
+      aucThreshold: 96.5,
+      rteBaseline: 88.5,
+      availabilitySla: 99.60
+    },
+    siteCount: 1,
+    fulfilledSiteCount: 1,
+    validFrom: '2025-01-01',
+    validTo: '2030-12-31',
+    penaltyClause: '同时考核 SOH(≥94.0%)、AUC(≥96.5%)、RTE(≥88.5%) 与系统可用度(≥99.60%) 四项核心指标；任一指标连续两月未达标按阶梯保证金比例扣减。',
+    overallStatus: 'FULFILLED',
+    lastSyncedAt: '2026-08-20 12:00 (四维性能评估同步)',
+    associatedSites: [
+      {
+        siteId: 'site-005',
+        siteCode: 'JS-NJ-0023',
+        siteName: '南京江北储能电站01号变电侧站',
+        siteSlaThreshold: 99.60,
+        currentAvailability: 99.78,
+        statusLamp: 'green'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.60, actualSla: 99.84, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.60, actualSla: 99.80, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.60, actualSla: 99.82, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.60, actualSla: 99.75, isFulfilled: true },
+      { month: '2026-07', targetSla: 99.60, actualSla: 99.79, isFulfilled: true },
+      { month: '2026-08', targetSla: 99.60, actualSla: 99.78, isFulfilled: true }
     ]
   }
 ];

@@ -61,12 +61,20 @@ export const SiteAvailabilityDetailView: React.FC = () => {
   const latestSiteRecalc = availabilityRecalcHistory.find(r => r.siteId === site.id) || null;
 
   // Resolve current availability contract cleanly across id, contractNo, and associatedSites
-  const siteContract = contracts?.find(
-    c =>
-      (site.contractId && c.id === site.contractId) ||
-      (site.contractNo && c.contractNo === site.contractNo) ||
-      c.associatedSites?.some(a => a.siteId === site.id)
-  );
+  // Prefer AVAILABILITY or FLEXIBLE_CONDITION contracts over SOH-only FLEXIBLE_WARRANTY contracts
+  const isAvailContract = (c: { contractType?: string }) =>
+    !c.contractType || c.contractType === 'AVAILABILITY' || c.contractType === 'FLEXIBLE_CONDITION';
+  const siteContractsMatched =
+    contracts?.filter(
+      c =>
+        (site.contractId && c.id === site.contractId) ||
+        (site.contractNo && c.contractNo === site.contractNo) ||
+        c.associatedSites?.some(a => a.siteId === site.id)
+    ) || [];
+  const siteContract =
+    siteContractsMatched.find(c => isAvailContract(c) && (c.id === site.contractId || c.contractNo === site.contractNo)) ||
+    siteContractsMatched.find(c => isAvailContract(c)) ||
+    siteContractsMatched[0];
   const effectiveContractNo = siteContract?.contractNo || site.contractNo || '';
   const currentContractStart = siteContract?.validFrom || '2026-01-01';
   const currentContractEnd = siteContract?.validTo || '2026-12-31';

@@ -42,12 +42,22 @@ export const ContractFulfillmentTab: React.FC<ContractFulfillmentTabProps> = ({
 }) => {
   const { navigateToContractDetail } = useApp();
 
-  const currentContract = contracts.find(
+  const siteContractsMatched = contracts.filter(
     c =>
       (site.contractId && c.id === site.contractId) ||
       (site.contractNo && c.contractNo === site.contractNo) ||
       c.associatedSites?.some(a => a.siteId === site.id)
   );
+  const currentContract =
+    siteContractsMatched.find(
+      c =>
+        (c.contractType === 'AVAILABILITY' || c.contractType === 'FLEXIBLE_CONDITION') &&
+        (c.id === site.contractId || c.contractNo === site.contractNo)
+    ) ||
+    siteContractsMatched.find(
+      c => c.contractType === 'AVAILABILITY' || c.contractType === 'FLEXIBLE_CONDITION'
+    ) ||
+    siteContractsMatched[0];
 
   const peerSites = allSites.filter(
     s =>
@@ -130,6 +140,29 @@ export const ContractFulfillmentTab: React.FC<ContractFulfillmentTabProps> = ({
               </button>
             </div>
           </div>
+
+          {siteContractsMatched.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px] bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+              <span className="text-slate-500 font-medium">当前站点同步生效的其他类型合同：</span>
+              {siteContractsMatched.map(sc => {
+                const typeText =
+                  sc.contractType === 'FLEXIBLE_WARRANTY'
+                    ? '灵活性能保障(SOH)'
+                    : sc.contractType === 'FLEXIBLE_CONDITION'
+                    ? '灵活工况(四维)'
+                    : '站点可用度(SLA)';
+                return (
+                  <button
+                    key={sc.id}
+                    onClick={() => navigateToContractDetail(sc.id, site.id)}
+                    className="px-2 py-0.5 rounded bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 font-mono transition-colors whitespace-nowrap"
+                  >
+                    {typeText} · {sc.contractNo}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="p-3 bg-slate-50 rounded border border-slate-200">

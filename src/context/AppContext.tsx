@@ -6,6 +6,7 @@ import {
   WorkOrder,
   PcareImportRecord,
   Contract,
+  ContractType,
   ReportItem,
   UserProfile,
   ChatMessage,
@@ -498,6 +499,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             c.associatedSites.some(a => a.siteId === s.id);
           if (!isMatched) return c;
 
+          const isAvailSlaContract =
+            c.contractType === 'AVAILABILITY' || c.contractType === 'FLEXIBLE_CONDITION';
           const exists = c.associatedSites.some(a => a.siteId === s.id);
           const nextAssoc = exists
             ? c.associatedSites.map(a =>
@@ -506,7 +509,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                       ...a,
                       siteCode: s.siteCode,
                       siteName: s.siteName,
-                      siteSlaThreshold: s.slaThreshold,
+                      siteSlaThreshold: isAvailSlaContract ? s.slaThreshold : a.siteSlaThreshold,
                       currentAvailability: s.currentAvailability,
                       statusLamp: s.statusLamp
                     }
@@ -528,7 +531,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             ...c,
             associatedSites: nextAssoc,
             siteCount: Math.max(c.siteCount, nextAssoc.length),
-            fulfilledSiteCount: nextAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+            fulfilledSiteCount: isAvailSlaContract
+              ? nextAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+              : c.fulfilledSiteCount
           };
         })
       );
@@ -792,12 +797,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  const supportsAvailabilitySla = (contractType: ContractType): boolean =>
+    contractType === 'AVAILABILITY' || contractType === 'FLEXIBLE_CONDITION';
+
   const navigateToContractDetail = (contractIdOrNo?: string, fallbackSiteId?: string) => {
-    const matched = contracts.find(
-      c =>
-        (contractIdOrNo && (c.id === contractIdOrNo || c.contractNo === contractIdOrNo)) ||
-        (fallbackSiteId && c.associatedSites.some(a => a.siteId === fallbackSiteId))
-    );
+    const directMatch = contractIdOrNo
+      ? contracts.find(c => c.id === contractIdOrNo || c.contractNo === contractIdOrNo)
+      : undefined;
+
+    const fallbackMatch =
+      !directMatch && fallbackSiteId
+        ? contracts.find(
+            c =>
+              supportsAvailabilitySla(c.contractType) &&
+              c.associatedSites.some(a => a.siteId === fallbackSiteId)
+          ) || contracts.find(c => c.associatedSites.some(a => a.siteId === fallbackSiteId))
+        : undefined;
+
+    const matched = directMatch || fallbackMatch;
 
     if (matched) {
       setSelectedContractId(matched.id);
@@ -808,12 +825,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setActiveTab('contracts');
   };
 
-  const buildAssociatedSitesList = (siteIds: string[], slaThreshold: number, syncSiteSla: boolean) => {
+  const buildAssociatedSitesList = (
+    siteIds: string[],
+    slaThreshold: number,
+    syncSiteSla: boolean,
+    contractType: ContractType
+  ) => {
+    const canSyncAvailSla = supportsAvailabilitySla(contractType);
     return siteIds
       .map(id => sites.find(s => s.id === id))
       .filter((s): s is Site => Boolean(s))
       .map(s => {
-        const nextSla = syncSiteSla ? slaThreshold : s.slaThreshold;
+        const nextSla = canSyncAvailSla && syncSiteSla ? slaThreshold : s.slaThreshold;
         const nextLamp: StatusLamp =
           s.statusLamp === 'grey'
             ? 'grey'
@@ -837,60 +860,111 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     syncSiteSla: boolean = true
   ): Contract => {
     const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' (手动录入)';
-    const sla = Number(contractData.slaThreshold ?? 99.5);
-    const associatedSites = buildAssociatedSitesList(linkedSiteIds, sla, syncSiteSla);
-    const fulfilledCount = associatedSites.filter(a => a.currentAvailability >= a.siteSlaThreshold).length;
+    const contractType: ContractType = contractData.contractType || 'AVAILABILITY';
+    const isAvailSlaContract = supportsAvailabilitySla(contractType);
+
+    const sla =
+      contractType === 'FLEXIBLE_CONDITION'
+        ? Number(contractData.flexibleConditionSpec?.availabilitySla ?? contractData.slaThreshold ?? 99.5)
+        : contractType === 'FLEXIBLE_WARRANTY'
+        ? Number(contractData.flexibleWarrantySpec?.currentSohBaseline ?? contractData.slaThreshold ?? 93.8)
+        : Number(contractData.slaThreshold ?? 99.5);
+
+    const associatedSites = buildAssociatedSitesList(linkedSiteIds, sla, syncSiteSla, contractType);
+    const fulfilledCount = isAvailSlaContract
+      ? associatedSites.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+      : contractData.overallStatus === 'FULFILLED'
+      ? associatedSites.length
+      : 0;
+
     const avgActual =
-      associatedSites.length > 0
+      contractType === 'FLEXIBLE_WARRANTY'
+        ? Number((sla + 0.1).toFixed(2))
+        : associatedSites.length > 0
         ? Number((associatedSites.reduce((acc, a) => acc + a.currentAvailability, 0) / associatedSites.length).toFixed(2))
         : Number((sla + 0.15).toFixed(2));
 
     const derivedStatus: Contract['overallStatus'] =
       contractData.overallStatus ||
-      (associatedSites.some(a => a.currentAvailability < a.siteSlaThreshold)
+      (isAvailSlaContract && associatedSites.some(a => a.currentAvailability < a.siteSlaThreshold)
         ? 'BREACHED'
         : 'FULFILLED');
 
+    const defaultPrefix =
+      contractType === 'FLEXIBLE_WARRANTY'
+        ? 'SOH'
+        : contractType === 'FLEXIBLE_CONDITION'
+        ? 'PERF'
+        : 'SLA';
+    const defaultTitle =
+      contractType === 'FLEXIBLE_WARRANTY'
+        ? '储能电站灵活性能保障（SOH质保）协议'
+        : contractType === 'FLEXIBLE_CONDITION'
+        ? '储能电站灵活工况四维性能保障协议 (SOH/AUC/RTE/可用度)'
+        : '储能电站可用度保障运维服务合同';
+    const defaultPenalty =
+      contractType === 'FLEXIBLE_WARRANTY'
+        ? `按标准基准工况考核，${contractData.flexibleWarrantySpec?.warrantyYears ?? 10}年质保终了 SOH ≥ ${(contractData.flexibleWarrantySpec?.finalGuaranteedSoh ?? 80).toFixed(1)}%；若超限工况加速衰减，按灵活性能保障算法折算质保期或触发补容。`
+        : contractType === 'FLEXIBLE_CONDITION'
+        ? `同时考核 SOH(≥${(contractData.flexibleConditionSpec?.sohThreshold ?? 94).toFixed(1)}%)、AUC(≥${(contractData.flexibleConditionSpec?.aucThreshold ?? 96).toFixed(1)}%)、RTE(≥${(contractData.flexibleConditionSpec?.rteBaseline ?? 88).toFixed(1)}%) 与可用度(≥${sla.toFixed(2)}%)，任一核心指标连续两月不达标按阶梯扣减履约保证金。`
+        : `单月可用度低于 ${sla.toFixed(2)}%，按短缺比率阶梯扣减当月运维服务费。`;
+
     const newContract: Contract = {
       id: `cnt-${Date.now().toString().slice(-6)}`,
-      contractNo: (contractData.contractNo || `SLA-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`).trim(),
-      title: (contractData.title || '储能电站可用度保障运维服务合同').trim(),
+      contractNo: (
+        contractData.contractNo ||
+        `${defaultPrefix}-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`
+      ).trim(),
+      contractType,
+      title: (contractData.title || defaultTitle).trim(),
       customer: (contractData.customer || '未指定客户').trim(),
-      evaluationPeriod: contractData.evaluationPeriod || '自然月度 (每月1日00:00 - 月末24:00)',
+      evaluationPeriod:
+        contractData.evaluationPeriod ||
+        (contractType === 'FLEXIBLE_WARRANTY'
+          ? '年度 SOH 标定与日工况连续积分考核'
+          : contractType === 'FLEXIBLE_CONDITION'
+          ? '自然月度与季度四维综合考核'
+          : '自然月度 (每月1日00:00 - 月末24:00)'),
       slaThreshold: sla,
+      flexibleWarrantySpec:
+        contractType === 'FLEXIBLE_WARRANTY' ? contractData.flexibleWarrantySpec : undefined,
+      flexibleConditionSpec:
+        contractType === 'FLEXIBLE_CONDITION' ? contractData.flexibleConditionSpec : undefined,
       siteCount: associatedSites.length,
       fulfilledSiteCount: fulfilledCount,
       validFrom: contractData.validFrom || '2026-01-01',
       validTo: contractData.validTo || '2028-12-31',
-      penaltyClause:
-        contractData.penaltyClause ||
-        `单月可用度低于 ${sla.toFixed(2)}%，按短缺比率阶梯扣减当月运维服务费。`,
+      penaltyClause: contractData.penaltyClause || defaultPenalty,
       overallStatus: derivedStatus,
       lastSyncedAt: nowStr,
       associatedSites,
-      monthlyTrend: contractData.monthlyTrend && contractData.monthlyTrend.length > 0
-        ? contractData.monthlyTrend
-        : [
-            { month: '2026-04', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.12).toFixed(2))), isFulfilled: avgActual + 0.12 >= sla },
-            { month: '2026-05', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.08).toFixed(2))), isFulfilled: avgActual + 0.08 >= sla },
-            { month: '2026-06', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.05).toFixed(2))), isFulfilled: avgActual + 0.05 >= sla },
-            { month: '2026-07', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.02).toFixed(2))), isFulfilled: avgActual + 0.02 >= sla },
-            { month: '2026-08', targetSla: sla, actualSla: avgActual, isFulfilled: avgActual >= sla }
-          ]
+      monthlyTrend:
+        contractData.monthlyTrend && contractData.monthlyTrend.length > 0
+          ? contractData.monthlyTrend
+          : [
+              { month: '2026-04', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.12).toFixed(2))), isFulfilled: avgActual + 0.12 >= sla },
+              { month: '2026-05', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.08).toFixed(2))), isFulfilled: avgActual + 0.08 >= sla },
+              { month: '2026-06', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.05).toFixed(2))), isFulfilled: avgActual + 0.05 >= sla },
+              { month: '2026-07', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.02).toFixed(2))), isFulfilled: avgActual + 0.02 >= sla },
+              { month: '2026-08', targetSla: sla, actualSla: avgActual, isFulfilled: avgActual >= sla }
+            ]
     };
 
     const linkedSet = new Set(linkedSiteIds);
+    // Only unlink bound sites from existing contracts of the SAME contractType
     setContracts(prev => [
       newContract,
       ...prev.map(c => {
-        if (linkedSiteIds.length === 0) return c;
+        if (linkedSiteIds.length === 0 || c.contractType !== contractType) return c;
         const remaining = c.associatedSites.filter(a => !linkedSet.has(a.siteId));
         if (remaining.length === c.associatedSites.length) return c;
         return {
           ...c,
           associatedSites: remaining,
           siteCount: remaining.length,
-          fulfilledSiteCount: remaining.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+          fulfilledSiteCount: supportsAvailabilitySla(c.contractType)
+            ? remaining.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+            : c.fulfilledSiteCount
         };
       })
     ]);
@@ -899,6 +973,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setSites(prev =>
         prev.map(s => {
           if (!linkedSet.has(s.id)) return s;
+          if (!isAvailSlaContract) {
+            // Flexible warranty (SOH) contracts do not override site availability SLA thresholds
+            if (!s.contractNo) {
+              return {
+                ...s,
+                contractId: newContract.id,
+                contractNo: newContract.contractNo,
+                updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+              };
+            }
+            return s;
+          }
           const nextSla = syncSiteSla ? sla : s.slaThreshold;
           const nextLamp: StatusLamp =
             s.statusLamp === 'grey'
@@ -932,7 +1018,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!existing) return;
 
     const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' (已编辑更新)';
-    const nextSla = Number(updatedData.slaThreshold ?? existing.slaThreshold);
+    const nextType: ContractType = updatedData.contractType ?? existing.contractType ?? 'AVAILABILITY';
+    const isAvailSlaContract = supportsAvailabilitySla(nextType);
+
+    const nextSla =
+      nextType === 'FLEXIBLE_CONDITION'
+        ? Number(
+            updatedData.flexibleConditionSpec?.availabilitySla ??
+              updatedData.slaThreshold ??
+              existing.flexibleConditionSpec?.availabilitySla ??
+              existing.slaThreshold
+          )
+        : nextType === 'FLEXIBLE_WARRANTY'
+        ? Number(
+            updatedData.flexibleWarrantySpec?.currentSohBaseline ??
+              updatedData.slaThreshold ??
+              existing.flexibleWarrantySpec?.currentSohBaseline ??
+              existing.slaThreshold
+          )
+        : Number(updatedData.slaThreshold ?? existing.slaThreshold);
+
     const nextContractNo = (updatedData.contractNo ?? existing.contractNo).trim();
     const targetSiteIds =
       linkedSiteIds !== undefined
@@ -941,12 +1046,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const targetSet = new Set(targetSiteIds);
     const prevSet = new Set(
       sites
-        .filter(s => s.contractId === contractId || s.contractNo === existing.contractNo || existing.associatedSites.some(a => a.siteId === s.id))
+        .filter(
+          s =>
+            s.contractId === contractId ||
+            (existing.contractNo && s.contractNo === existing.contractNo) ||
+            existing.associatedSites.some(a => a.siteId === s.id)
+        )
         .map(s => s.id)
     );
 
-    const associatedSites = buildAssociatedSitesList(targetSiteIds, nextSla, syncSiteSla);
-    const fulfilledCount = associatedSites.filter(a => a.currentAvailability >= a.siteSlaThreshold).length;
+    const associatedSites = buildAssociatedSitesList(targetSiteIds, nextSla, syncSiteSla, nextType);
+    const nextStatus = updatedData.overallStatus ?? existing.overallStatus;
+    const fulfilledCount = isAvailSlaContract
+      ? associatedSites.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+      : nextStatus === 'FULFILLED'
+      ? associatedSites.length
+      : 0;
 
     setContracts(prev =>
       prev.map(c => {
@@ -954,8 +1069,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return {
             ...c,
             ...updatedData,
+            contractType: nextType,
             contractNo: nextContractNo,
             slaThreshold: nextSla,
+            flexibleWarrantySpec:
+              nextType === 'FLEXIBLE_WARRANTY'
+                ? updatedData.flexibleWarrantySpec ?? existing.flexibleWarrantySpec
+                : undefined,
+            flexibleConditionSpec:
+              nextType === 'FLEXIBLE_CONDITION'
+                ? updatedData.flexibleConditionSpec ?? existing.flexibleConditionSpec
+                : undefined,
             associatedSites,
             siteCount: associatedSites.length,
             fulfilledSiteCount: fulfilledCount,
@@ -967,14 +1091,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }))
           };
         }
-        // Remove newly bound sites from other contracts
+        // Only remove newly bound sites from other contracts of the SAME contractType
+        if (c.contractType !== nextType) return c;
         const filteredAssoc = c.associatedSites.filter(a => !targetSet.has(a.siteId));
         if (filteredAssoc.length !== c.associatedSites.length) {
           return {
             ...c,
             associatedSites: filteredAssoc,
             siteCount: filteredAssoc.length,
-            fulfilledSiteCount: filteredAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+            fulfilledSiteCount: supportsAvailabilitySla(c.contractType)
+              ? filteredAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+              : c.fulfilledSiteCount
           };
         }
         return c;
@@ -984,6 +1111,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSites(prev =>
       prev.map(s => {
         if (targetSet.has(s.id)) {
+          if (!isAvailSlaContract) {
+            if (!s.contractNo || s.contractId === contractId) {
+              return {
+                ...s,
+                contractId,
+                contractNo: nextContractNo,
+                updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+              };
+            }
+            return s;
+          }
           const nextSiteSla = syncSiteSla ? nextSla : s.slaThreshold;
           const nextLamp: StatusLamp =
             s.statusLamp === 'grey'
@@ -1000,7 +1138,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
           };
         }
-        if (prevSet.has(s.id) && !targetSet.has(s.id)) {
+        if (prevSet.has(s.id) && !targetSet.has(s.id) && s.contractId === contractId) {
           return {
             ...s,
             contractId: '',
@@ -1076,10 +1214,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               : a
           );
 
+          const isAvailSlaContract = supportsAvailabilitySla(c.contractType);
           return {
             ...c,
             associatedSites: nextAssoc,
-            fulfilledSiteCount: nextAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length,
+            fulfilledSiteCount: isAvailSlaContract
+              ? nextAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+              : c.fulfilledSiteCount,
             lastSyncedAt: `${record.recalculatedAt} (单站可用度重算联动)`
           };
         })

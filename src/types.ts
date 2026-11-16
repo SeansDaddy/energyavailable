@@ -290,13 +290,36 @@ export interface PcareImportRecord {
   remarks?: string;
 }
 
+export type ContractType = 'AVAILABILITY' | 'FLEXIBLE_WARRANTY' | 'FLEXIBLE_CONDITION';
+
+export interface FlexibleWarrantyContractSpec {
+  warrantyYears: number; // 质保年限
+  finalGuaranteedSoh: number; // 质保期终了 SOH 保证值 (%)
+  currentSohBaseline: number; // 当前合同阶段基准 SOH 要求 (%)
+  annualBaselineEfc: number; // 年基准等效循环限额 (次/年)
+  maxCrate: number; // 基准最大充放电倍率 (C)
+  maxDodPct: number; // 基准充放电深度上限 (%)
+  baselineTempMax: number; // 基准允许最高温度 (℃)
+  plannedAvgSocPct: number; // 合同规划平均 SOC (%)
+}
+
+export interface FlexibleConditionContractSpec {
+  sohThreshold: number; // 核心 SOH 保证阈值 (%)
+  aucThreshold: number; // 核心 AUC 标定可用容量/工况利用率阈值 (%)
+  rteBaseline: number; // 核心 RTE 综合往返效率基线 (%)
+  availabilitySla: number; // 核心可用度 SLA 阈值 (%)
+}
+
 export interface Contract {
   id: string;
   contractNo: string;
+  contractType: ContractType;
   title: string;
   customer: string;
   evaluationPeriod: string; // 考核周期，如 "自然月度 (每月1日-月末)"
-  slaThreshold: number; // 合同基准 SLA 阈值
+  slaThreshold: number; // 合同基准 SLA 阈值 (可用度/灵活工况可用度)
+  flexibleWarrantySpec?: FlexibleWarrantyContractSpec;
+  flexibleConditionSpec?: FlexibleConditionContractSpec;
   siteCount: number;
   fulfilledSiteCount: number;
   validFrom: string;
