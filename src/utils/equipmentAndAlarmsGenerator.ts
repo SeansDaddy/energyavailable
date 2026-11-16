@@ -727,3 +727,273 @@ export function getEquipmentAndAlarmsForPeriod(
     }
   };
 }
+
+export interface DeviceFiveMinStatusPoint {
+  index: number; // 0 ~ 287
+  time: string; // "HH:mm"
+  timestamp: string; // "YYYY-MM-DD HH:mm"
+  status: 'NORMAL' | 'WARNING' | 'FAULT_TRIP' | 'WORKORDER_ACTIVE' | 'ECO_OUTAGE' | 'MAINTENANCE';
+  statusLabel: string;
+  availability: number; // 0 ~ 100%
+  powerKw: number; // 实时运行功率 / 负荷 (kW)
+  ratedPowerKw: number;
+  interruptionMins: number; // 本5分钟槽等效可用度扣减 (分钟)
+  cumulativeDeviceAvailability: number; // 当日截至当前时刻该设备累计可用度 (%)
+  hasEventMarker: boolean;
+  alarmCode?: string;
+  alarmTitle?: string;
+  workOrderNo?: string;
+  ecoReason?: string;
+}
+
+function parseTimeToMins(timeStr: string): number {
+  if (!timeStr) return 0;
+  const part = timeStr.includes(' ') ? timeStr.split(' ')[1] : timeStr;
+  const [h, m] = part.split(':').map(Number);
+  return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+}
+
+function formatMinsToTime(totalMins: number): string {
+  const m = Math.max(0, Math.min(1439, Math.floor(totalMins)));
+  const hh = Math.floor(m / 60).toString().padStart(2, '0');
+  const mm = (m % 60).toString().padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/**
+ * Generates 288 5-minute status points for a specific core device on a target date,
+ * aligned with site availability dots, merged faults, ECO intervals, and work orders.
+ */
+export function generateDeviceFiveMinutePointsForDate(
+  site: Site,
+  device: PeriodDeviceStatus,
+  date: string,
+  alarms: AvailabilityAlarmItem[] = [],
+  workOrders: WorkOrder[] = []
+): DeviceFiveMinStatusPoint[] {
+  const totalPoints = 288;
+  const points: DeviceFiveMinStatusPoint[] = [];
+
+  const ratedKw = device.ratedPowerKw || (device.deviceType === 'TRANSFORMER' ? 2500 : device.deviceType === 'HVAC_COOLING' ? 45 : device.deviceType === 'EMS_HOST' ? 15 : 1250);
+  const snapshot = site.dailySnapshots?.find(s => s.date === date);
+
+  // Filter alarms specifically linked to this device on this date
+  const deviceDateAlarms = alarms.filter(a => {
+    const matchesDevice =
+      a.deviceCode === device.deviceCode ||
+      a.deviceName === device.deviceName;
+    if (!matchesDevice) return false;
+    const tDate = a.triggerTime?.slice(0, 10);
+    const cDate = a.clearTime?.slice(0, 10) || tDate;
+    return tDate <= date && cDate >= date;
+  });
+
+  // Also check if site has mergedFaults on this date targeting this device
+  const faultIntervals: {
+    startMin: number;
+    endMin: number;
+    severity: AvailabilityAlarmItem['severity'];
+    isEco: boolean;
+    isExempt: boolean;
+    code: string;
+    title: string;
+    workOrderNo?: string;
+    ecoReason?: string;
+    impactRatio: number;
+  }[] = [];
+
+  deviceDateAlarms.forEach(a => {
+    const startMin = a.triggerTime?.startsWith(date) ? parseTimeToMins(a.triggerTime) : 0;
+    const endMin = a.clearTime?.startsWith(date)
+      ? Math.max(startMin + 5, parseTimeToMins(a.clearTime))
+      : Math.min(1440, startMin + (a.durationMinutes || 30));
+
+    faultIntervals.push({
+      startMin,
+      endMin,
+      severity: a.severity,
+      isEco: Boolean(a.isEcoExempt),
+      isExempt: Boolean(a.isExempt),
+      code: a.code,
+      title: a.title,
+      workOrderNo: a.workOrderNo,
+      ecoReason: a.ecoExemptReason,
+      impactRatio: a.severity === 'CRITICAL' ? 1 : a.severity === 'MAJOR' ? 0.6 : 0.25
+    });
+  });
+
+  // If device is in FAULT/WARNING/ECO in current period but date-specific alarms array wasn't passed or empty for that exact day
+  if (faultIntervals.length === 0 && (site.mergedFaults || []).length > 0) {
+    (site.mergedFaults || []).forEach(f => {
+      if (f.startTime?.startsWith(date) || f.endTime?.startsWith(date)) {
+        const titleLower = f.title.toLowerCase();
+        const matchesThisDevice =
+          (device.deviceCode === 'PCS-INV-01B' && (titleLower.includes('pcs') || titleLower.includes('01b'))) ||
+          (device.deviceCode === 'BMS-RACK-01' && titleLower.includes('bms')) ||
+          (device.deviceCode === 'EMS-CTRL-01' && titleLower.includes('ems')) ||
+          (device.deviceCode === 'TR-MAIN-01' && (titleLower.includes('tr') || titleLower.includes('变')));
+        if (matchesThisDevice) {
+          const sMin = f.startTime?.startsWith(date) ? parseTimeToMins(f.startTime) : 0;
+          const eMin = f.endTime?.startsWith(date) ? parseTimeToMins(f.endTime) : 1440;
+          faultIntervals.push({
+            startMin: sMin,
+            endMin: Math.max(sMin + 5, eMin),
+            severity: 'CRITICAL',
+            isEco: false,
+            isExempt: false,
+            code: f.faultCode,
+            title: f.title,
+            impactRatio: 1
+          });
+        }
+      }
+    });
+  }
+
+  // Site-wide planned maintenance window (Rule R2 exempt)
+  const maintIntervals: { startMin: number; endMin: number }[] = [];
+  if (snapshot && snapshot.plannedMaintenanceMins > 0) {
+    maintIntervals.push({ startMin: 120, endMin: 120 + snapshot.plannedMaintenanceMins });
+  }
+
+  // Site-wide ECO dispatch window (aligned with availabilityTimelineGenerator.ts)
+  const dayNum = parseInt(date.split('-')[2] || '15', 10);
+  const defaultEcoStart = dayNum % 2 === 0 ? 870 : 615; // 14:30 or 10:15
+  const defaultEcoEnd = defaultEcoStart + 45;
+  const hasExplicitEco = faultIntervals.some(fi => fi.isEco);
+
+  // Active work orders for this date
+  const orderIntervals = workOrders
+    .filter(w => (w.siteId === site.id || w.siteName === site.siteName) && (w.createTime?.startsWith(date) || w.solutionTime?.startsWith(date)))
+    .map(w => {
+      const sMin = w.createTime?.startsWith(date) ? parseTimeToMins(w.createTime) : 0;
+      const eMin = w.solutionTime?.startsWith(date) ? parseTimeToMins(w.solutionTime) : Math.min(1440, sMin + 330);
+      return { startMin: sMin, endMin: eMin, orderNo: w.orderNo };
+    });
+
+  // Seeded pseudo-random fluctuation based on deviceCode for realistic telemetry curve
+  const deviceSeed = device.deviceCode.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+
+  let accumulatedInterruptionMins = 0;
+
+  for (let i = 0; i < totalPoints; i++) {
+    const pointMin = i * 5;
+    const nextMin = (i + 1) * 5;
+    const timeStr = formatMinsToTime(pointMin);
+    const timestampStr = `${date} ${timeStr}`;
+
+    const isMaint = maintIntervals.some(r => pointMin >= r.startMin && pointMin < r.endMin);
+    const activeEvent = faultIntervals.find(r => pointMin >= r.startMin && pointMin < r.endMin);
+    const isSiteEco =
+      !hasExplicitEco &&
+      (device.deviceType === 'PCS_INVERTER' || device.deviceType === 'TRANSFORMER' || device.ecoOutageMinutesInPeriod > 0) &&
+      pointMin >= defaultEcoStart &&
+      pointMin < defaultEcoEnd;
+
+    const activeOrder = orderIntervals.find(r => pointMin >= r.startMin && pointMin < r.endMin);
+
+    // Base realistic load curve (charging valley 01-06, morning discharge 08-12, solar/valley soak 12-15, evening peak 18-22)
+    const hour = pointMin / 60;
+    let loadFactor = 0.45;
+    if (hour >= 1 && hour < 6) loadFactor = 0.82; // 谷充
+    else if (hour >= 8 && hour < 12) loadFactor = 0.88; // 早峰放
+    else if (hour >= 12 && hour < 15) loadFactor = 0.55; // 午间平谷
+    else if (hour >= 18 && hour < 22) loadFactor = 0.94; // 晚尖峰放
+    const jitter = Math.sin((i + deviceSeed) * 0.35) * 0.06;
+    const nominalPowerKw = Math.max(0, Math.round(ratedKw * Math.min(1, Math.max(0.15, loadFactor + jitter))));
+
+    let status: DeviceFiveMinStatusPoint['status'] = 'NORMAL';
+    let statusLabel = '正常运行';
+    let availability = 100;
+    let powerKw = nominalPowerKw;
+    let interruptionMins = 0;
+    let alarmCode: string | undefined;
+    let alarmTitle: string | undefined;
+    let workOrderNo: string | undefined;
+    let ecoReason: string | undefined;
+    let hasEventMarker = false;
+
+    if (isMaint) {
+      status = 'MAINTENANCE';
+      statusLabel = '计划检修 (免责)';
+      availability = 100;
+      powerKw = 0;
+      interruptionMins = 0;
+      alarmCode = 'MAINT-PLAN';
+      alarmTitle = '计划性月度预防性定检维护';
+      hasEventMarker = pointMin === maintIntervals[0].startMin;
+    } else if (activeEvent?.isEco || isSiteEco) {
+      status = 'ECO_OUTAGE';
+      statusLabel = 'ECO外因停机 (免责)';
+      availability = 100;
+      powerKw = 0;
+      interruptionMins = 0;
+      alarmCode = activeEvent?.code || 'ALM-ECO-GRID-01';
+      alarmTitle = activeEvent?.title || '电网调度备用/外部线路限电 (ECO外因停机)';
+      ecoReason = activeEvent?.ecoReason || '外部电网调度限电停机，依据 SLA 条款核免可用度扣减';
+      hasEventMarker = activeEvent ? Math.abs(pointMin - activeEvent.startMin) < 5 : pointMin === defaultEcoStart;
+    } else if (activeEvent && !activeEvent.isExempt) {
+      hasEventMarker = Math.abs(pointMin - activeEvent.startMin) < 5;
+      alarmCode = activeEvent.code;
+      alarmTitle = activeEvent.title;
+      workOrderNo = activeEvent.workOrderNo || activeOrder?.orderNo;
+
+      if (activeEvent.severity === 'CRITICAL') {
+        if (activeOrder) {
+          status = 'WORKORDER_ACTIVE';
+          statusLabel = '故障排查中';
+        } else {
+          status = 'FAULT_TRIP';
+          statusLabel = '故障停运';
+        }
+        availability = 0;
+        powerKw = 0;
+        interruptionMins = 5;
+      } else {
+        // MAJOR / WARNING: derated operation or warning state
+        status = 'WARNING';
+        statusLabel = '告警预警/降额';
+        availability = Number(((1 - activeEvent.impactRatio) * 100).toFixed(1));
+        powerKw = Math.round(nominalPowerKw * (1 - activeEvent.impactRatio));
+        interruptionMins = Number((5 * activeEvent.impactRatio).toFixed(2));
+      }
+      accumulatedInterruptionMins += interruptionMins;
+    } else if (device.periodStatus === 'WARNING' && pointMin >= 540 && pointMin < 570 && faultIntervals.length === 0) {
+      // Subtle synthetic warning window for warning-flagged devices if no explicit timestamped alarm fell on this date
+      status = 'WARNING';
+      statusLabel = '告警预警';
+      availability = 85;
+      powerKw = Math.round(nominalPowerKw * 0.85);
+      interruptionMins = 0.75;
+      alarmCode = `WARN-${device.deviceCode}`;
+      alarmTitle = '设备运行工况温升/参数短时预警';
+      hasEventMarker = pointMin === 540;
+      accumulatedInterruptionMins += interruptionMins;
+    }
+
+    const cumulativeDeviceAvailability = Number(
+      Math.max(0, Math.min(100, ((nextMin - accumulatedInterruptionMins) / nextMin) * 100)).toFixed(2)
+    );
+
+    points.push({
+      index: i,
+      time: timeStr,
+      timestamp: timestampStr,
+      status,
+      statusLabel,
+      availability,
+      powerKw,
+      ratedPowerKw: ratedKw,
+      interruptionMins,
+      cumulativeDeviceAvailability,
+      hasEventMarker,
+      alarmCode,
+      alarmTitle,
+      workOrderNo,
+      ecoReason
+    });
+  }
+
+  return points;
+}
+

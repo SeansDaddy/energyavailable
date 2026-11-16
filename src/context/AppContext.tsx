@@ -10,8 +10,10 @@ import {
   UserProfile,
   ChatMessage,
   StatusLamp,
-  RedundancyLevel
+  RedundancyLevel,
+  AvailabilityRecalcRecord
 } from '../types';
+import { computeSiteAvailabilityRecalculation } from '../utils/availabilityRecalc';
 import {
   CURRENT_USERS,
   INITIAL_SITES,
@@ -179,6 +181,27 @@ interface AppContextType {
   sendChatMessage: (content: string) => void;
   syncContracts: () => void;
 
+  // Contract management & cross-view drilldown
+  selectedContractId: string | null;
+  setSelectedContractId: (id: string | null) => void;
+  contractViewAction: { mode: 'view' | 'create' | 'edit'; contractId?: string; prefillSiteId?: string } | null;
+  setContractViewAction: (action: { mode: 'view' | 'create' | 'edit'; contractId?: string; prefillSiteId?: string } | null) => void;
+  navigateToContractDetail: (contractIdOrNo?: string, fallbackSiteId?: string) => void;
+  addContract: (contractData: Partial<Contract>, linkedSiteIds?: string[], syncSiteSla?: boolean) => Contract;
+  updateContract: (contractId: string, updatedData: Partial<Contract>, linkedSiteIds?: string[], syncSiteSla?: boolean) => void;
+
+  // Single-site period availability recalculation
+  availabilityRecalcHistory: AvailabilityRecalcRecord[];
+  recalculateSiteAvailability: (params: {
+    siteId: string;
+    startDate: string;
+    endDate: string;
+    applyEcoExempt: boolean;
+    applyR4OrderClosure: boolean;
+    applyLatestWinsLog: boolean;
+    syncSiteKpi: boolean;
+  }) => AvailabilityRecalcRecord | null;
+
   // AI Fault Diagnosis
   diagnosisTasks: DiagnosisTask[];
   activeDiagnosisTaskId: string | null;
@@ -258,6 +281,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [pcareImportHistory, setPcareImportHistory] = useState<PcareImportRecord[]>(INITIAL_PCARE_IMPORT_HISTORY);
   const [lastPcareImportTime, setLastPcareImportTime] = useState<string>('2026-09-08 17:35:20');
   const [contracts, setContracts] = useState<Contract[]>(INITIAL_CONTRACTS);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(INITIAL_CONTRACTS[0]?.id || null);
+  const [contractViewAction, setContractViewAction] = useState<{
+    mode: 'view' | 'create' | 'edit';
+    contractId?: string;
+    prefillSiteId?: string;
+  } | null>(null);
+  const [availabilityRecalcHistory, setAvailabilityRecalcHistory] = useState<AvailabilityRecalcRecord[]>([]);
   const [reports, setReports] = useState<ReportItem[]>(INITIAL_REPORTS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
   
@@ -437,6 +467,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateSite = (siteId: string, updatedData: Partial<Site>) => {
+    let nextSiteSnapshot: Site | null = null;
     setSites(prev =>
       prev.map(site => {
         if (site.id === siteId) {
@@ -446,13 +477,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
           };
           if (updatedData.slaThreshold !== undefined || updatedData.currentAvailability !== undefined) {
-            updated.statusLamp = updated.currentAvailability >= updated.slaThreshold ? 'green' : 'red';
+            if (updated.statusLamp !== 'grey') {
+              updated.statusLamp = updated.currentAvailability >= updated.slaThreshold ? 'green' : 'red';
+            }
           }
+          nextSiteSnapshot = updated;
           return updated;
         }
         return site;
       })
     );
+
+    if (nextSiteSnapshot) {
+      const s = nextSiteSnapshot as Site;
+      setContracts(prev =>
+        prev.map(c => {
+          const isMatched =
+            c.id === s.contractId ||
+            (s.contractNo && c.contractNo === s.contractNo) ||
+            c.associatedSites.some(a => a.siteId === s.id);
+          if (!isMatched) return c;
+
+          const exists = c.associatedSites.some(a => a.siteId === s.id);
+          const nextAssoc = exists
+            ? c.associatedSites.map(a =>
+                a.siteId === s.id
+                  ? {
+                      ...a,
+                      siteCode: s.siteCode,
+                      siteName: s.siteName,
+                      siteSlaThreshold: s.slaThreshold,
+                      currentAvailability: s.currentAvailability,
+                      statusLamp: s.statusLamp
+                    }
+                  : a
+              )
+            : [
+                ...c.associatedSites,
+                {
+                  siteId: s.id,
+                  siteCode: s.siteCode,
+                  siteName: s.siteName,
+                  siteSlaThreshold: s.slaThreshold,
+                  currentAvailability: s.currentAvailability,
+                  statusLamp: s.statusLamp
+                }
+              ];
+
+          return {
+            ...c,
+            associatedSites: nextAssoc,
+            siteCount: Math.max(c.siteCount, nextAssoc.length),
+            fulfilledSiteCount: nextAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+          };
+        })
+      );
+    }
   };
 
   const updateSiteRedundancy = (siteId: string, redundancy: RedundancyLevel, notes: string) => {
@@ -710,6 +790,304 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         lastSyncedAt: nowStr
       }))
     );
+  };
+
+  const navigateToContractDetail = (contractIdOrNo?: string, fallbackSiteId?: string) => {
+    const matched = contracts.find(
+      c =>
+        (contractIdOrNo && (c.id === contractIdOrNo || c.contractNo === contractIdOrNo)) ||
+        (fallbackSiteId && c.associatedSites.some(a => a.siteId === fallbackSiteId))
+    );
+
+    if (matched) {
+      setSelectedContractId(matched.id);
+      setContractViewAction({ mode: 'view', contractId: matched.id });
+    } else {
+      setContractViewAction({ mode: 'create', prefillSiteId: fallbackSiteId });
+    }
+    setActiveTab('contracts');
+  };
+
+  const buildAssociatedSitesList = (siteIds: string[], slaThreshold: number, syncSiteSla: boolean) => {
+    return siteIds
+      .map(id => sites.find(s => s.id === id))
+      .filter((s): s is Site => Boolean(s))
+      .map(s => {
+        const nextSla = syncSiteSla ? slaThreshold : s.slaThreshold;
+        const nextLamp: StatusLamp =
+          s.statusLamp === 'grey'
+            ? 'grey'
+            : s.currentAvailability >= nextSla
+            ? 'green'
+            : 'red';
+        return {
+          siteId: s.id,
+          siteCode: s.siteCode,
+          siteName: s.siteName,
+          siteSlaThreshold: nextSla,
+          currentAvailability: s.currentAvailability,
+          statusLamp: nextLamp
+        };
+      });
+  };
+
+  const addContract = (
+    contractData: Partial<Contract>,
+    linkedSiteIds: string[] = [],
+    syncSiteSla: boolean = true
+  ): Contract => {
+    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' (手动录入)';
+    const sla = Number(contractData.slaThreshold ?? 99.5);
+    const associatedSites = buildAssociatedSitesList(linkedSiteIds, sla, syncSiteSla);
+    const fulfilledCount = associatedSites.filter(a => a.currentAvailability >= a.siteSlaThreshold).length;
+    const avgActual =
+      associatedSites.length > 0
+        ? Number((associatedSites.reduce((acc, a) => acc + a.currentAvailability, 0) / associatedSites.length).toFixed(2))
+        : Number((sla + 0.15).toFixed(2));
+
+    const derivedStatus: Contract['overallStatus'] =
+      contractData.overallStatus ||
+      (associatedSites.some(a => a.currentAvailability < a.siteSlaThreshold)
+        ? 'BREACHED'
+        : 'FULFILLED');
+
+    const newContract: Contract = {
+      id: `cnt-${Date.now().toString().slice(-6)}`,
+      contractNo: (contractData.contractNo || `SLA-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`).trim(),
+      title: (contractData.title || '储能电站可用度保障运维服务合同').trim(),
+      customer: (contractData.customer || '未指定客户').trim(),
+      evaluationPeriod: contractData.evaluationPeriod || '自然月度 (每月1日00:00 - 月末24:00)',
+      slaThreshold: sla,
+      siteCount: associatedSites.length,
+      fulfilledSiteCount: fulfilledCount,
+      validFrom: contractData.validFrom || '2026-01-01',
+      validTo: contractData.validTo || '2028-12-31',
+      penaltyClause:
+        contractData.penaltyClause ||
+        `单月可用度低于 ${sla.toFixed(2)}%，按短缺比率阶梯扣减当月运维服务费。`,
+      overallStatus: derivedStatus,
+      lastSyncedAt: nowStr,
+      associatedSites,
+      monthlyTrend: contractData.monthlyTrend && contractData.monthlyTrend.length > 0
+        ? contractData.monthlyTrend
+        : [
+            { month: '2026-04', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.12).toFixed(2))), isFulfilled: avgActual + 0.12 >= sla },
+            { month: '2026-05', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.08).toFixed(2))), isFulfilled: avgActual + 0.08 >= sla },
+            { month: '2026-06', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.05).toFixed(2))), isFulfilled: avgActual + 0.05 >= sla },
+            { month: '2026-07', targetSla: sla, actualSla: Math.min(99.98, Number((avgActual + 0.02).toFixed(2))), isFulfilled: avgActual + 0.02 >= sla },
+            { month: '2026-08', targetSla: sla, actualSla: avgActual, isFulfilled: avgActual >= sla }
+          ]
+    };
+
+    const linkedSet = new Set(linkedSiteIds);
+    setContracts(prev => [
+      newContract,
+      ...prev.map(c => {
+        if (linkedSiteIds.length === 0) return c;
+        const remaining = c.associatedSites.filter(a => !linkedSet.has(a.siteId));
+        if (remaining.length === c.associatedSites.length) return c;
+        return {
+          ...c,
+          associatedSites: remaining,
+          siteCount: remaining.length,
+          fulfilledSiteCount: remaining.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+        };
+      })
+    ]);
+
+    if (linkedSiteIds.length > 0) {
+      setSites(prev =>
+        prev.map(s => {
+          if (!linkedSet.has(s.id)) return s;
+          const nextSla = syncSiteSla ? sla : s.slaThreshold;
+          const nextLamp: StatusLamp =
+            s.statusLamp === 'grey'
+              ? 'grey'
+              : s.currentAvailability >= nextSla
+              ? 'green'
+              : 'red';
+          return {
+            ...s,
+            contractId: newContract.id,
+            contractNo: newContract.contractNo,
+            slaThreshold: nextSla,
+            statusLamp: nextLamp,
+            updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          };
+        })
+      );
+    }
+
+    setSelectedContractId(newContract.id);
+    return newContract;
+  };
+
+  const updateContract = (
+    contractId: string,
+    updatedData: Partial<Contract>,
+    linkedSiteIds?: string[],
+    syncSiteSla: boolean = true
+  ) => {
+    const existing = contracts.find(c => c.id === contractId);
+    if (!existing) return;
+
+    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' (已编辑更新)';
+    const nextSla = Number(updatedData.slaThreshold ?? existing.slaThreshold);
+    const nextContractNo = (updatedData.contractNo ?? existing.contractNo).trim();
+    const targetSiteIds =
+      linkedSiteIds !== undefined
+        ? linkedSiteIds
+        : existing.associatedSites.map(a => a.siteId);
+    const targetSet = new Set(targetSiteIds);
+    const prevSet = new Set(
+      sites
+        .filter(s => s.contractId === contractId || s.contractNo === existing.contractNo || existing.associatedSites.some(a => a.siteId === s.id))
+        .map(s => s.id)
+    );
+
+    const associatedSites = buildAssociatedSitesList(targetSiteIds, nextSla, syncSiteSla);
+    const fulfilledCount = associatedSites.filter(a => a.currentAvailability >= a.siteSlaThreshold).length;
+
+    setContracts(prev =>
+      prev.map(c => {
+        if (c.id === contractId) {
+          return {
+            ...c,
+            ...updatedData,
+            contractNo: nextContractNo,
+            slaThreshold: nextSla,
+            associatedSites,
+            siteCount: associatedSites.length,
+            fulfilledSiteCount: fulfilledCount,
+            lastSyncedAt: nowStr,
+            monthlyTrend: c.monthlyTrend.map(t => ({
+              ...t,
+              targetSla: nextSla,
+              isFulfilled: t.actualSla >= nextSla
+            }))
+          };
+        }
+        // Remove newly bound sites from other contracts
+        const filteredAssoc = c.associatedSites.filter(a => !targetSet.has(a.siteId));
+        if (filteredAssoc.length !== c.associatedSites.length) {
+          return {
+            ...c,
+            associatedSites: filteredAssoc,
+            siteCount: filteredAssoc.length,
+            fulfilledSiteCount: filteredAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length
+          };
+        }
+        return c;
+      })
+    );
+
+    setSites(prev =>
+      prev.map(s => {
+        if (targetSet.has(s.id)) {
+          const nextSiteSla = syncSiteSla ? nextSla : s.slaThreshold;
+          const nextLamp: StatusLamp =
+            s.statusLamp === 'grey'
+              ? 'grey'
+              : s.currentAvailability >= nextSiteSla
+              ? 'green'
+              : 'red';
+          return {
+            ...s,
+            contractId,
+            contractNo: nextContractNo,
+            slaThreshold: nextSiteSla,
+            statusLamp: nextLamp,
+            updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          };
+        }
+        if (prevSet.has(s.id) && !targetSet.has(s.id)) {
+          return {
+            ...s,
+            contractId: '',
+            contractNo: '',
+            updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  const recalculateSiteAvailability = (params: {
+    siteId: string;
+    startDate: string;
+    endDate: string;
+    applyEcoExempt: boolean;
+    applyR4OrderClosure: boolean;
+    applyLatestWinsLog: boolean;
+    syncSiteKpi: boolean;
+  }): AvailabilityRecalcRecord | null => {
+    const targetSite = sites.find(s => s.id === params.siteId);
+    if (!targetSite) return null;
+
+    const { record, updatedSnapshots } = computeSiteAvailabilityRecalculation({
+      site: targetSite,
+      workOrders,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      applyEcoExempt: params.applyEcoExempt,
+      applyR4OrderClosure: params.applyR4OrderClosure,
+      applyLatestWinsLog: params.applyLatestWinsLog,
+      operator: currentUser.name,
+      syncSiteKpi: params.syncSiteKpi
+    });
+
+    const nextLamp: StatusLamp =
+      targetSite.statusLamp === 'grey'
+        ? 'grey'
+        : record.afterSiteCurrentAvail >= targetSite.slaThreshold
+        ? 'green'
+        : 'red';
+
+    setSites(prev =>
+      prev.map(s => {
+        if (s.id !== params.siteId) return s;
+        return {
+          ...s,
+          dailySnapshots: updatedSnapshots,
+          currentAvailability: params.syncSiteKpi ? record.afterSiteCurrentAvail : s.currentAvailability,
+          statusLamp: params.syncSiteKpi ? nextLamp : s.statusLamp,
+          updatedAt: record.recalculatedAt
+        };
+      })
+    );
+
+    if (params.syncSiteKpi) {
+      setContracts(prev =>
+        prev.map(c => {
+          const matched =
+            c.id === targetSite.contractId ||
+            (targetSite.contractNo && c.contractNo === targetSite.contractNo) ||
+            c.associatedSites.some(a => a.siteId === targetSite.id);
+          if (!matched) return c;
+
+          const nextAssoc = c.associatedSites.map(a =>
+            a.siteId === targetSite.id
+              ? {
+                  ...a,
+                  currentAvailability: record.afterSiteCurrentAvail,
+                  statusLamp: nextLamp
+                }
+              : a
+          );
+
+          return {
+            ...c,
+            associatedSites: nextAssoc,
+            fulfilledSiteCount: nextAssoc.filter(a => a.currentAvailability >= a.siteSlaThreshold).length,
+            lastSyncedAt: `${record.recalculatedAt} (单站可用度重算联动)`
+          };
+        })
+      );
+    }
+
+    setAvailabilityRecalcHistory(prev => [record, ...prev]);
+    return record;
   };
 
   const sendChatMessage = (userQuery: string) => {
@@ -1170,6 +1548,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addReportItem,
         sendChatMessage,
         syncContracts,
+        selectedContractId,
+        setSelectedContractId,
+        contractViewAction,
+        setContractViewAction,
+        navigateToContractDetail,
+        addContract,
+        updateContract,
+        availabilityRecalcHistory,
+        recalculateSiteAvailability,
         diagnosisTasks,
         activeDiagnosisTaskId,
         setActiveDiagnosisTaskId,

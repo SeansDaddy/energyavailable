@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Site, WorkOrder, DailySnapshot, FiveMinAvailabilityPoint } from '../../types';
 import { FiveMinAvailabilityDotsView, FiveMinTimeRangeLinkageInfo } from '../sites/FiveMinAvailabilityDotsView';
 import { DimensionEquipmentAndAlarmsSection } from './DimensionEquipmentAndAlarmsSection';
@@ -29,7 +29,8 @@ import {
   AlertCircle,
   Sliders,
   Link2,
-  Archive
+  Archive,
+  Calculator
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -56,6 +57,10 @@ interface AvailabilityDetailsTabProps {
   onSelectDate?: (date: string) => void;
   onNavigateTab: (tabIdx: number, extra?: any) => void;
   onOpenArchiveModal?: () => void;
+  onOpenRecalculateModal?: () => void;
+  onViewContract?: () => void;
+  contractNo?: string;
+  contractTitle?: string;
   contractStartDate?: string;
   contractEndDate?: string;
 }
@@ -67,6 +72,10 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
   onSelectDate,
   onNavigateTab,
   onOpenArchiveModal,
+  onOpenRecalculateModal,
+  onViewContract,
+  contractNo,
+  contractTitle,
   contractStartDate = '2026-01-01',
   contractEndDate = '2026-12-31'
 }) => {
@@ -77,6 +86,12 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
     initialSelectedDate ||
     (snapshots.length > 0 ? snapshots[snapshots.length - 1].date : '2026-08-15');
   const [activeDate, setActiveDate] = useState<string>(defaultDate);
+
+  useEffect(() => {
+    if (initialSelectedDate) {
+      setActiveDate(initialSelectedDate);
+    }
+  }, [initialSelectedDate]);
 
   // Custom Time Range States for Each Dimension
   const [dayStartDate, setDayStartDate] = useState<string>('2026-08-01');
@@ -859,6 +874,26 @@ export const AvailabilityDetailsTab: React.FC<AvailabilityDetailsTabProps> = ({
             <span>合同 SLA 门槛:</span>
             <strong className="text-blue-600 font-mono">{site.slaThreshold}%</strong>
           </div>
+          {onViewContract && (
+            <button
+              onClick={onViewContract}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold transition-colors shadow-2xs whitespace-nowrap"
+              title={contractTitle ? `跳转查看合同【${contractTitle}】` : '跳转前往合同与履约台账查看或录入合同'}
+            >
+              <Link2 className="w-3.5 h-3.5 text-blue-600" />
+              <span>{contractNo ? `查看合同 (${contractNo})` : '录入关联合同'}</span>
+            </button>
+          )}
+          {onOpenRecalculateModal && (
+            <button
+              onClick={onOpenRecalculateModal}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold transition-colors shadow-2xs whitespace-nowrap"
+              title="对指定时间段重新统计并刷新单站可用度指标"
+            >
+              <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+              <span>指定时段重算可用度</span>
+            </button>
+          )}
           {onOpenArchiveModal && (
             <button
               onClick={onOpenArchiveModal}

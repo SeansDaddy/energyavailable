@@ -8,17 +8,14 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  Layers,
   ShieldCheck,
-  ArrowUpRight,
   Database,
   Eye,
-  FolderKanban,
-  FileSpreadsheet
+  FolderKanban
 } from 'lucide-react';
 
 export const AvailabilityMonitorView: React.FC = () => {
-  const { sites, navigateToSiteDetail, navigateToAvailabilityDrilldown } = useApp();
+  const { sites, navigateToAvailabilityDrilldown } = useApp();
 
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [regionFilter, setRegionFilter] = useState('ALL');
@@ -55,13 +52,18 @@ export const AvailabilityMonitorView: React.FC = () => {
   const complianceRate =
     totalSites > 0 ? Number(((compliantSites.length / totalSites) * 100).toFixed(1)) : 0;
 
-  // Four-color status lamp counts
+  // SLA breach & status counts
+  const breachedSlaSites = sites.filter(s => s.currentAvailability < s.slaThreshold);
+  const breachedSlaCount = breachedSlaSites.length;
+  const maxSlaGap =
+    breachedSlaSites.length > 0
+      ? Math.max(...breachedSlaSites.map(s => Number((s.slaThreshold - s.currentAvailability).toFixed(2))))
+      : 0;
+
   const greenCount = sites.filter(s => s.statusLamp === 'green').length;
   const yellowCount = sites.filter(s => s.statusLamp === 'yellow').length;
   const redCount = sites.filter(s => s.statusLamp === 'red').length;
   const greyCount = sites.filter(s => s.statusLamp === 'grey').length;
-
-  const atRiskCount = yellowCount + redCount;
 
   // Data health
   const avgCoverage =
@@ -75,12 +77,20 @@ export const AvailabilityMonitorView: React.FC = () => {
   // Filtered Sites for Table
   const filteredSites = sites.filter(s => {
     if (regionFilter !== 'ALL' && s.region !== regionFilter) return false;
-    if (statusFilter !== 'ALL' && s.statusLamp !== statusFilter) return false;
+    if (statusFilter === 'breached') {
+      if (s.currentAvailability >= s.slaThreshold) return false;
+    } else if (statusFilter === 'compliant') {
+      if (s.currentAvailability < s.slaThreshold) return false;
+    } else if (statusFilter !== 'ALL' && s.statusLamp !== statusFilter) {
+      return false;
+    }
     if (searchTerm) {
+      const q = searchTerm.toLowerCase();
       const match =
-        s.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.siteCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.customer.toLowerCase().includes(searchTerm.toLowerCase());
+        s.siteName.toLowerCase().includes(q) ||
+        s.customer.toLowerCase().includes(q) ||
+        s.region.toLowerCase().includes(q) ||
+        s.representativeOffice.toLowerCase().includes(q);
       if (!match) return false;
     }
     return true;
@@ -101,7 +111,7 @@ export const AvailabilityMonitorView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                动态汇总全网各站点可用度达标情况、四色状态分布、大区质量对比及履约预警指标。
+                动态汇总全网各站点可用度达标情况、跌破 SLA 阈值站点数、大区质量对比及履约预警指标。
               </p>
             </div>
 
@@ -178,69 +188,44 @@ export const AvailabilityMonitorView: React.FC = () => {
           </div>
         </div>
 
-        {/* Metric Card 3: Four-Color Status Lamps */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+        {/* Metric Card 3: Breached SLA Threshold Site Count */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'breached' ? 'ALL' : 'breached')}
+          className={`bg-white border rounded-xl p-4 shadow-sm relative overflow-hidden cursor-pointer transition-all ${
+            statusFilter === 'breached'
+              ? 'border-red-400 ring-2 ring-red-100'
+              : 'border-slate-200 hover:border-red-300'
+          }`}
+          title="点击筛选跌破可用度 SLA 阈值的站点"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">四色状态灯分布</span>
-            <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
-              <Layers className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-500">跌破可用度 SLA 阈值站点数</span>
+            <div className="p-1.5 rounded-lg bg-red-50 text-red-600">
+              <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 flex items-center gap-1.5">
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'green' ? 'ALL' : 'green')}
-              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
-                statusFilter === 'green'
-                  ? 'bg-emerald-100 border-emerald-400 font-bold'
-                  : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100/60'
-              }`}
-              title="点击按绿灯筛选"
-            >
-              <div className="text-[10px] text-emerald-700 font-medium">🟢 达标</div>
-              <div className="text-sm font-bold text-emerald-800 font-mono">{greenCount}</div>
-            </button>
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'yellow' ? 'ALL' : 'yellow')}
-              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
-                statusFilter === 'yellow'
-                  ? 'bg-amber-100 border-amber-400 font-bold'
-                  : 'bg-amber-50 border-amber-200 hover:bg-amber-100/60'
-              }`}
-              title="点击按黄灯筛选"
-            >
-              <div className="text-[10px] text-amber-700 font-medium">🟡 预警</div>
-              <div className="text-sm font-bold text-amber-800 font-mono">{yellowCount}</div>
-            </button>
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'red' ? 'ALL' : 'red')}
-              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
-                statusFilter === 'red'
-                  ? 'bg-red-100 border-red-400 font-bold'
-                  : 'bg-red-50 border-red-200 hover:bg-red-100/60'
-              }`}
-              title="点击按红灯筛选"
-            >
-              <div className="text-[10px] text-red-700 font-medium">🔴 跌破</div>
-              <div className="text-sm font-bold text-red-800 font-mono">{redCount}</div>
-            </button>
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'grey' ? 'ALL' : 'grey')}
-              className={`flex-1 py-1 px-1.5 rounded border text-center transition-all ${
-                statusFilter === 'grey'
-                  ? 'bg-slate-200 border-slate-400 font-bold'
-                  : 'bg-slate-100 border-slate-200 hover:bg-slate-200/60'
-              }`}
-              title="点击按灰灯筛选"
-            >
-              <div className="text-[10px] text-slate-600 font-medium">⚪ 断供</div>
-              <div className="text-sm font-bold text-slate-700 font-mono">{greyCount}</div>
-            </button>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-red-600 font-mono tabular-nums tracking-tight">
+              {breachedSlaCount}
+            </span>
+            <span className="text-xs text-slate-500">
+              站 · 占全网{' '}
+              <strong className="font-mono text-slate-700">
+                {totalSites > 0 ? ((breachedSlaCount / totalSites) * 100).toFixed(1) : '0.0'}%
+              </strong>
+            </span>
           </div>
           <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>重点干预风险站:</span>
-            <strong className={atRiskCount > 0 ? 'text-amber-600' : 'text-slate-700'}>
-              {atRiskCount} 站 ({totalSites > 0 ? ((atRiskCount / totalSites) * 100).toFixed(0) : 0}%)
-            </strong>
+            <span>
+              最大负向差值:{' '}
+              <strong className="text-red-600 font-mono tabular-nums">
+                {maxSlaGap > 0 ? `-${maxSlaGap}%` : '0.00%'}
+              </strong>
+            </span>
+            <span className="text-slate-500">
+              预警 <strong className="text-amber-600 font-mono">{yellowCount}</strong> · 断供{' '}
+              <strong className="text-slate-700 font-mono">{greyCount}</strong>
+            </span>
           </div>
         </div>
 
@@ -287,17 +272,19 @@ export const AvailabilityMonitorView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-500 font-medium">四色状态灯:</span>
+            <span className="text-slate-500 font-medium">达标状态:</span>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
               className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:border-blue-500"
             >
-              <option value="ALL">全部状态灯 ({totalSites})</option>
-              <option value="green">🟢 绿灯 - SLA 达标 ({greenCount})</option>
-              <option value="yellow">🟡 黄灯 - 预测将跌破 ({yellowCount})</option>
-              <option value="red">🔴 红灯 - 已跌破 SLA ({redCount})</option>
-              <option value="grey">⚪ 灰灯 - 数据断供 ({greyCount})</option>
+              <option value="ALL">全部站点 ({totalSites})</option>
+              <option value="breached">已跌破 SLA 阈值 ({breachedSlaCount})</option>
+              <option value="compliant">满足 SLA 阈值 ({compliantSites.length})</option>
+              <option value="yellow">预测将跌破 ({yellowCount})</option>
+              <option value="grey">数据断供 ({greyCount})</option>
+              <option value="green">绿灯正常 ({greenCount})</option>
+              <option value="red">红灯告警 ({redCount})</option>
             </select>
           </div>
 
@@ -305,7 +292,7 @@ export const AvailabilityMonitorView: React.FC = () => {
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
             <input
               type="text"
-              placeholder="搜索站点名称 / 编码 / 客户..."
+              placeholder="搜索站点名称 / 客户 / 区域..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="bg-white border border-slate-300 rounded-lg pl-8 pr-3 py-1.5 text-slate-800 w-56 focus:outline-none focus:border-blue-500"
@@ -336,8 +323,9 @@ export const AvailabilityMonitorView: React.FC = () => {
         <table className="w-full text-left text-xs text-slate-700">
           <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase font-bold tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-3 px-4">站点名称 / 编码</th>
-              <th className="py-3 px-3">区域 / 代表处</th>
+              <th className="py-3 px-4">站点名称</th>
+              <th className="py-3 px-3">区域</th>
+              <th className="py-3 px-3">代表处</th>
               <th className="py-3 px-3 font-mono">当期累计可用度</th>
               <th className="py-3 px-3 font-mono">SLA 阈值</th>
               <th className="py-3 px-3 font-mono">达标差值</th>
@@ -359,11 +347,12 @@ export const AvailabilityMonitorView: React.FC = () => {
                 >
                   <td className="py-3 px-4">
                     <div className="font-semibold text-slate-900">{s.siteName}</div>
-                    <div className="text-[11px] text-blue-600 font-mono">{s.siteCode}</div>
                   </td>
-                  <td className="py-3 px-3">
-                    <div className="text-slate-800">{s.region}</div>
-                    <div className="text-[11px] text-slate-500">{s.representativeOffice}</div>
+                  <td className="py-3 px-3 text-slate-800 font-medium whitespace-nowrap">
+                    {s.region}
+                  </td>
+                  <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                    {s.representativeOffice}
                   </td>
                   <td className="py-3 px-3 font-mono font-bold text-sm">
                     <span

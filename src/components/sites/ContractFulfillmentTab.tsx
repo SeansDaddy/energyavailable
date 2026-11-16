@@ -25,6 +25,8 @@ import {
   ReferenceLine
 } from 'recharts';
 
+import { useApp } from '../../context/AppContext';
+
 interface ContractFulfillmentTabProps {
   site: Site;
   contracts: Contract[];
@@ -38,12 +40,19 @@ export const ContractFulfillmentTab: React.FC<ContractFulfillmentTabProps> = ({
   allSites,
   onSelectSite
 }) => {
-  const currentContract =
-    contracts.find(c => c.contractNo === site.contractNo || c.id === site.contractId) ||
-    contracts[0];
+  const { navigateToContractDetail } = useApp();
+
+  const currentContract = contracts.find(
+    c =>
+      (site.contractId && c.id === site.contractId) ||
+      (site.contractNo && c.contractNo === site.contractNo) ||
+      c.associatedSites?.some(a => a.siteId === site.id)
+  );
 
   const peerSites = allSites.filter(
-    s => s.contractNo === site.contractNo || (currentContract && s.customer === currentContract.customer)
+    s =>
+      (site.contractNo && s.contractNo === site.contractNo) ||
+      (currentContract && currentContract.associatedSites?.some(a => a.siteId === s.id))
   );
 
   const isBreached = site.currentAvailability < site.slaThreshold;
@@ -83,16 +92,43 @@ export const ContractFulfillmentTab: React.FC<ContractFulfillmentTabProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  {currentContract ? currentContract.contractName : '储能电站全生命周期运维保障SLA合同'}
+                  {currentContract ? currentContract.title : '暂未关联 SLA 运维保障合同'}
                 </h3>
                 <p className="text-xs text-slate-500 font-mono">
-                  合同编号: {site.contractNo} · 客户: {site.customer}
+                  合同编号: {currentContract?.contractNo || site.contractNo || '未录入'} · 客户:{' '}
+                  {currentContract?.customer || site.customer}
+                  {currentContract ? ` · 周期: ${currentContract.validFrom} ~ ${currentContract.validTo}` : ''}
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              履行中 (In Force)
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                  !currentContract
+                    ? 'bg-slate-100 text-slate-600 border-slate-200'
+                    : currentContract.overallStatus === 'BREACHED'
+                    ? 'bg-red-50 text-red-700 border-red-200'
+                    : currentContract.overallStatus === 'AT_RISK'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}
+              >
+                {!currentContract
+                  ? '待录入'
+                  : currentContract.overallStatus === 'BREACHED'
+                  ? '已违约'
+                  : currentContract.overallStatus === 'AT_RISK'
+                  ? '履约预警'
+                  : '履行中 (In Force)'}
+              </span>
+              <button
+                onClick={() => navigateToContractDetail(currentContract?.id || site.contractNo, site.id)}
+                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-semibold flex items-center gap-1 whitespace-nowrap"
+              >
+                <span>{currentContract ? '前往合同台账查看/编辑' : '录入合同'}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">

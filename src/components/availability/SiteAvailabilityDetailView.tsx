@@ -20,7 +20,8 @@ import {
   Archive,
   Edit3,
   FolderKanban,
-  ShieldCheck
+  ShieldCheck,
+  Calculator
 } from 'lucide-react';
 import { AvailabilityDetailsTab } from './AvailabilityDetailsTab';
 import { MergedFaultsTab } from '../sites/MergedFaultsTab';
@@ -29,6 +30,7 @@ import { EditSiteModal } from '../sites/EditSiteModal';
 import { SiteScopedReportCenter } from '../reports/SiteScopedReportCenter';
 import { HistoricalContractArchiveModal } from './HistoricalContractArchiveModal';
 import { SiteContractEcoManagementTab } from './SiteContractEcoManagementTab';
+import { RecalculateAvailabilityModal } from './RecalculateAvailabilityModal';
 
 export const SiteAvailabilityDetailView: React.FC = () => {
   const {
@@ -45,16 +47,27 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     workOrders,
     contracts,
     reportCenterItems,
-    openAiDrawer
+    openAiDrawer,
+    navigateToContractDetail,
+    availabilityRecalcHistory,
+    recalculateSiteAvailability
   } = useApp();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showRecalcModal, setShowRecalcModal] = useState(false);
 
   const site = sites.find(s => s.id === selectedSiteId) || sites[0];
+  const latestSiteRecalc = availabilityRecalcHistory.find(r => r.siteId === site.id) || null;
 
-  // Resolve current availability contract year dates
-  const siteContract = contracts?.find(c => c.contractNo === site.contractNo) || contracts?.find(c => c.siteId === site.id);
+  // Resolve current availability contract cleanly across id, contractNo, and associatedSites
+  const siteContract = contracts?.find(
+    c =>
+      (site.contractId && c.id === site.contractId) ||
+      (site.contractNo && c.contractNo === site.contractNo) ||
+      c.associatedSites?.some(a => a.siteId === site.id)
+  );
+  const effectiveContractNo = siteContract?.contractNo || site.contractNo || '';
   const currentContractStart = siteContract?.validFrom || '2026-01-01';
   const currentContractEnd = siteContract?.validTo || '2026-12-31';
 
@@ -278,9 +291,22 @@ export const SiteAvailabilityDetailView: React.FC = () => {
                     <Edit3 className="w-3 h-3" />
                   </button>
                 </span>
-                <span>
-                  合同编号:{' '}
-                  <span className="text-blue-600 font-mono font-medium">{site.contractNo}</span>
+                <span className="inline-flex items-center gap-1.5">
+                  关联合同:{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigateToContractDetail(siteContract?.id || effectiveContractNo, site.id)}
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline font-mono font-semibold cursor-pointer"
+                    title={siteContract ? `点击前往合同与履约台账查看【${siteContract.title}】` : '暂未关联合同，点击前往录入'}
+                  >
+                    <span>{effectiveContractNo || '暂未关联合同 (点击录入)'}</span>
+                    <ArrowUpRight className="w-3 h-3" />
+                  </button>
+                  {siteContract && (
+                    <span className="text-slate-600 max-w-[240px] truncate" title={siteContract.title}>
+                      · {siteContract.title}
+                    </span>
+                  )}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   当年合同起始时间:{' '}
@@ -335,21 +361,44 @@ export const SiteAvailabilityDetailView: React.FC = () => {
               </div>
             </div>
 
+            {/* Recalculate Availability Button */}
+            <button
+              id="btn-recalculate-availability"
+              onClick={() => setShowRecalcModal(true)}
+              className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold border border-emerald-300 shadow-2xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              title="对指定时段重新统计并校准单站可用度指标与逐日明细"
+            >
+              <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+              <span>重新统计可用度</span>
+            </button>
+
             {/* Edit Site Ledger Button */}
             <button
               onClick={() => setShowEditModal(true)}
-              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold border border-amber-300 shadow-2xs transition-colors flex items-center gap-1.5"
+              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold border border-amber-300 shadow-2xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
               title="编辑该站点台账档案：修改所属客户、运维负责人、装机容量、SLA及工程参数"
             >
               <Edit3 className="w-3.5 h-3.5 text-amber-600" />
               <span>编辑台账信息</span>
             </button>
 
+            {/* Jump to Contract Hub */}
+            <button
+              id="btn-view-site-contract"
+              onClick={() => navigateToContractDetail(siteContract?.id || effectiveContractNo, site.id)}
+              className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 hover:border-indigo-300 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all whitespace-nowrap"
+              title={siteContract ? `前往合同与履约台账查看合同【${siteContract.contractNo}】` : '为当前站点录入并关联合同'}
+            >
+              <FileText className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{siteContract ? '查看关联合同' : '录入关联合同'}</span>
+              <ArrowUpRight className="w-3 h-3 text-indigo-500" />
+            </button>
+
             {/* Jump to Site Ledger */}
             <button
               id="btn-view-site-ledger"
               onClick={() => navigateToSiteDetail(site.id, 0)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-700 border border-slate-300 hover:border-blue-400 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all group"
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-700 border border-slate-300 hover:border-blue-400 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all group whitespace-nowrap"
               title="查看该站点的全景态势、核心设备拓扑、合同与SLA履约及离线日志批次"
             >
               <FileText className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
@@ -371,6 +420,27 @@ export const SiteAvailabilityDetailView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Latest Recalculation Status Strip */}
+        {latestSiteRecalc && (
+          <div className="px-3.5 py-2 bg-emerald-50/70 border border-emerald-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-900">
+            <div className="flex items-center gap-2 flex-wrap">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>最近重算生效：</strong>
+                时段 <span className="font-mono font-semibold">{latestSiteRecalc.startDate} ~ {latestSiteRecalc.endDate}</span>（{latestSiteRecalc.affectedDaysCount}天），
+                时段均值 <span className="font-mono">{latestSiteRecalc.beforePeriodAvgAvail}% → <strong>{latestSiteRecalc.afterPeriodAvgAvail}%</strong></span>
+                {' '}({latestSiteRecalc.deltaAvail >= 0 ? `+${latestSiteRecalc.deltaAvail}` : latestSiteRecalc.deltaAvail}% · 挽回 {latestSiteRecalc.recoveredMins} min)
+              </span>
+            </div>
+            <button
+              onClick={() => setShowRecalcModal(true)}
+              className="text-emerald-700 hover:text-emerald-900 font-semibold underline whitespace-nowrap"
+            >
+              查看重算明细 / 再次重算
+            </button>
+          </div>
+        )}
 
         {/* Availability Drilldown Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto border-t border-slate-100 pt-3 mt-2">
@@ -414,6 +484,10 @@ export const SiteAvailabilityDetailView: React.FC = () => {
           onSelectDate={date => setAvailabilityDrilldownDate(date)}
           onNavigateTab={handleDrilldownNavigate}
           onOpenArchiveModal={() => setShowArchiveModal(true)}
+          onOpenRecalculateModal={() => setShowRecalcModal(true)}
+          onViewContract={() => navigateToContractDetail(siteContract?.id || effectiveContractNo, site.id)}
+          contractNo={effectiveContractNo}
+          contractTitle={siteContract?.title}
           contractStartDate={currentContractStart}
           contractEndDate={currentContractEnd}
         />
@@ -472,6 +546,20 @@ export const SiteAvailabilityDetailView: React.FC = () => {
         isOpen={showArchiveModal}
         onClose={() => setShowArchiveModal(false)}
         site={site}
+      />
+
+      {/* Recalculate Period Availability Modal */}
+      <RecalculateAvailabilityModal
+        isOpen={showRecalcModal}
+        onClose={() => setShowRecalcModal(false)}
+        site={site}
+        workOrders={siteOrders.length > 0 ? siteOrders : workOrders}
+        history={availabilityRecalcHistory}
+        onExecuteRecalc={recalculateSiteAvailability}
+        onInspectDate5Min={date => {
+          setAvailabilityDrilldownDate(date);
+          setAvailabilityDrilldownTab(0);
+        }}
       />
     </div>
   );

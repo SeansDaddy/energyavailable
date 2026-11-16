@@ -342,3 +342,36 @@ export interface ChatMessage {
   queryType?: 'metric_card' | 'trend_chart' | 'site_table' | 'prediction_card' | 'fallback' | 'pivot_analysis';
   dataPayload?: any;
 }
+
+export interface AvailabilityRecalcDayDetail {
+  date: string;
+  beforeAvail: number;
+  afterAvail: number;
+  beforeInterruptMins: number;
+  afterInterruptMins: number;
+  recoveredMins: number;
+  note: string;
+}
+
+export interface AvailabilityRecalcRecord {
+  id: string;
+  siteId: string;
+  siteName: string;
+  startDate: string;
+  endDate: string;
+  recalculatedAt: string;
+  operator: string;
+  beforePeriodAvgAvail: number;
+  afterPeriodAvgAvail: number;
+  beforeSiteCurrentAvail: number;
+  afterSiteCurrentAvail: number;
+  deltaAvail: number;
+  beforeInterruptionMins: number;
+  afterInterruptionMins: number;
+  recoveredMins: number;
+  appliedRules: string[];
+  affectedDaysCount: number;
+  syncedToSiteKpi: boolean;
+  dayBreakdown: AvailabilityRecalcDayDetail[];
+}
+

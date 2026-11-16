@@ -1343,6 +1343,203 @@ export const INITIAL_CONTRACTS: Contract[] = [
       { month: '2026-07', targetSla: 99.80, actualSla: 99.95, isFulfilled: true },
       { month: '2026-08', targetSla: 99.80, actualSla: 99.89, isFulfilled: true }
     ]
+  },
+  {
+    id: 'cnt-003',
+    contractNo: 'SM-NW-2025-SLA-095',
+    title: '陕煤集团西安高新热电联产储能调峰运维SLA合同',
+    customer: '陕煤集团西安能源公司',
+    evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
+    slaThreshold: 99.20,
+    siteCount: 1,
+    fulfilledSiteCount: 1,
+    validFrom: '2025-05-01',
+    validTo: '2028-04-30',
+    penaltyClause: '当月可用度低于99.20%时触发预警整改；连续两个自然月低于99.20%，按当月服务费的8%扣减履约保证金。',
+    overallStatus: 'AT_RISK',
+    lastSyncedAt: '2026-08-20 04:00 (每日定时同步)',
+    associatedSites: [
+      {
+        siteId: 'site-003',
+        siteCode: 'NW-XA-0019',
+        siteName: '西安高新热电联产储能调峰站',
+        siteSlaThreshold: 99.20,
+        currentAvailability: 99.24,
+        statusLamp: 'yellow'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.20, actualSla: 99.45, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.20, actualSla: 99.38, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.20, actualSla: 99.41, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.20, actualSla: 99.32, isFulfilled: true },
+      { month: '2026-07', targetSla: 99.20, actualSla: 99.29, isFulfilled: true },
+      { month: '2026-08', targetSla: 99.20, actualSla: 99.24, isFulfilled: true }
+    ]
+  },
+  {
+    id: 'cnt-004',
+    contractNo: 'SPIC-BJ-2025-SLA-044',
+    title: '国家电投北京怀柔科学城智能微电网保障服务合同',
+    customer: '国家电投北京分公司',
+    evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
+    slaThreshold: 99.00,
+    siteCount: 1,
+    fulfilledSiteCount: 1,
+    validFrom: '2025-02-01',
+    validTo: '2027-01-31',
+    penaltyClause: '单月可用度低于99.00%或离线数据断供超过30天未补采，暂停当月可用度激励结算并督办整改。',
+    overallStatus: 'AT_RISK',
+    lastSyncedAt: '2026-08-20 04:00 (每日定时同步)',
+    associatedSites: [
+      {
+        siteId: 'site-004',
+        siteCode: 'HB-BJ-0077',
+        siteName: '北京怀柔科学城智能微电网站-03站',
+        siteSlaThreshold: 99.00,
+        currentAvailability: 99.15,
+        statusLamp: 'grey'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.00, actualSla: 99.35, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.00, actualSla: 99.28, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.00, actualSla: 99.22, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.00, actualSla: 99.18, isFulfilled: true },
+      { month: '2026-07', targetSla: 99.00, actualSla: 99.15, isFulfilled: true }
+    ]
+  },
+  {
+    id: 'cnt-005',
+    contractNo: 'JS-GX-2025-SLA-067',
+    title: '江苏省国信集团江北变电侧储能电站高可靠SLA运维合同',
+    customer: '江苏省国信集团',
+    evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
+    slaThreshold: 99.60,
+    siteCount: 1,
+    fulfilledSiteCount: 1,
+    validFrom: '2025-01-01',
+    validTo: '2027-12-31',
+    penaltyClause: '单月可用度低于99.60%，按每0.1%短缺扣减当月基础运维费的3%，单月封顶25%。',
+    overallStatus: 'FULFILLED',
+    lastSyncedAt: '2026-08-20 04:00 (每日定时同步)',
+    associatedSites: [
+      {
+        siteId: 'site-005',
+        siteCode: 'JS-NJ-0023',
+        siteName: '南京江北储能电站01号变电侧站',
+        siteSlaThreshold: 99.60,
+        currentAvailability: 99.78,
+        statusLamp: 'green'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.60, actualSla: 99.84, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.60, actualSla: 99.80, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.60, actualSla: 99.82, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.60, actualSla: 99.75, isFulfilled: true },
+      { month: '2026-07', targetSla: 99.60, actualSla: 99.79, isFulfilled: true },
+      { month: '2026-08', targetSla: 99.60, actualSla: 99.78, isFulfilled: true }
+    ]
+  },
+  {
+    id: 'cnt-006',
+    contractNo: 'GD-YD-2025-SLA-072',
+    title: '广东粤电南沙自贸区综合能源港储能可用度保障合同',
+    customer: '广东粤电储能',
+    evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
+    slaThreshold: 99.50,
+    siteCount: 1,
+    fulfilledSiteCount: 0,
+    validFrom: '2025-04-01',
+    validTo: '2027-03-31',
+    penaltyClause: '单月可用度低于99.50%，扣减当月服务费的10%；连续两月不达标需派驻原厂专家驻场整改。',
+    overallStatus: 'BREACHED',
+    lastSyncedAt: '2026-08-20 04:00 (每日定时同步)',
+    associatedSites: [
+      {
+        siteId: 'site-006',
+        siteCode: 'GD-GZ-0089',
+        siteName: '广州南沙自贸区综合能源港储能站',
+        siteSlaThreshold: 99.50,
+        currentAvailability: 99.12,
+        statusLamp: 'red'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.50, actualSla: 99.61, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.50, actualSla: 99.55, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.50, actualSla: 99.52, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.50, actualSla: 99.44, isFulfilled: false },
+      { month: '2026-07', targetSla: 99.50, actualSla: 99.31, isFulfilled: false },
+      { month: '2026-08', targetSla: 99.50, actualSla: 99.12, isFulfilled: false }
+    ]
+  },
+  {
+    id: 'cnt-007',
+    contractNo: 'ZJ-NY-2025-SLA-033',
+    title: '浙江省能源集团钱塘数据中心备电储能超高可用度合同',
+    customer: '浙江省能源集团',
+    evaluationPeriod: '自然月度 (每月1日00:00 - 月末24:00)',
+    slaThreshold: 99.90,
+    siteCount: 1,
+    fulfilledSiteCount: 0,
+    validFrom: '2025-01-01',
+    validTo: '2028-12-31',
+    penaltyClause: '数据中心备电级SLA：低于99.90%按双倍日均服务费扣减，并启动备电冗余专项排查。',
+    overallStatus: 'AT_RISK',
+    lastSyncedAt: '2026-08-20 04:00 (每日定时同步)',
+    associatedSites: [
+      {
+        siteId: 'site-007',
+        siteCode: 'ZJ-HZ-0033',
+        siteName: '杭州钱塘新区数据中心储能备电站',
+        siteSlaThreshold: 99.90,
+        currentAvailability: 99.84,
+        statusLamp: 'yellow'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.90, actualSla: 99.94, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.90, actualSla: 99.91, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.90, actualSla: 99.92, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.90, actualSla: 99.90, isFulfilled: true },
+      { month: '2026-07', targetSla: 99.90, actualSla: 99.88, isFulfilled: false },
+      { month: '2026-08', targetSla: 99.90, actualSla: 99.84, isFulfilled: false }
+    ]
+  },
+  {
+    id: 'cnt-008',
+    contractNo: 'CTG-NW-2025-SLA-058',
+    title: '三峡新能源兰州新区光伏配储电站全生命周期运维SLA合同',
+    customer: '三峡新能源西北分公司',
+    evaluationPeriod: '自然年度与月度联合考核',
+    slaThreshold: 99.00,
+    siteCount: 1,
+    fulfilledSiteCount: 1,
+    validFrom: '2025-06-01',
+    validTo: '2028-05-31',
+    penaltyClause: '单月可用度低于99.00%，每降低0.1%扣减当月运维服务费的2%（计划内检修与电网弃光限电免责）。',
+    overallStatus: 'FULFILLED',
+    lastSyncedAt: '2026-08-20 04:00 (每日定时同步)',
+    associatedSites: [
+      {
+        siteId: 'site-008',
+        siteCode: 'GS-LZ-0055',
+        siteName: '兰州新区光伏配储能电站02站',
+        siteSlaThreshold: 99.00,
+        currentAvailability: 99.35,
+        statusLamp: 'green'
+      }
+    ],
+    monthlyTrend: [
+      { month: '2026-03', targetSla: 99.00, actualSla: 99.40, isFulfilled: true },
+      { month: '2026-04', targetSla: 99.00, actualSla: 99.38, isFulfilled: true },
+      { month: '2026-05', targetSla: 99.00, actualSla: 99.42, isFulfilled: true },
+      { month: '2026-06', targetSla: 99.00, actualSla: 99.31, isFulfilled: true },
+      { month: '2026-07', targetSla: 99.00, actualSla: 99.33, isFulfilled: true },
+      { month: '2026-08', targetSla: 99.00, actualSla: 99.35, isFulfilled: true }
+    ]
   }
 ];
 

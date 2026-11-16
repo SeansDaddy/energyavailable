@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { Site, WorkOrder } from '../../types';
 import {
   PeriodDeviceStatus,
   AvailabilityAlarmItem
 } from '../../utils/equipmentAndAlarmsGenerator';
+import { DeviceFiveMinDotsPanel } from './DeviceFiveMinDotsPanel';
 import {
   Zap,
   ZapOff,
@@ -21,8 +23,10 @@ import {
 } from 'lucide-react';
 
 interface EquipmentTopologyGraphProps {
+  site: Site;
   devices: PeriodDeviceStatus[];
   alarms: AvailabilityAlarmItem[];
+  workOrders?: WorkOrder[];
   selectedDeviceCode: string | null;
   onSelectDeviceCode: (code: string | null) => void;
   onDrilldownToCausalChain: (deviceCode?: string) => void;
@@ -31,15 +35,21 @@ interface EquipmentTopologyGraphProps {
   dimension: string;
   startDate: string;
   endDate: string;
+  targetDate: string;
+  availableDates?: string[];
 }
 
 export const EquipmentTopologyGraph: React.FC<EquipmentTopologyGraphProps> = ({
+  site,
   devices,
   alarms,
+  workOrders = [],
   selectedDeviceCode,
   onSelectDeviceCode,
   onDrilldownToCausalChain,
-  timeRangeLabel
+  timeRangeLabel,
+  targetDate,
+  availableDates = []
 }) => {
   // Status highlight filter: ALL, NORMAL, WARNING, FAULT, ECO_STANDBY, MAINTENANCE
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -778,6 +788,20 @@ export const EquipmentTopologyGraph: React.FC<EquipmentTopologyGraphProps> = ({
               </div>
             </div>
           )}
+
+          {/* Embedded Per-Device 5-Minute Status Dots Chart & Table */}
+          <div className="pt-4 border-t border-slate-200">
+            <DeviceFiveMinDotsPanel
+              site={site}
+              device={inspectedDevice}
+              alarms={alarms}
+              workOrders={workOrders}
+              targetDate={targetDate}
+              availableDates={availableDates}
+              onDrilldownToCausalChain={onDrilldownToCausalChain}
+              compact
+            />
+          </div>
         </div>
       )}
     </div>

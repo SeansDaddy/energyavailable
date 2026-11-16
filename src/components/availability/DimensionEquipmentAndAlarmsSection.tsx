@@ -33,6 +33,7 @@ import {
   SplitSquareVertical
 } from 'lucide-react';
 import { EquipmentTopologyGraph } from './EquipmentTopologyGraph';
+import { DeviceFiveMinDotsPanel } from './DeviceFiveMinDotsPanel';
 
 interface DimensionEquipmentAndAlarmsSectionProps {
   site: Site;
@@ -64,12 +65,36 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
   const [deviceSearchTerm, setDeviceSearchTerm] = useState<string>('');
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<string | null>(null);
   const [expandedDeviceId, setExpandedDeviceId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'topology' | 'table' | 'split'>('topology');
+  const [viewMode, setViewMode] = useState<'topology' | 'table' | 'dots' | 'split'>('topology');
 
   // Generate equipment and alarms dataset for the given time range
   const { devices, alarms, stats } = useMemo(() => {
     return getEquipmentAndAlarmsForPeriod(site, startDate, endDate, workOrders);
   }, [site, startDate, endDate, workOrders]);
+
+  // Resolve available dates in range & target date for 5-minute dot drilldown
+  const { targetDate, availableDates } = useMemo(() => {
+    const sDay = startDate.slice(0, 10);
+    const eDay = endDate.slice(0, 10);
+    const snapDates = (site.dailySnapshots || [])
+      .map(s => s.date)
+      .filter(d => d >= sDay && d <= eDay);
+    const uniqueDates = snapDates.length > 0 ? Array.from(new Set(snapDates)) : [sDay];
+    const faultDate = alarms.find(a => !a.isEcoExempt && !a.isExempt)?.triggerTime?.slice(0, 10);
+    const defaultTarget = faultDate && uniqueDates.includes(faultDate) ? faultDate : uniqueDates[uniqueDates.length - 1] || sDay;
+    return { targetDate: defaultTarget, availableDates: uniqueDates };
+  }, [site.dailySnapshots, startDate, endDate, alarms]);
+
+  // Active device for dedicated 'dots' tab
+  const [activeDotsDeviceCode, setActiveDotsDeviceCode] = useState<string | null>(null);
+  const activeDotsDevice = useMemo(() => {
+    const code = activeDotsDeviceCode || selectedDeviceCode;
+    if (code) {
+      const found = devices.find(d => d.deviceCode === code);
+      if (found) return found;
+    }
+    return devices.find(d => d.periodStatus === 'FAULT') || devices.find(d => d.periodStatus === 'WARNING') || devices[0];
+  }, [devices, activeDotsDeviceCode, selectedDeviceCode]);
 
   // Filtered devices list
   const filteredDevices = useMemo(() => {
@@ -172,11 +197,11 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
         {/* View Switcher & Drilldown Navigation */}
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Segmented Control */}
-          <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium">
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium overflow-x-auto">
             <button
               type="button"
               onClick={() => setViewMode('topology')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition-all ${
                 viewMode === 'topology'
                   ? 'bg-white text-blue-700 font-bold shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -185,14 +210,11 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
             >
               <Share2 className="w-3.5 h-3.5" />
               <span>设备拓扑染色</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800 font-mono">
-                R2全景
-              </span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition-all ${
                 viewMode === 'table'
                   ? 'bg-white text-blue-700 font-bold shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -200,15 +222,25 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
               title="查看设备明细台账与等效停运统计列表"
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>状态统计列表</span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                ({filteredDevices.length})
-              </span>
+              <span>状态统计列表 ({filteredDevices.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('dots')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition-all ${
+                viewMode === 'dots'
+                  ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="逐台设备查看 5 分钟状态打点曲线图与明细表"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>设备5分钟打点</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('split')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md whitespace-nowrap transition-all ${
                 viewMode === 'split'
                   ? 'bg-white text-blue-700 font-bold shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -342,8 +374,10 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
       {/* 1. TOPOLOGY VIEW (设备拓扑染色展示) */}
       {(viewMode === 'topology' || viewMode === 'split') && (
         <EquipmentTopologyGraph
+          site={site}
           devices={devices}
           alarms={alarms}
+          workOrders={workOrders}
           selectedDeviceCode={selectedDeviceCode}
           onSelectDeviceCode={code => setSelectedDeviceCode(code)}
           onDrilldownToCausalChain={handleDrilldownToCausalChain}
@@ -352,7 +386,89 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
           dimension={dimension}
           startDate={startDate}
           endDate={endDate}
+          targetDate={targetDate}
+          availableDates={availableDates}
         />
+      )}
+
+      {/* 1.5 DEDICATED PER-DEVICE 5-MINUTE DOTS VIEW (单设备5分钟状态打点曲线图与表格) */}
+      {viewMode === 'dots' && activeDotsDevice && (
+        <div className="space-y-4">
+          {/* Core Device Selector Strip */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-800">
+                选择核心设备查看 5 分钟状态打点与走势（{devices.length} 台）
+              </span>
+              <span className="text-slate-500 font-mono text-[11px]">
+                当前选中: {activeDotsDevice.deviceCode} · {activeDotsDevice.deviceName}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {devices.map(dev => {
+                const isSelected = activeDotsDevice.deviceCode === dev.deviceCode;
+                const isFault = dev.periodStatus === 'FAULT';
+                const isWarn = dev.periodStatus === 'WARNING';
+                const isEco = dev.periodStatus === 'ECO_STANDBY' || dev.ecoOutageMinutesInPeriod > 0;
+                return (
+                  <button
+                    key={dev.id}
+                    type="button"
+                    onClick={() => setActiveDotsDeviceCode(dev.deviceCode)}
+                    className={`p-2.5 rounded-lg border text-left transition-all flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-white text-slate-800 border-slate-200 hover:border-blue-300 hover:bg-blue-50/30'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-mono text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                          {dev.deviceCode}
+                        </span>
+                        <span
+                          className={`text-[10px] font-semibold ${
+                            isSelected
+                              ? 'text-blue-100'
+                              : isFault
+                              ? 'text-red-600'
+                              : isWarn
+                              ? 'text-amber-600'
+                              : isEco
+                              ? 'text-cyan-700'
+                              : 'text-emerald-700'
+                          }`}
+                        >
+                          {dev.periodStatusLabel}
+                        </span>
+                      </div>
+                      <div className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                        {dev.deviceName}
+                      </div>
+                    </div>
+                    <div className={`text-xs font-mono tabular-nums font-bold shrink-0 ${isSelected ? 'text-white' : dev.availabilityContribution < 99.5 ? 'text-red-600' : 'text-emerald-700'}`}>
+                      {dev.availabilityContribution}%
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Selected Device 5-Min Dots Curve + Table */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <DeviceFiveMinDotsPanel
+              site={site}
+              device={activeDotsDevice}
+              alarms={alarms}
+              workOrders={workOrders}
+              targetDate={targetDate}
+              availableDates={availableDates}
+              onDrilldownToCausalChain={handleDrilldownToCausalChain}
+            />
+          </div>
+        </div>
       )}
 
       {/* Split View Divider */}
@@ -740,12 +856,19 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
 
                         {/* Actions */}
                         <td className="py-3 px-3 text-center">
-                          <button
-                            onClick={() => toggleExpandDevice(dev.id)}
-                            className="text-slate-600 hover:text-slate-900 font-medium text-[11px] px-2 py-1 rounded hover:bg-slate-100 transition-colors"
-                          >
-                            {isExpanded ? '收起' : '详情'}
-                          </button>
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleExpandDevice(dev.id)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded border transition-colors whitespace-nowrap ${
+                                isExpanded
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                              }`}
+                            >
+                              {isExpanded ? '收起打点' : '5分钟打点'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
@@ -753,13 +876,13 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                       {isExpanded && (
                         <tr className="bg-slate-50/70 border-b border-slate-200">
                           <td colSpan={9} className="p-4">
-                            <div className="space-y-3 bg-white p-4 rounded-lg border border-slate-200 text-xs">
+                            <div className="space-y-4 bg-white p-4 rounded-lg border border-slate-200 text-xs">
                               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-2 border-b border-slate-100">
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-slate-900 text-sm">
                                     {dev.deviceName} ({dev.deviceCode})
                                   </span>
-                                  <span className="text-slate-500">工况下钻与诊断详情</span>
+                                  <span className="text-slate-500">工况下钻与 5 分钟状态打点详情</span>
                                 </div>
                                 <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
                                   <span>型号: {dev.model}</span>
@@ -817,6 +940,20 @@ export const DimensionEquipmentAndAlarmsSection: React.FC<DimensionEquipmentAndA
                                   </div>
                                 </div>
                               )}
+
+                              {/* Embedded 5-Min Status Dots Curve Chart & Table */}
+                              <div className="pt-3 border-t border-slate-200">
+                                <DeviceFiveMinDotsPanel
+                                  site={site}
+                                  device={dev}
+                                  alarms={alarms}
+                                  workOrders={workOrders}
+                                  targetDate={targetDate}
+                                  availableDates={availableDates}
+                                  onDrilldownToCausalChain={handleDrilldownToCausalChain}
+                                  compact
+                                />
+                              </div>
 
                               {/* Prominent CTA to jump to Interruption Alarms */}
                               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
