@@ -21,7 +21,8 @@ import {
   Edit3,
   FolderKanban,
   ShieldCheck,
-  Calculator
+  Calculator,
+  UploadCloud
 } from 'lucide-react';
 import { AvailabilityDetailsTab } from './AvailabilityDetailsTab';
 import { MergedFaultsTab } from '../sites/MergedFaultsTab';
@@ -49,6 +50,7 @@ export const SiteAvailabilityDetailView: React.FC = () => {
     reportCenterItems,
     openAiDrawer,
     navigateToContractDetail,
+    navigateToLogImport,
     availabilityRecalcHistory,
     recalculateSiteAvailability
   } = useApp();
@@ -402,6 +404,18 @@ export const SiteAvailabilityDetailView: React.FC = () => {
               <ArrowUpRight className="w-3 h-3 text-indigo-500" />
             </button>
 
+            {/* Jump to Offline Log Import */}
+            <button
+              id="btn-go-log-import"
+              onClick={() => navigateToLogImport(site.id, 'availability_drilldown')}
+              className="px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-300 rounded-lg text-xs font-bold shadow-2xs flex items-center gap-1.5 transition-all whitespace-nowrap"
+              title="前往离线日志上传页为当前站点补采/覆盖导入离线运行日志包"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-sky-600" />
+              <span>离线日志上传</span>
+              <ArrowUpRight className="w-3 h-3 text-sky-500" />
+            </button>
+
             {/* Jump to Site Ledger */}
             <button
               id="btn-view-site-ledger"
@@ -428,6 +442,31 @@ export const SiteAvailabilityDetailView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Data Starvation / Coverage Gap Hint Banner */}
+        {(site.statusLamp === 'grey' || site.dataStarvedDays > 0 || site.dataCoverage < 100) && (
+          <div className="px-3.5 py-2 bg-amber-50/80 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs text-amber-900">
+            <div className="flex items-center gap-2 flex-wrap">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>离线数据补采提示：</strong>
+                当前站点数据完整率 <span className="font-mono font-bold">{site.dataCoverage}%</span>
+                {site.dataStarvedDays > 0 && (
+                  <> · 已连续未同步 <span className="font-mono font-bold text-red-700">{site.dataStarvedDays}</span> 天</>
+                )}
+                （最近导入: <span className="font-mono">{site.lastImportTime}</span>），可通过离线运行日志上传快速补全并重算可用度。
+              </span>
+            </div>
+            <button
+              onClick={() => navigateToLogImport(site.id, 'availability_drilldown')}
+              className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 rounded font-semibold inline-flex items-center gap-1 transition-colors whitespace-nowrap"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+              <span>前往离线日志上传</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         {/* Latest Recalculation Status Strip */}
         {latestSiteRecalc && (

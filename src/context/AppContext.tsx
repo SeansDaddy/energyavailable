@@ -57,7 +57,6 @@ export type NavigationTab =
   | 'sites'
   | 'site_detail'
   | 'pre_sales_eval'
-  | 'log_import'
   | 'availability_monitor'
   | 'availability_drilldown'
   | 'alerts'
@@ -170,6 +169,9 @@ interface AppContextType {
   }>>;
   navigateToSiteDetail: (siteId: string, defaultTabIdx?: number) => void;
   navigateToAlertsWithFilter: (typeFilter?: string) => void;
+  logImportOriginTab: 'availability_drilldown' | 'site_detail' | null;
+  setLogImportOriginTab: (origin: 'availability_drilldown' | 'site_detail' | null) => void;
+  navigateToLogImport: (siteId?: string, originTab?: 'availability_drilldown' | 'site_detail') => void;
 
   // Actions
   handleAlert: (alertId: string, action: 'confirmed' | 'ignored', note?: string) => void;
@@ -177,6 +179,7 @@ interface AppContextType {
   updateSite: (siteId: string, updatedData: Partial<Site>) => void;
   updateSiteRedundancy: (siteId: string, redundancy: RedundancyLevel, notes: string) => void;
   importLogBatch: (siteId: string, fileName: string, periodStart: string, periodEnd: string, isOverride: boolean) => ImportBatch;
+  startLogImportTask: (siteId: string, fileName: string, fileSize?: string) => ImportBatch;
   generateReport: (type: ReportItem['type'], scopeName: string, period: string, format: 'PDF' | 'EXCEL' | 'BOTH') => ReportItem;
   addReportItem?: (report: ReportItem) => void;
   sendChatMessage: (content: string) => void;
@@ -265,6 +268,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [siteDetailTab, setSiteDetailTab] = useState<number>(0);
   const [availabilityDrilldownTab, setAvailabilityDrilldownTab] = useState<number>(0);
   const [availabilityDrilldownDate, setAvailabilityDrilldownDate] = useState<string>('2026-08-15');
+  const [logImportOriginTab, setLogImportOriginTab] = useState<'availability_drilldown' | 'site_detail' | null>(null);
   
   // Performance condition monitoring & detail state
   const [performanceDetailSiteId, setPerformanceDetailSiteId] = useState<string | null>(null);
@@ -365,6 +369,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setAvailabilityDrilldownDate(date);
     }
     setActiveTab('availability_drilldown');
+  };
+
+  const navigateToLogImport = (
+    siteId?: string,
+    originTab?: 'availability_drilldown' | 'site_detail'
+  ) => {
+    if (siteId) {
+      setSelectedSiteId(siteId);
+    }
+    setLogImportOriginTab(originTab || null);
+    setSiteDetailTab(3);
+    setActiveTab('site_detail');
   };
 
   const navigateToPerformanceDetail = (siteId: string) => {
@@ -597,15 +613,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const targetSite = sites.find(s => s.id === siteId) || sites[0];
     const newBatchNo = `BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(100 + Math.random()*900)}`;
     
-    // Mark previous overlapping batches as OVERRIDDEN
-    if (isOverride) {
-      setBatches(prev =>
-        prev.map(b => (b.siteId === siteId ? { ...b, status: 'OVERRIDDEN', isLatestWinning: false, replacedBatchNo: newBatchNo } : b))
-      );
-    }
-
     const newBatch: ImportBatch = {
-      id: `batch-${Date.now()}`,
+      id: `batch-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       batchNo: newBatchNo,
       siteId: targetSite.id,
       siteName: targetSite.siteName,
@@ -621,7 +630,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isLatestWinning: true
     };
 
-    setBatches(prev => [newBatch, ...prev]);
+    setBatches(prev => {
+      const updatedPrev = isOverride
+        ? prev.map(b =>
+            b.siteId === siteId
+              ? { ...b, status: 'OVERRIDDEN' as const, isLatestWinning: false, replacedBatchNo: newBatchNo }
+              : b
+          )
+        : prev;
+      return [newBatch, ...updatedPrev];
+    });
 
     // Instant recalculation & update target site
     setSites(prev =>
@@ -640,6 +658,122 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     return newBatch;
+  };
+
+  const startLogImportTask = (
+    siteId: string,
+    fileName: string,
+    fileSize: string = '48.6 MB'
+  ): ImportBatch => {
+    const targetSite = sites.find(s => s.id === siteId) || sites[0];
+    const now = new Date();
+    const importTimeStr = now.toISOString().replace('T', ' ').substring(0, 16);
+    const newBatchNo = `BATCH-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
+    const taskId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    const pendingBatch: ImportBatch = {
+      id: taskId,
+      batchNo: newBatchNo,
+      siteId: targetSite.id,
+      siteName: targetSite.siteName,
+      fileName: fileName || `${targetSite.siteCode}_LOG.zip`,
+      fileSize,
+      importTime: importTimeStr,
+      periodStart: '自动解析',
+      periodEnd: '自动解析',
+      status: 'PARSING',
+      progress: 15,
+      progressLabel: '正在上传日志包',
+      operator: currentUser.name,
+      equivalentInterruptionMinutes: 0,
+      eventsCount: 0,
+      recordsCount: 0,
+      faultEventsExtracted: 0,
+      isLatestWinning: false
+    };
+
+    setBatches(prev => [pendingBatch, ...prev]);
+
+    const stages = [
+      { progress: 40, label: '正在解析设备报文与事件' },
+      { progress: 72, label: '正在校验并重算站点可用度' },
+      { progress: 100, label: '已完成 · Latest-Wins 生效' }
+    ];
+    let stepIdx = 0;
+
+    const timer = window.setInterval(() => {
+      const stage = stages[stepIdx];
+      stepIdx += 1;
+
+      if (!stage) {
+        window.clearInterval(timer);
+        return;
+      }
+
+      if (stage.progress < 100) {
+        setBatches(prev =>
+          prev.map(b =>
+            b.id === taskId
+              ? {
+                  ...b,
+                  status: 'PARSING',
+                  progress: stage.progress,
+                  progressLabel: stage.label
+                }
+              : b
+          )
+        );
+      } else {
+        window.clearInterval(timer);
+        const completedTime = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        const records = 11200 + Math.floor(Math.random() * 4800);
+        const faults = 2 + Math.floor(Math.random() * 4);
+
+        setBatches(prev =>
+          prev.map(b => {
+            if (b.id === taskId) {
+              return {
+                ...b,
+                status: 'SUCCESS',
+                progress: 100,
+                progressLabel: stage.label,
+                importTime: completedTime,
+                eventsCount: 36 + faults * 2,
+                recordsCount: records,
+                faultEventsExtracted: faults,
+                isLatestWinning: true
+              };
+            }
+            if (b.siteId === targetSite.id) {
+              return {
+                ...b,
+                status: 'OVERRIDDEN' as const,
+                isLatestWinning: false,
+                replacedBatchNo: newBatchNo
+              };
+            }
+            return b;
+          })
+        );
+
+        setSites(prev =>
+          prev.map(s => {
+            if (s.id === targetSite.id) {
+              return {
+                ...s,
+                lastImportTime: completedTime,
+                dataStarvedDays: 0,
+                dataCoverage: 100,
+                statusLamp: s.currentAvailability >= s.slaThreshold ? 'green' : 'red'
+              };
+            }
+            return s;
+          })
+        );
+      }
+    }, 550);
+
+    return pendingBatch;
   };
 
   const generateReport = (
@@ -1680,11 +1814,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         navigateToSiteDetail,
         navigateToAvailabilityDrilldown,
         navigateToAlertsWithFilter,
+        logImportOriginTab,
+        setLogImportOriginTab,
+        navigateToLogImport,
         handleAlert,
         addSite,
         updateSite,
         updateSiteRedundancy,
         importLogBatch,
+        startLogImportTask,
         generateReport,
         addReportItem,
         sendChatMessage,

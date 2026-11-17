@@ -40,6 +40,7 @@ export const WorkbenchView: React.FC = () => {
     alerts,
     setActiveTab,
     navigateToSiteDetail,
+    navigateToLogImport,
     setDrilldownFilter,
     openAiDrawer
   } = useApp();
@@ -88,7 +89,7 @@ export const WorkbenchView: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             id="btn-cockpit-quick-import"
-            onClick={() => setActiveTab('log_import')}
+            onClick={() => navigateToLogImport()}
             className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded text-xs font-semibold border border-slate-300 shadow-sm transition-colors flex items-center gap-2"
           >
             <span>导入离线日志</span>

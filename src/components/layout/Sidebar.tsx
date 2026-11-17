@@ -3,7 +3,6 @@ import { useApp, NavigationTab } from '../../context/AppContext';
 import {
   LayoutDashboard,
   Radio,
-  UploadCloud,
   Activity,
   AlertOctagon,
   BarChart3,
@@ -180,11 +179,6 @@ export const Sidebar: React.FC = () => {
             id: 'work_orders',
             label: 'PCare 工单管理',
             icon: Wrench
-          },
-          {
-            id: 'log_import',
-            label: '离线数据导入',
-            icon: UploadCloud
           },
           {
             id: 'contracts',

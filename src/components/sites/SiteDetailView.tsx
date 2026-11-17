@@ -49,6 +49,7 @@ export const SiteDetailView: React.FC = () => {
   } = useApp();
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [openLogPickerTrigger, setOpenLogPickerTrigger] = useState(0);
 
   const site = sites.find(s => s.id === selectedSiteId) || sites[0];
 
@@ -76,7 +77,7 @@ export const SiteDetailView: React.FC = () => {
     { id: 0, label: '1. 站点全景态势', icon: Activity },
     { id: 1, label: '2. 核心设备拓扑 (R2)', icon: Cpu, count: site.coreDevices?.length || 0 },
     { id: 2, label: '3. 合同与 SLA 履约 (R10)', icon: FileText },
-    { id: 3, label: '4. 离线日志批次查看 (R3)', icon: Database, count: siteBatches.length },
+    { id: 3, label: '4. 离线日志批次查看与导入 (R3)', icon: Database, count: siteBatches.length },
     { id: 4, label: '5. 站点台账与设备档案报告', icon: FolderKanban, count: siteLedgerReportsCount }
   ];
 
@@ -233,7 +234,10 @@ export const SiteDetailView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setActiveTab('log_import')}
+                onClick={() => {
+                  setSiteDetailTab(3);
+                  setOpenLogPickerTrigger(n => n + 1);
+                }}
                 className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold border border-slate-300 shadow-sm transition-colors flex items-center gap-1.5"
               >
                 <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
@@ -277,7 +281,7 @@ export const SiteDetailView: React.FC = () => {
             <Info className="w-4 h-4 text-blue-600 shrink-0" />
             <span>
               <strong>页面模块拆分提示：</strong>
-              本站点台账保留<strong>【站点全景态势】</strong>、<strong>【核心设备拓扑】</strong>、<strong>【合同与SLA履约】</strong>及<strong>【离线日志批次查看】</strong>。可用度详情（5分钟/日/周/月周期监控）、中断告警（故障归并与告警清册）、工单详情已归类至【可用度监控】的下钻详情中。
+              本站点台账保留<strong>【站点全景态势】</strong>、<strong>【核心设备拓扑】</strong>、<strong>【合同与SLA履约】</strong>及<strong>【离线日志批次查看与导入】</strong>。可用度详情（5分钟/日/周/月周期监控）、中断告警（故障归并与告警清册）、工单详情已归类至【可用度监控】的下钻详情中。
             </span>
           </div>
           <button
@@ -369,6 +373,7 @@ export const SiteDetailView: React.FC = () => {
           site={site}
           batches={batches}
           onNavigateTab={idx => setSiteDetailTab(idx)}
+          openLogPickerTrigger={openLogPickerTrigger}
         />
       )}
 

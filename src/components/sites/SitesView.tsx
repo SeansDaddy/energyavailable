@@ -368,11 +368,10 @@ export const SitesView: React.FC = () => {
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
-                                  setSelectedSiteId(site.id);
-                                  setActiveTab('log_import');
+                                  navigateToSiteDetail(site.id, 3);
                                 }}
                                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors shadow-2xs"
-                                title="为此站点导入离线日志"
+                                title="前往该站离线日志批次查看与导入页签"
                                 aria-label="导入离线日志"
                               >
                                 <Upload className="w-3.5 h-3.5" />

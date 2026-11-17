@@ -214,6 +214,8 @@ export interface ImportBatch {
   periodStart: string;
   periodEnd: string;
   status: 'SUCCESS' | 'PARSING' | 'OVERRIDDEN' | 'FAILED';
+  progress?: number;
+  progressLabel?: string;
   operator: string;
   equivalentInterruptionMinutes: number;
   eventsCount: number;
